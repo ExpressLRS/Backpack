@@ -93,8 +93,9 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 
 void ProcessMSPPacket(mspPacket_t *packet)
 {
-  if (packet->function == MSP_SET_VTX_CONFIG)
+  switch (packet->function)
   {
+  case MSP_SET_VTX_CONFIG:
     gotInitialPacket = true;
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
@@ -122,10 +123,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
     {
       return; // Packets containing frequency in MHz are not yet supported.
     }
-  }
-  else if (packet->function == MSP_ELRS_SET_WIFI_MODE)
-  {
+    break;  
+  case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     RebootIntoWifi();
+    break;  
+  default:
+    break;
   }
 }
 
