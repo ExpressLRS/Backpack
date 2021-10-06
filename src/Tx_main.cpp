@@ -80,20 +80,29 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
       msp.markPacketReceived();
     }
   }
+
   flashLED = true;
 }
 
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
-  // If we just got a VTX packet, cache it for re-sending later (i.e if the goggles are off)
-  if (packet->function == MSP_SET_VTX_CONFIG)
+  switch (packet->function)
   {
+  case MSP_SET_VTX_CONFIG:
     cachedVTXPacket = *packet;
     cacheFull = true;
+    // transparently forward MSP packets via espnow to any subscribers
+    sendMSPViaEspnow(packet);
+    break;
+  case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
+    sendMSPViaEspnow(packet);
+    break;
+  case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
+    RebootIntoWifi();
+    break;  
+  default:
+    break;
   }
-  
-  // transparently forward MSP packets via espnow to any subscribers
-  sendMSPViaEspnow(packet);
 }
 
 void sendMSPViaEspnow(mspPacket_t *packet)
@@ -110,6 +119,8 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   }
   
   esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+
+  flashLED = true;
 }
 
 void SendCachedMSP()
@@ -195,7 +206,7 @@ void loop()
   if (flashLED)
   {
     flashLED = false;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 2; i++)
     {
       digitalWrite(LED_PIN, LOW);
       startWebUpdater == true ? delay(50) : delay(200);
