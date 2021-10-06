@@ -113,11 +113,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
         cachedChannel = newChannel;
         sendChangesToVrx = true;
       }
-
-      if (cachedBand == 6)
-      {
-        RebootIntoWifi();   // testing only, remove later!
-      }
     }
     else
     {
