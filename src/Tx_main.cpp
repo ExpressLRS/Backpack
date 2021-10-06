@@ -89,10 +89,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
   switch (packet->function)
   {
   case MSP_SET_VTX_CONFIG:
-  case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     cachedVTXPacket = *packet;
     cacheFull = true;
     // transparently forward MSP packets via espnow to any subscribers
+    sendMSPViaEspnow(packet);
+    break;
+  case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     sendMSPViaEspnow(packet);
     break;
   case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
