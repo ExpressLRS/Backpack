@@ -23,8 +23,7 @@ BOM:
 <add AMS1117 pinout>
 <add AMS1117 pic>
 
-Using the silkscreen on the back of the ESP01F:
-2. Solder one of the GND wires from the reg to the top left GND pad on the ESP01F
+2. Using the silkscreen on the back of the ESP01F, solder one of the GND wires from the reg to the top left GND pad on the ESP01F
 3. Solder the output from the reg to the 3V3 pad on the ESP01F
 4. Solder the rest of the silicon wires as per the diagram below:
 <add ESP01F diagram>
