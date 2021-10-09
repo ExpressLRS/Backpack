@@ -1,5 +1,6 @@
 #include "rapidfire.h"
 #include <SPI.h>
+#include "logging.h"
 
 void
 Rapidfire::Init()
@@ -23,13 +24,13 @@ Rapidfire::Init()
 
     SPI.begin();
 
-    Serial.println("SPI config complete");
+    DBGLN("SPI config complete");
 }
 
 void
 Rapidfire::SendBuzzerCmd()
 {
-    Serial.print("Beep!");
+    DBGLN("Beep!");
     
     uint8_t cmd[4];
     cmd[0] = RF_API_BEEP_CMD;   // 'S'
@@ -49,8 +50,8 @@ Rapidfire::SendChannelCmd(uint8_t channel)
     // ELRS channel is zero based, need to add 1
     channel++;
 
-    Serial.print("Setting channel ");
-    Serial.println(channel);
+    DBG("Setting channel ");
+    DBGLN("%x", channel);
 
     uint8_t cmd[5];
     cmd[0] = RF_API_CHANNEL_CMD;    // 'C'
@@ -67,8 +68,8 @@ Rapidfire::SendChannelCmd(uint8_t channel)
 void
 Rapidfire::SendBandCmd(uint8_t band)
 {
-    Serial.print("Setting band ");
-    Serial.println(band);
+    DBG("Setting band ");
+    DBGLN("%x", band);
 
     // ELRS bands
     // 0x01 - Boscam A
@@ -136,10 +137,10 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     // debug code for printing SPI pkt
     for (int i = 0; i < bufLen; ++i)
     {
-        Serial.print(buf[i], HEX);
-        Serial.print(",");
+        DBG("%x", buf[i]);
+        DBG(",");
     }
-    Serial.println("");
+    DBGLN("");
     
     SPI.transfer(buf, bufLen);  // send API cmd to rapidfire
 
