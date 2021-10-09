@@ -79,7 +79,16 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
     if (msp.processReceivedByte(data[i]))
     {
       // Finished processing a complete packet
-      ProcessMSPPacketFromPeer(msp.getReceivedPacket());
+      // Only process packets from a bound MAC address
+      if (broadcastAddress[0] == mac_addr[0] &&
+          broadcastAddress[1] == mac_addr[1] &&
+          broadcastAddress[2] == mac_addr[2] &&
+          broadcastAddress[3] == mac_addr[3] &&
+          broadcastAddress[4] == mac_addr[4] &&
+          broadcastAddress[5] == mac_addr[5])
+      {
+        ProcessMSPPacketFromPeer(msp.getReceivedPacket());
+      }
       msp.markPacketReceived();
     }
   }
