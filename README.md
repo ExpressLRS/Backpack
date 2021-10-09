@@ -19,33 +19,33 @@ BOM:
 - 1x AMS1117 3.3V Regulator https://www.aliexpress.com/item/32910803907.html
 - Silicon wire
 
-![PartsRequired](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/parts-needed.jpg | width=200)
+<img src="https://github.com/ExpressLRS/Backpack/blob/update-readme/img/parts-needed.jpg" width="200">
 
 1. Using the pinout for the AMS1117, solder 2x black silicon wires to GND pin, and 1x red silicon wires to each of the other pins
-![AMS1117Pinout1](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/AMS1117-pinout.png | width=100)
-![AMS1117Pinout2](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/wires-on-reg.jpg | width=100)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/AMS1117-pinout.png | width=100)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/wires-on-reg.jpg | width=100)
 
 2. Using the silkscreen on the back of the ESP01F, solder one of the GND wires from the reg to the top left GND pad on the ESP01F
 3. Solder the output from the reg to the 3V3 pad on the ESP01F
 4. Solder the rest of the silicon wires as per the diagram below:
 TODO add ESP01F diagram
-![ESPWiring](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/reg-on-esp.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/reg-on-esp.jpg)
 
 5. Stick a peice of kapton tape over the sheild on the ESP01F, then heat shrink the reg to the ESP01F:
-![KaptonTape](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/kapton-tape.jpg)
-![HeatShrink](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/heat-shrink.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/kapton-tape.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/heat-shrink.jpg)
 
 6. Connect TX, RX, GND, and 5V (the input pin on the reg) to a FTDI
 7. Bridge the IO0 wire to GND as you power up your FTDI
 8. Under the `Rapidfire_Backpack` target in platformio, select Upload
 9. Once flashed, you can remove the wires from the following pads: TX, RX, IO0
-![DisconnectingWires](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/disconnecting-wires-post-flash.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/disconnecting-wires-post-flash.jpg)
 
 10. Solder 5V, GND, CLK, DATA and CS to the rapidfire pin header, as per the diagram below:
 TODO add rapidfire diagram
-![RapidfireSoldering](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/esp-on-rf.jpg)
-![Soldered](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/up-top-of-rf.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/esp-on-rf.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/up-top-of-rf.jpg)
 
 11. Install the Rapidfire back into the module, and tuck the VRX-Backpack into the space above the Rapidfire:
-![Installation](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/installed.jpg)
-![Done](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/front-cover.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/installed.jpg)
+![](https://github.com/ExpressLRS/Backpack/blob/update-readme/img/front-cover.jpg)
