@@ -320,14 +320,13 @@ void loop()
     {
       sendChangesToVrx = false;
       // rapidfire sometimes misses pkts, so send each one 3x
-      // Is spamming still required with reduced SPI freq?
       vrxModule.SendBandCmd(cachedBand);
-      // vrxModule.SendBandCmd(cachedBand);
-      // vrxModule.SendBandCmd(cachedBand);
+      vrxModule.SendBandCmd(cachedBand);
+      vrxModule.SendBandCmd(cachedBand);
 
       vrxModule.SendChannelCmd(cachedChannel);
-      // vrxModule.SendChannelCmd(cachedChannel);
-      // vrxModule.SendChannelCmd(cachedChannel);
+      vrxModule.SendChannelCmd(cachedChannel);
+      vrxModule.SendChannelCmd(cachedChannel);
     }
 
     // spam out a bunch of requests for the desired band/channel for the first 5s
