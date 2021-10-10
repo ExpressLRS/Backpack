@@ -22,6 +22,7 @@
 #define EEPROM_RST_COUNTER  0x07
 
 #define BINDING_TIMEOUT     30000
+#define NO_PACKET_TIMEOUT   120000
 #define BINDING_LED_PAUSE   1000
 
 /////////// GLOBALS ///////////
@@ -102,6 +103,7 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
             )
           )
       {
+        gotInitialPacket = true;
         ProcessMSPPacket(msp.getReceivedPacket());
       }
       else
@@ -139,7 +141,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
   {
   case MSP_SET_VTX_CONFIG:
     DBGLN("Processing MSP_SET_VTX_CONFIG...");
-    gotInitialPacket = true;
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
       // only send new changes to the goggles
@@ -313,8 +314,10 @@ void loop()
     uint32_t now = millis();
     
     // press the boot button to start webupdater
-    if (buttonPressed)
+    if (buttonPressed || (!gotInitialPacket && now > NO_PACKET_TIMEOUT))
+    {
       RebootIntoWifi();
+    }
 
     if (sendChangesToVrx)
     {
