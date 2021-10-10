@@ -22,7 +22,7 @@
 #define EEPROM_RST_COUNTER  0x07
 
 #define BINDING_TIMEOUT     30000
-#define NO_PACKET_TIMEOUT   120000
+#define NO_BINDING_TIMEOUT  120000
 #define BINDING_LED_PAUSE   1000
 
 /////////// GLOBALS ///////////
@@ -64,7 +64,7 @@ void ProcessMSPPacket(mspPacket_t *packet);
 void SetSoftMACAddress();
 void RequestVTXPacket();
 void sendMSPViaEspnow(mspPacket_t *packet);
-void resetBindingMode();
+void resetBootCounter();
 void checkIfInBindingMode();
 
 /////////////////////////////////////
@@ -131,7 +131,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
         DBG(",");
       }
       DBG(""); // Extra line for serial output readability
-      resetBindingMode();
+      resetBootCounter();
       ESP.restart();
     }
     return;
@@ -225,10 +225,9 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
 }
 
-void resetBindingMode()
+void resetBootCounter()
 {
   bootCounter = 0;
-  bindingMode = false;
   EEPROM.put(EEPROM_RST_COUNTER, bootCounter);
   EEPROM.commit();
 }
@@ -257,6 +256,10 @@ void checkIfInBindingMode()
 
 void setup()
 {
+  pinMode(WIFI_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
+  
   Serial.begin(460800);
 
   EEPROM.begin(512);
@@ -288,9 +291,6 @@ void setup()
 
     vrxModule.Init();
   }
-
-  pinMode(WIFI_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT);
   
   flashLedCounter = 2;
   DBGLN("Setup completed");
@@ -314,7 +314,7 @@ void loop()
     uint32_t now = millis();
     
     // press the boot button to start webupdater
-    if (buttonPressed || (!gotInitialPacket && now > NO_PACKET_TIMEOUT))
+    if (buttonPressed || (bindingMode && now > NO_BINDING_TIMEOUT))
     {
       RebootIntoWifi();
     }
@@ -341,11 +341,10 @@ void loop()
     }
 
     // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
-    // If currently in binding the backpack will exit binding to prevent users getting caught out accidentally.
-    if (now > BINDING_TIMEOUT && (bindingMode || bootCounter))
+    if (now > BINDING_TIMEOUT && bootCounter)
     {
-      DBGLN("resetBindingMode...");
-      resetBindingMode();
+      DBGLN("resetBootCounter...");
+      resetBootCounter();
       digitalWrite(LED_PIN, HIGH);
     }
     
