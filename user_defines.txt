@@ -9,7 +9,8 @@
 
 
 ### BINDING PHRASE: ###
--DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
+# https://github.com/ExpressLRS/Backpack/wiki#binding
+#-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
 #-DDEBUG_LOG
