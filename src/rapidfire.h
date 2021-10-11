@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#define BIT_BANG_FREQ       10000
+#define BIT_BANG_FREQ       1000
 
 #define PIN_MOSI            13
 #define PIN_CLK             14
