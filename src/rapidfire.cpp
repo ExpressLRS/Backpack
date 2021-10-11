@@ -21,8 +21,9 @@ Rapidfire::Init()
     digitalWrite(PIN_MOSI, LOW);
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, LOW);
-
-    SPI.begin();
+    delay(200);
+    // Set high ready to bit bang SPI data
+    digitalWrite(PIN_CS, HIGH);
 
     DBGLN("SPI config complete");
 }
@@ -129,23 +130,36 @@ Rapidfire::SendBandCmd(uint8_t band)
 void
 Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
 {
+    uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
+
     digitalWrite(PIN_CS, LOW);
     delay(100); // these delays might not be required. Came from example code
-
-    SPI.beginTransaction(SPISettings(10000, MSBFIRST, SPI_MODE0));
 
     // debug code for printing SPI pkt
     for (int i = 0; i < bufLen; ++i)
     {
-        DBG("%x", buf[i]);
+        uint8_t bufByte = buf[i];
+
+        DBG("%x", bufByte);
         DBG(",");
+
+        for (uint8_t k = 0; k < 8; k++)
+        {
+            // digitalWrite takes about 0.5us, so it is not taken into account with delays.
+            digitalWrite(PIN_CLK, LOW);
+            delayMicroseconds(periodMicroSec / 4);
+            digitalWrite(PIN_MOSI, bufByte & 0x80);
+            delayMicroseconds(periodMicroSec / 4);
+            digitalWrite(PIN_CLK, HIGH);
+            delayMicroseconds(periodMicroSec / 2);
+
+            bufByte <<= 1;
+        }
     }
     DBGLN("");
-    
-    SPI.transfer(buf, bufLen);  // send API cmd to rapidfire
 
-    SPI.endTransaction();
-
+    digitalWrite(PIN_MOSI, LOW);
+    digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
     delay(100);
 }
