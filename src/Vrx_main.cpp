@@ -323,13 +323,11 @@ void loop()
     {
       sendChangesToVrx = false;
       // rapidfire sometimes misses pkts, so send each one 3x
-      vrxModule.SendBandCmd(cachedBand);
-      vrxModule.SendBandCmd(cachedBand);
-      vrxModule.SendBandCmd(cachedBand);
-
-      vrxModule.SendChannelCmd(cachedChannel);
-      vrxModule.SendChannelCmd(cachedChannel);
-      vrxModule.SendChannelCmd(cachedChannel);
+      for (int i = 0; i < 3; i++)
+      {
+        vrxModule.SendBandCmd(cachedBand);
+        vrxModule.SendChannelCmd(cachedChannel);
+      }
     }
 
     // spam out a bunch of requests for the desired band/channel for the first 5s
