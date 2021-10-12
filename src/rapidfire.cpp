@@ -22,8 +22,10 @@ Rapidfire::Init()
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, LOW);
     delay(200);
-    // Set high ready to bit bang SPI data
-    digitalWrite(PIN_CS, HIGH);
+    
+    pinMode(PIN_MOSI, INPUT);
+    pinMode(PIN_CLK, INPUT);
+    pinMode(PIN_CS, INPUT);
 
     DBGLN("SPI config complete");
 }
@@ -132,8 +134,17 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
 {
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
-    digitalWrite(PIN_CS, LOW);
+    pinMode(PIN_MOSI, OUTPUT);
+    pinMode(PIN_CLK, OUTPUT);
+    pinMode(PIN_CS, OUTPUT);
+    digitalWrite(PIN_MOSI, LOW);
+    digitalWrite(PIN_CLK, LOW);
+    digitalWrite(PIN_CS, HIGH);
+
     delayMicroseconds(periodMicroSec);
+
+    digitalWrite(PIN_CS, LOW);
+    delay(100);
 
     // debug code for printing SPI pkt
     for (int i = 0; i < bufLen; ++i)
@@ -153,7 +164,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
             digitalWrite(PIN_CLK, HIGH);
             delayMicroseconds(periodMicroSec / 2);
 
-            bufByte <<= 1;
+            bufByte <<= 1; 
         }
     }
     DBGLN("");
@@ -161,7 +172,11 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     digitalWrite(PIN_MOSI, LOW);
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
-    delayMicroseconds(periodMicroSec);
+    delay(100);
+    
+    pinMode(PIN_MOSI, INPUT);
+    pinMode(PIN_CLK, INPUT);
+    pinMode(PIN_CS, INPUT);
 }
 
 // CRC function for IMRC rapidfire API
