@@ -133,7 +133,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
     digitalWrite(PIN_CS, LOW);
-    delay(100); // these delays might not be required. Came from example code
+    delayMicroseconds(periodMicroSec);
 
     // debug code for printing SPI pkt
     for (int i = 0; i < bufLen; ++i)
@@ -161,7 +161,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     digitalWrite(PIN_MOSI, LOW);
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
-    delay(100);
+    delayMicroseconds(periodMicroSec);
 }
 
 // CRC function for IMRC rapidfire API
