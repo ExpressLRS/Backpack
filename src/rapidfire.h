@@ -4,10 +4,6 @@
 
 #define BIT_BANG_FREQ       1000
 
-#define PIN_MOSI            13
-#define PIN_CLK             14
-#define PIN_CS              15
-
 #define RF_API_DIR_GRTHAN   0x3E    // '>'
 #define RF_API_DIR_EQUAL    0x3D    // '='
 #define RF_API_BEEP_CMD     0x53    // 'S'
