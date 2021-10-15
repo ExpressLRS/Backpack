@@ -14,9 +14,6 @@
 
 /////////// DEFINES ///////////
 
-#define WIFI_PIN            0
-#define LED_PIN             16
-
 #define EEPROM_ADDR_WIFI    0x00
 #define EEPROM_MAC          0x01 // 0x01 to 0x06
 #define EEPROM_RST_COUNTER  0x07
@@ -273,9 +270,9 @@ RF_PRE_INIT()
 
 void setup()
 {
-  pinMode(WIFI_PIN, INPUT);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
+  pinMode(PIN_BUTTON, INPUT);
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, HIGH);
   
   Serial.begin(460800);
 
@@ -315,7 +312,7 @@ void setup()
 
 void loop()
 {
-  uint8_t buttonPressed = !digitalRead(WIFI_PIN);
+  uint8_t buttonPressed = !digitalRead(PIN_BUTTON);
 
   if (startWebUpdater)
   {
@@ -360,7 +357,7 @@ void loop()
     {
       DBGLN("resetBootCounter...");
       resetBootCounter();
-      digitalWrite(LED_PIN, HIGH);
+      digitalWrite(PIN_LED, HIGH);
     }
     
     if (bindingMode && now > nextBindingLedFlash)
@@ -375,11 +372,11 @@ void loop()
   {
     flashLedCounter--;
     
-    digitalWrite(LED_PIN, LOW);
+    digitalWrite(PIN_LED, LOW);
     startWebUpdater == true ? delay(50) : delay(100);
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(PIN_LED, HIGH);
     startWebUpdater == true ? delay(50) : delay(100);
     if (bindingMode)
-      digitalWrite(LED_PIN, LOW);
+      digitalWrite(PIN_LED, LOW);
   }
 }
