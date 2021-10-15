@@ -270,7 +270,7 @@ RF_PRE_INIT()
 
 void setup()
 {
-  pinMode(PIN_WIFI, INPUT);
+  pinMode(PIN_BUTTON, INPUT);
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
   
@@ -312,7 +312,7 @@ void setup()
 
 void loop()
 {
-  uint8_t buttonPressed = !digitalRead(PIN_WIFI);
+  uint8_t buttonPressed = !digitalRead(PIN_BUTTON);
 
   if (startWebUpdater)
   {

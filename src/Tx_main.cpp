@@ -236,7 +236,7 @@ void setup()
     esp_now_register_recv_cb(OnDataRecv);
   }
 
-  pinMode(PIN_WIFI, INPUT);
+  pinMode(PIN_BUTTON, INPUT);
   pinMode(PIN_LED, OUTPUT);
   
   flashLedCounter = 2;
@@ -245,7 +245,7 @@ void setup()
 
 void loop()
 {
-  uint8_t buttonPressed = !digitalRead(PIN_WIFI);
+  uint8_t buttonPressed = !digitalRead(PIN_BUTTON);
   
   if (startWebUpdater)
   {
