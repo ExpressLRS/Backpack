@@ -4,10 +4,6 @@
 
 #define BIT_BANG_FREQ       10000
 
-#define PIN_MOSI            3 //RX
-#define PIN_CLK             0 //Boot
-#define PIN_CS              1 //TX
-
 #define SYNTHESIZER_REG_B   0x01
 #define WRITE_CTRL_BIT      0x01
 #define READ_CTRL_BIT       0x01

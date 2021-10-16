@@ -241,6 +241,17 @@ void checkIfInBindingMode()
   DBGLN("%x", bindingMode);
 }
 
+uint8_t isButtonPressed()
+{
+  uint8_t buttonPressed = false;
+
+  #ifdef PIN_BUTTON
+  buttonPressed = !digitalRead(PIN_BUTTON);
+  #endif
+
+  return buttonPressed;
+}
+
 #if defined(PLATFORM_ESP8266)
 // Called from core's user_rf_pre_init() function (which is called by SDK) before setup()
 RF_PRE_INIT()
@@ -260,7 +271,9 @@ RF_PRE_INIT()
 
 void setup()
 {
+  #ifdef PIN_BUTTON
   pinMode(PIN_BUTTON, INPUT);
+  #endif
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
   
@@ -302,15 +315,13 @@ void setup()
 
 void loop()
 {
-  uint8_t buttonPressed = !digitalRead(PIN_BUTTON);
-
   if (startWebUpdater)
   {
     HandleWebUpdate();
     flashLedCounter = 1;
     
     // button press to exit wifi
-    if (buttonPressed)
+    if (isButtonPressed())
       ESP.restart();
   }
   else
@@ -318,8 +329,7 @@ void loop()
     uint32_t now = millis();
     
     // press the boot button to start webupdater
-    // if (buttonPressed || (bindingMode && now > NO_BINDING_TIMEOUT))
-    if (bindingMode && now > NO_BINDING_TIMEOUT) // Needs a define or somthing to remove the button if the pin is defines for SPI.
+    if (isButtonPressed() || (bindingMode && now > NO_BINDING_TIMEOUT))
     {
       RebootIntoWifi();
     }
