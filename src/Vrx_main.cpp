@@ -10,6 +10,8 @@
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
+#elif defined(RX5808_BACKPACK)
+  #include "rx5808.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -36,8 +38,7 @@ uint8_t bootCounter = 0;
 uint8_t flashLedCounter = 0;
 uint32_t nextBindingLedFlash = 0;
 
-uint8_t cachedBand = 0;
-uint8_t cachedChannel = 0;
+uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
 uint32_t lastSentRequest = 0;
@@ -49,8 +50,8 @@ MSP msp;
 
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
-#elif GENERIC_BACKPACK
-  // other VRx backpack (i.e. reserved for FENIX or fusion etc.)
+#elif defined(RX5808_BACKPACK)
+  RX5808 vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -140,20 +141,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Processing MSP_SET_VTX_CONFIG...");
     if (packet->payload[0] < 48) // Standard 48 channel VTx table size e.g. A, B, E, F, R, L
     {
-      // only send new changes to the goggles
       // cache changes here, to be handled outside this callback, in the main loop
-      uint8_t newBand = packet->payload[0] / 8 + 1;
-      uint8_t newChannel = packet->payload[0] % 8;
-      if (cachedBand != newBand)
-      {
-        cachedBand = newBand;
-        sendChangesToVrx = true;
-      }
-      if (cachedChannel != newChannel)
-      {
-        cachedChannel = newChannel;
-        sendChangesToVrx = true;
-      }
+      cachedIndex = packet->payload[0];;
+      sendChangesToVrx = true;
     }
     else
     {
@@ -328,7 +318,8 @@ void loop()
     uint32_t now = millis();
     
     // press the boot button to start webupdater
-    if (buttonPressed || (bindingMode && now > NO_BINDING_TIMEOUT))
+    // if (buttonPressed || (bindingMode && now > NO_BINDING_TIMEOUT))
+    if (bindingMode && now > NO_BINDING_TIMEOUT) // Needs a define or somthing to remove the button if the pin is defines for SPI.
     {
       RebootIntoWifi();
     }
@@ -336,12 +327,7 @@ void loop()
     if (sendChangesToVrx)
     {
       sendChangesToVrx = false;
-      // rapidfire sometimes misses pkts, so send each one 3x
-      for (int i = 0; i < 3; i++)
-      {
-        vrxModule.SendBandCmd(cachedBand);
-        vrxModule.SendChannelCmd(cachedChannel);
-      }
+      vrxModule.SendIndexCmd(cachedIndex);
     }
 
     // spam out a bunch of requests for the desired band/channel for the first 5s

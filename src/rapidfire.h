@@ -15,6 +15,7 @@ class Rapidfire
 public:
     void Init();
     void SendBuzzerCmd();
+    void SendIndexCmd(uint8_t index);
     void SendChannelCmd(uint8_t channel);
     void SendBandCmd(uint8_t band);
 

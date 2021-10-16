@@ -48,6 +48,20 @@ Rapidfire::SendBuzzerCmd()
 }
 
 void
+Rapidfire::SendIndexCmd(uint8_t index)
+{
+    uint8_t band = index / 8 + 1;
+    uint8_t channel = index % 8;
+    
+    // rapidfire sometimes misses pkts, so send each one 3x
+    for (int i = 0; i < 3; i++)
+    {
+        SendBandCmd(band);
+        SendChannelCmd(channel);
+    }
+}
+
+void
 Rapidfire::SendChannelCmd(uint8_t channel)
 {
     // ELRS channel is zero based, need to add 1
