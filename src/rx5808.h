@@ -36,5 +36,6 @@ public:
     void SendIndexCmd(uint8_t index);
 
 private:
-    void SendSPI(uint32_t buf);
+    void rtc6705WriteRegister(uint32_t buf);
+    uint32_t rtc6705readRegister(uint8_t readRegister);
 };
