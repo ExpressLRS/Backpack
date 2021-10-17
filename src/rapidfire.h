@@ -13,6 +13,10 @@
 class Rapidfire
 {
 public:
+    uint8_t cachedIndex = 0xFF;
+    uint8_t cachedBand;
+    uint8_t cachedChannel;
+    
     void Init();
     void SendBuzzerCmd();
     void SendIndexCmd(uint8_t index);

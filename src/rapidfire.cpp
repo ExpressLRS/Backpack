@@ -50,14 +50,19 @@ Rapidfire::SendBuzzerCmd()
 void
 Rapidfire::SendIndexCmd(uint8_t index)
 {
-    uint8_t band = index / 8 + 1;
-    uint8_t channel = index % 8;
+    if (cachedIndex == index)
+        return;
+
+    cachedIndex = index;
+
+    cachedBand = index / 8 + 1;
+    cachedChannel = index % 8;
     
     // rapidfire sometimes misses pkts, so send each one 3x
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < SPAM_COUNT; i++)
     {
-        SendBandCmd(band);
-        SendChannelCmd(channel);
+        SendBandCmd(cachedBand);
+        SendChannelCmd(cachedChannel);
     }
 }
 
