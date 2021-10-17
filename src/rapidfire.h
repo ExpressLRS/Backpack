@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #define BIT_BANG_FREQ       1000
+#define SPAM_COUNT          3
 
 #define RF_API_DIR_GRTHAN   0x3E    // '>'
 #define RF_API_DIR_EQUAL    0x3D    // '='
@@ -16,7 +17,7 @@ public:
     uint8_t cachedIndex = 0xFF;
     uint8_t cachedBand;
     uint8_t cachedChannel;
-    
+
     void Init();
     void SendBuzzerCmd();
     void SendIndexCmd(uint8_t index);
