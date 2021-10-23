@@ -228,10 +228,10 @@ void checkIfInBindingMode()
   {
     resetBootCounter();
 
-    #ifndef MY_UID
-    bindingMode = true;
-    #else
+    #ifdef MY_UID
     RebootIntoWifi();
+    #else
+    bindingMode = true;
     #endif
   }
   else
@@ -298,7 +298,6 @@ void setup()
   {
 
     checkIfInBindingMode();
-
 
     SetSoftMACAddress();
 
