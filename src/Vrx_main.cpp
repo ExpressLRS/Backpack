@@ -226,6 +226,8 @@ void checkIfInBindingMode()
 
   if (bootCounter > 2)
   {
+    resetBootCounter();
+
     #ifndef MY_UID
     bindingMode = true;
     #else
