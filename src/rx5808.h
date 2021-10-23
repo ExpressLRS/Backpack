@@ -17,8 +17,11 @@
 #define POWER_DOWN_CONTROL_REGISTER                 0x0A
 #define STATE_REGISTER                              0x0F
 
-#define READ_CTRL_BIT                               0x00
-#define WRITE_CTRL_BIT                              0x01
+#define RX5808_READ_CTRL_BIT                        0x00
+#define RX5808_WRITE_CTRL_BIT                       0x01
+#define RX5808_ADDRESS_R_W_LENGTH                   5
+#define RX5808_DATA_LENGTH                          20
+#define RX5808_PACKET_LENGTH                        25
 
 const uint16_t frequencyTable[48] = {
     5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A

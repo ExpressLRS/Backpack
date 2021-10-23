@@ -26,9 +26,9 @@ RX5808::SendIndexCmd(uint8_t index)
     
     uint32_t data = ((((f - 479) / 2) / 32) << 7) | (((f - 479) / 2) % 32);
 
-    uint32_t newRegisterData = SYNTHESIZER_REG_B  | (WRITE_CTRL_BIT << 4) | (data << 5);
+    uint32_t newRegisterData = SYNTHESIZER_REG_B  | (RX5808_WRITE_CTRL_BIT << 4) | (data << 5);
 
-    uint32_t currentRegisterData = SYNTHESIZER_REG_B | (WRITE_CTRL_BIT << 4) | rtc6705readRegister(SYNTHESIZER_REG_B);
+    uint32_t currentRegisterData = SYNTHESIZER_REG_B | (RX5808_WRITE_CTRL_BIT << 4) | rtc6705readRegister(SYNTHESIZER_REG_B);
 
     if (newRegisterData != currentRegisterData)
     {
@@ -44,7 +44,7 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
     digitalWrite(PIN_CS, LOW);
     delayMicroseconds(periodMicroSec);
 
-    for (uint8_t i = 0; i < 25; ++i)
+    for (uint8_t i = 0; i < RX5808_PACKET_LENGTH; ++i)
     {
         digitalWrite(PIN_CLK, LOW);
         delayMicroseconds(periodMicroSec / 4);
@@ -66,7 +66,7 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
 uint32_t
 RX5808::rtc6705readRegister(uint8_t readRegister)
 {
-    uint32_t buf = readRegister | (READ_CTRL_BIT << 4);
+    uint32_t buf = readRegister | (RX5808_READ_CTRL_BIT << 4);
     uint32_t registerData = 0;
 
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
@@ -75,7 +75,7 @@ RX5808::rtc6705readRegister(uint8_t readRegister)
     delayMicroseconds(periodMicroSec);
 
     // Write register address and read bit
-    for (uint8_t i = 0; i < 5; ++i)
+    for (uint8_t i = 0; i < RX5808_ADDRESS_R_W_LENGTH; ++i)
     {
         digitalWrite(PIN_CLK, LOW);
         delayMicroseconds(periodMicroSec / 4);
@@ -91,7 +91,7 @@ RX5808::rtc6705readRegister(uint8_t readRegister)
     pinMode(PIN_MOSI, INPUT);
 
     // Read data 20 bits
-    for (uint8_t i = 0; i < 20; i++)
+    for (uint8_t i = 0; i < RX5808_DATA_LENGTH; i++)
     {
         digitalWrite(PIN_CLK, LOW);
         delayMicroseconds(periodMicroSec / 4);
