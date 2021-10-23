@@ -48,12 +48,38 @@ Rapidfire::SendBuzzerCmd()
 }
 
 void
+Rapidfire::SendIndexCmd(uint8_t index)
+{
+    if (getCachedIndex() == index)
+    {
+        return;
+    }
+
+    setCachedIndex(index);
+    
+    uint8_t newBand = index / 8 + 1;
+    uint8_t newChannel = index % 8;
+
+    SendBandCmd(newBand);
+    SendChannelCmd(newChannel);
+}
+
+void
 Rapidfire::SendChannelCmd(uint8_t channel)
 {
+    if (getCachedChannel() == channel)
+    {
+        DBG("Channel already set ");
+        DBGLN("%x", channel);
+        return;
+    }
+
+    setCachedChannel(channel);
+
     // ELRS channel is zero based, need to add 1
     channel++;
 
-    DBG("Setting channel ");
+    DBG("Setting new channel ");
     DBGLN("%x", channel);
 
     uint8_t cmd[5];
@@ -64,14 +90,26 @@ Rapidfire::SendChannelCmd(uint8_t channel)
     cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
     cmd[4] = channel;               // assign channel to correct byte 5
 
-    
-    SendSPI(cmd, 5);
+    // rapidfire sometimes misses pkts, so send each one 3x
+    for (int i = 0; i < SPAM_COUNT; i++)
+    {
+        SendSPI(cmd, 5);
+    }
 }
 
 void
 Rapidfire::SendBandCmd(uint8_t band)
 {
-    DBG("Setting band ");
+    if (getCachedBand() == band)
+    {
+        DBG("Band already set ");
+        DBGLN("%x", band);
+        return;
+    }
+
+    setCachedBand(band);
+
+    DBG("Setting new band ");
     DBGLN("%x", band);
 
     // ELRS bands
@@ -126,7 +164,11 @@ Rapidfire::SendBandCmd(uint8_t band)
     cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
     cmd[4] = imrcBand;              // assign band to correct byte 5
 
-    SendSPI(cmd, 5);
+    // rapidfire sometimes misses pkts, so send each one 3x
+    for (int i = 0; i < SPAM_COUNT; i++)
+    {
+        SendSPI(cmd, 5);
+    }
 }
 
 void
