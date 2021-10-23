@@ -51,7 +51,9 @@ void
 Rapidfire::SendIndexCmd(uint8_t index)
 {
     if (cachedIndex == index)
+    {
         return;
+    }
 
     cachedIndex = index;
 
