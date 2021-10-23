@@ -49,14 +49,7 @@ Rapidfire::SendBuzzerCmd()
 
 void
 Rapidfire::SendIndexCmd(uint8_t index)
-{
-    if (getCachedIndex() == index)
-    {
-        return;
-    }
-
-    setCachedIndex(index);
-    
+{  
     uint8_t newBand = index / 8 + 1;
     uint8_t newChannel = index % 8;
 
@@ -67,15 +60,6 @@ Rapidfire::SendIndexCmd(uint8_t index)
 void
 Rapidfire::SendChannelCmd(uint8_t channel)
 {
-    if (getCachedChannel() == channel)
-    {
-        DBG("Channel already set ");
-        DBGLN("%x", channel);
-        return;
-    }
-
-    setCachedChannel(channel);
-
     // ELRS channel is zero based, need to add 1
     channel++;
 
@@ -100,15 +84,6 @@ Rapidfire::SendChannelCmd(uint8_t channel)
 void
 Rapidfire::SendBandCmd(uint8_t band)
 {
-    if (getCachedBand() == band)
-    {
-        DBG("Band already set ");
-        DBGLN("%x", band);
-        return;
-    }
-
-    setCachedBand(band);
-
     DBG("Setting new band ");
     DBGLN("%x", band);
 
