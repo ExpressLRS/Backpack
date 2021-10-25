@@ -257,9 +257,7 @@ void loop()
       ESP.restart();
   }
   else
-  {
-    uint32_t now = millis();
-    
+  {   
     // press the boot button to start webupdater
     if (buttonPressed)
       RebootIntoWifi();
