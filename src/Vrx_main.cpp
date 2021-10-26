@@ -12,6 +12,8 @@
   #include "rapidfire.h"
 #elif defined(RX5808_BACKPACK)
   #include "rx5808.h"
+#elif defined(STEADYVIEW_BACKPACK)
+  #include "steadyview.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -52,6 +54,8 @@ MSP msp;
   Rapidfire vrxModule;
 #elif defined(RX5808_BACKPACK)
   RX5808 vrxModule;
+#elif defined(STEADYVIEW_BACKPACK)
+  SteadyView vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
