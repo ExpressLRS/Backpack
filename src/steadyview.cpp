@@ -32,7 +32,7 @@ SteadyView::SendIndexCmd(uint8_t index)
 
     if (newRegisterData != currentRegisterData)
     {
-        rtc6705WriteRegister(0x110);
+        rtc6705WriteRegister(SYNTHESIZER_REG_A  | (RX5808_WRITE_CTRL_BIT << 4) | (0x8 << 5));
         rtc6705WriteRegister(newRegisterData);
     }
     currentIndex = index;
@@ -44,16 +44,17 @@ SteadyView::SetMode(videoMode_t mode)
     if (mode == ModeMix)
     {
         digitalWrite(PIN_CLK, HIGH);
-        delay(500);
+        delay(100);
         digitalWrite(PIN_CLK, LOW);
+        delay(500);
     }
     uint16_t f = frequencyTable[currentIndex];
     uint32_t data = ((((f - 479) / 2) / 32) << 7) | (((f - 479) / 2) % 32);
     uint32_t registerData = SYNTHESIZER_REG_B  | (RX5808_WRITE_CTRL_BIT << 4) | (data << 5);
 
-    rtc6705WriteRegister(0x110);
+    rtc6705WriteRegister(SYNTHESIZER_REG_A  | (RX5808_WRITE_CTRL_BIT << 4) | (0x8 << 5));
     delayMicroseconds(500);
-    rtc6705WriteRegister(0x110);
+    rtc6705WriteRegister(SYNTHESIZER_REG_A  | (RX5808_WRITE_CTRL_BIT << 4) | (0x8 << 5));
     rtc6705WriteRegister(registerData);
 }
 
