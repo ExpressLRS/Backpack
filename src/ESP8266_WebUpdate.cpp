@@ -197,19 +197,7 @@ int8_t flashSTM32(uint32_t flash_addr)
 
 void handleFileUploadEnd()
 {
-  uint32_t flash_base = BEGIN_ADDRESS;
-  //String message = "\nRequest params:\n";
-  for (uint8_t i = 0; i < server.args(); i++) {
-    String name = server.argName(i);
-    String value = server.arg(i);
-      //message += " " + name + ": " + value + "\n";
-      if (name == "flash_address") {
-        flash_base = strtol(&value.c_str()[2], NULL, 16);
-        break;
-      }
-  }
-
-  int8_t success = flashSTM32(flash_base);
+  int8_t success = flashSTM32(BEGIN_ADDRESS);
 
   if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
     SPIFFS.remove(uploadedfilename);
