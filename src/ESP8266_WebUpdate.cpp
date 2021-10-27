@@ -6,6 +6,9 @@
 #ifdef RX5808_BACKPACK
   #define STASSID "ExpressLRS RX5808 Backpack"
 #endif
+#ifdef STEADYVIEW_BACKPACK
+  #define STASSID "ExpressLRS SteadyView Backpack"
+#endif
 #ifdef GENERIC_BACKPACK
   #define STASSID "ExpressLRS VRx Backpack"
 #endif
