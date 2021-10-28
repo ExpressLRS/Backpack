@@ -239,15 +239,19 @@ function abortHandler(type_suffix) {
     }
 }
 
-_('upload_form_tx').addEventListener('submit', (e) => {
-    e.preventDefault();
-    uploadFile("tx");
-});
+if (_('upload_form_tx')) {
+    _('upload_form_tx').addEventListener('submit', (e) => {
+        e.preventDefault();
+        uploadFile("tx");
+    });
+}
 
-_('upload_form_bp').addEventListener('submit', (e) => {
-    e.preventDefault();
-    uploadFile("bp");
-});
+if(_('upload_form_bp')) {
+    _('upload_form_bp').addEventListener('submit', (e) => {
+        e.preventDefault();
+        uploadFile("bp");
+    });
+}
 
 //=========================================================
 
