@@ -39,9 +39,11 @@ extern unsigned long rebootTime;
 #if defined(TARGET_VRX_BACKPACK)
 static const char *myHostname = "elrs_vrx";
 static const char *ssid = "ExpressLRS VRx Backpack";
-#else
+#elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
 static const char *ssid = "ExpressLRS TX Backpack";
+#else
+#error Unknown target
 #endif
 static const char *password = "expresslrs";
 
@@ -426,7 +428,11 @@ static void startMDNS()
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt(service, "type", "rx");
+    #if defined(TARGET_VRX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "vrx");
+    #elif defined(TARGET_TX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "txbp");
+    #endif
   #else
     MDNS.setInstanceName(instance);
     MDNS.addService("http", "tcp", 80);
