@@ -1,5 +1,11 @@
 #include "ESP8266_WebUpdate.h"
 
+#ifdef NAMIMNO_TX_BACKPACK
+#include <FS.h>
+#include "stm32Updater.h"
+#include "stk500.h"
+#endif
+
 #ifdef RAPIDFIRE_BACKPACK
   #define STASSID "ExpressLRS Rapidfire Backpack"
 #endif
@@ -28,6 +34,16 @@ DNSServer dnsServer;
 ESP8266WebServer server(80);
 
 ESP8266HTTPUpdateServer httpUpdater;
+
+#ifdef NAMIMNO_TX_BACKPACK
+int8_t flashSTM32(uint32_t flash_addr);
+void handleFileUploadEnd();
+void handleFileUpload();
+void sendSucess();
+
+File fsUploadFile;                                         // a File object to temporarily store the received file
+String uploadedfilename;                                   // filename of uploaded file
+#endif
 
 /** Is this an IP? */
 boolean isIp(String str)
@@ -73,11 +89,6 @@ void WebUpdateSendcss()
   server.send_P(200, "text/css", CSS);
 }
 
-void WebUpdateSendReturn()
-{
-  server.send_P(200, "text/html", GO_BACK);
-}
-
 void WebUpdateHandleRoot()
 {
   if (captivePortal())
@@ -119,6 +130,10 @@ void BeginWebUpdate(void)
 {
   Serial.println("Begin Webupdater");
 
+  #ifdef NAMIMNO_TX_BACKPACK
+  SPIFFS.begin();
+  #endif
+
   server.on("/", WebUpdateHandleRoot);
   server.on("/css.css", WebUpdateSendcss);
 
@@ -130,7 +145,13 @@ void BeginWebUpdate(void)
   server.on("/check_network_status.txt", WebUpdateHandleRoot);
   server.on("/ncsi.txt", WebUpdateHandleRoot);
   server.on("/fwlink", WebUpdateHandleRoot);
+  #ifdef NAMIMNO_TX_BACKPACK
+  server.on("/upload", HTTP_POST, // STM32 OTA upgrade
+    handleFileUploadEnd, handleFileUpload);
+  server.on("/success", sendSucess);
+  #endif
   server.onNotFound(WebUpdateHandleNotFound);
+
 
   WiFi.persistent(false);
   WiFi.disconnect();   //added to start with the wifi off, avoid crashing
@@ -158,3 +179,95 @@ void HandleWebUpdate(void)
   yield();
   delay(1);
 }
+
+// Namimno TX update functions
+
+#ifdef NAMIMNO_TX_BACKPACK
+int8_t flashSTM32(uint32_t flash_addr)
+{
+  int8_t result = -1;
+
+  if (uploadedfilename.endsWith("firmware.elrs")) {
+    result = stk500_write_file(uploadedfilename.c_str());
+  } else if (uploadedfilename.endsWith("firmware.bin")) {
+    result = esp8266_spifs_write_file(uploadedfilename.c_str(), flash_addr);
+  } else {
+
+  }
+  Serial.begin(460800);
+  return result;
+}
+
+void handleFileUploadEnd()
+{
+  int8_t success = flashSTM32(BEGIN_ADDRESS);
+
+  if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+    SPIFFS.remove(uploadedfilename);
+
+  server.sendHeader("Location", "/success");          // Redirect the client to the success page
+  server.send(303);
+  server.send((success < 0) ? 400 : 200);
+}
+
+void handleFileUpload()
+{ // upload a new file to the SPIFFS
+  HTTPUpload &upload = server.upload();
+  if (upload.status == UPLOAD_FILE_START)
+  {
+    /* Remove old file */
+    if (uploadedfilename.length() && SPIFFS.exists(uploadedfilename))
+      SPIFFS.remove(uploadedfilename);
+
+    FSInfo fs_info;
+    if (SPIFFS.info(fs_info))
+    {
+      String output = "Filesystem: used: ";
+      output += fs_info.usedBytes;
+      output += " / free: ";
+      output += fs_info.totalBytes;
+
+      if (fs_info.usedBytes > 0) {
+        SPIFFS.format();
+      }
+    }
+    else
+    {
+      return;
+    }
+    uploadedfilename = upload.filename;
+
+    if (!uploadedfilename.startsWith("/"))
+    {
+      uploadedfilename = "/" + uploadedfilename;
+    }
+    fsUploadFile = SPIFFS.open(uploadedfilename, "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
+  }
+  else if (upload.status == UPLOAD_FILE_WRITE)
+  {
+    if (fsUploadFile)
+    {
+      fsUploadFile.write(upload.buf, upload.currentSize);  // Write the received bytes to the file
+    }
+  }
+  else if (upload.status == UPLOAD_FILE_END)
+  {
+    if (fsUploadFile)                                      // If the file was successfully created
+    {
+      server.send(100);
+      fsUploadFile.close(); // Close the file again
+    }
+    else
+    {
+      server.send(500, "text/plain", "500: couldn't create file");
+    }
+  }
+}
+
+void sendSucess()
+{
+  server.send_P(200, "text/html", SUCCESS);
+  delay(100);
+  ESP.restart();
+}
+#endif // NAMIMNO_TX_BACKPACK
