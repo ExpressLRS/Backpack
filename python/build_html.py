@@ -65,10 +65,10 @@ def build_common(out, env):
     build_html("main.css", "CSS", out, env)
     build_html("flag.svg", "FLAG", out, env)
 
-def build_tx_html(env):
+def build_txbp_html(env):
     out = open("include/WebContent.h", 'w')
     build_version(out, env)
-    build_html("tx_index.html", "INDEX_HTML", out, env)
+    build_html("txbp_index.html", "INDEX_HTML", out, env)
     build_common(out, env)
     out.close
 
@@ -84,4 +84,4 @@ platform = env.get('PIOPLATFORM', '')
 if fnmatch.filter(env['BUILD_FLAGS'], '*TARGET_VRX_BACKPACK*'):
     build_vrx_html(env)
 elif fnmatch.filter(env['BUILD_FLAGS'], '*TARGET_TX_BACKPACK*'):
-    build_tx_html(env)
+    build_txbp_html(env)

@@ -29,7 +29,7 @@
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
 #else
-extern RxConfig config;
+extern TxBackpackConfig config;
 #endif
 extern unsigned long rebootTime;
 

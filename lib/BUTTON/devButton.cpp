@@ -11,13 +11,6 @@ static Button<PIN_BUTTON, false> button;
 extern unsigned long rebootTime;
 void RebootIntoWifi();
 
-#if defined(TARGET_TRX_BACKPACK)
-static void shortPress()
-{
-}
-#endif
-
-#if defined(TARGET_VRX_BACKPACK)
 static void shortPress()
 {
     if (connectionState == wifiUpdate)
@@ -28,8 +21,7 @@ static void shortPress()
     {
         RebootIntoWifi();
     }
-};
-#endif
+}
 
 static void initialize()
 {
