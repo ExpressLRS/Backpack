@@ -327,7 +327,7 @@ void loop()
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
-      rebootTime = millis();
+      ESP.restart();
     }
   #endif
 
