@@ -35,21 +35,43 @@
 
 			<div align="left">
 				<fieldset>
-					Here you can update backpack firmware,
+					Here you can update your TX module firmware,
 					be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need
 					to reflash via USB/Serial.
 					<br><br>
 					<legend>
 						<h2>Firmware Update:</h2>
 					</legend>
-					<form id='upload_form' method='POST' enctype='multipart/form-data'>
+					<form id='upload_form_tx' method='POST' enctype='multipart/form-data'>
 						<div class="group">
-							<input id='firmware_file' type='file' name='update'>
+							<input id='firmware_file_tx' type='file' name='update'>
 							<input type='submit' value='Update'>
 						</div>
 						<br/>
-						<h3 id="status"></h3>
-						<progress id="progressBar" value="0" max="100" style="width:100%;"></progress>
+						<h3 id="status_tx"></h3>
+						<progress id="progressBar_tx" value="0" max="100" style="width:100%;"></progress>
+					</form>
+					<br><br>
+				</fieldset>
+			</div>
+
+			<div align="left">
+				<fieldset>
+					Here you can update your backpack firmware,
+					be careful to upload the correct file otherwise a bad flash may occur. If this happens you will need
+					to reflash via USB/Serial.
+					<br><br>
+					<legend>
+						<h2>Firmware Update:</h2>
+					</legend>
+					<form id='upload_form_bp' method='POST' enctype='multipart/form-data'>
+						<div class="group">
+							<input id='firmware_file_bp' type='file' name='update'>
+							<input type='submit' value='Update'>
+						</div>
+						<br/>
+						<h3 id="status_bp"></h3>
+						<progress id="progressBar_bp" value="0" max="100" style="width:100%;"></progress>
 					</form>
 					<br><br>
 				</fieldset>

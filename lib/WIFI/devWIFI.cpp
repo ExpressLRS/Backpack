@@ -23,6 +23,10 @@
 #include "logging.h"
 #include "options.h"
 
+#ifdef NAMIMNO_TX_BACKPACK
+#include "stmUpdateClass.h"
+#endif
+
 #include "WebContent.h"
 
 #include "config.h"
@@ -310,25 +314,40 @@ static void WebUploadResponseHander(AsyncWebServerRequest *request) {
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   static uint32_t totalSize;
+  static UpdaterClass &updater = Update;
+
   if (index == 0) {
     DBGLN("Update: %s", filename.c_str());
-    #if defined(PLATFORM_ESP8266)
-    Update.runAsync(true);
-    uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-    DBGLN("Free space = %u", maxSketchSpace);
-    if (!Update.begin(maxSketchSpace, U_FLASH)){//start with max available size
-    #else
-    if (!Update.begin()) { //start with max available size
+    #ifdef NAMIMNO_TX_BACKPACK
+      if (request->arg("type").equals("tx"))
+      {
+        updater = STMUpdate;
+        STMUpdate.setFilename(filename);
+      }
+      else
     #endif
-      Update.printError(Serial);
+    {
+      updater = Update;
     }
+    #if defined(PLATFORM_ESP8266)
+      updater.runAsync(true);
+      uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+      DBGLN("Free space = %u", maxSketchSpace);
+      if (!updater.begin(maxSketchSpace, U_FLASH)){//start with max available size
+        updater.printError(Serial);
+      }
+    #else
+      if (!updater.begin()) { //start with max available size
+        updater.printError(Serial);
+      }
+    #endif
     target_seen = false;
     target_pos = 0;
     totalSize = 0;
   }
   if (len) {
     DBGVLN("writing %d", len);
-    if (Update.write(data, len) == len) {
+    if (updater.write(data, len) == len) {
       if (force_update || (totalSize == 0 && *data == 0x1F))
         target_seen = true;
       if (!target_seen) {
@@ -347,17 +366,17 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       totalSize += len;
     }
   }
-  if (final && !Update.getError()) {
+  if (final && !updater.getError()) {
     DBGVLN("finish");
     if (target_seen) {
-      if (Update.end(true)) { //true to set the size to the current progress
+      if (updater.end(true)) { //true to set the size to the current progress
         DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
       } else {
-        Update.printError(Serial);
+        updater.printError(Serial);
       }
     } else {
       #if defined(PLATFORM_ESP32)
-        Update.abort();
+        updater.abort();
       #endif
       DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }

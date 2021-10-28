@@ -98,7 +98,7 @@ function autocomplete(inp, arr) {
                 /*insert a input field that will hold the current array item's value:*/
                 b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
                 /*execute a function when someone clicks on the item value (DIV element):*/
-                b.addEventListener("click", function (e) {
+                b.addEventListener("click", (e) => {
                     /*insert the value for the autocomplete text field:*/
                     inp.value = this.getElementsByTagName("input")[0].value;
                     /*close the list of autocompleted values,
@@ -113,7 +113,7 @@ function autocomplete(inp, arr) {
     inp.addEventListener("click", handler);
 
     /*execute a function presses a key on the keyboard:*/
-    inp.addEventListener("keydown", function (e) {
+    inp.addEventListener("keydown", (e) => {
         var x = _(this.id + "autocomplete-list");
         if (x) x = x.getElementsByTagName("div");
         if (e.keyCode == 40) {
@@ -164,76 +164,92 @@ function autocomplete(inp, arr) {
         }
     }
     /*execute a function when someone clicks in the document:*/
-    document.addEventListener("click", function (e) {
+    document.addEventListener("click", (e) => {
         closeAllLists(e.target);
     });
 }
 
 //=========================================================
 
-function uploadFile() {
-    var file = _("firmware_file").files[0];
+function uploadFile(type_suffix) {
+    var file = _("firmware_file_" + type_suffix).files[0];
     var formdata = new FormData();
+    formdata.append("type", type_suffix);
     formdata.append("upload", file, file.name);
     var ajax = new XMLHttpRequest();
-    ajax.upload.addEventListener("progress", progressHandler, false);
-    ajax.addEventListener("load", completeHandler, false);
-    ajax.addEventListener("error", errorHandler, false);
-    ajax.addEventListener("abort", abortHandler, false);
+    ajax.upload.addEventListener("progress", progressHandler(type_suffix), false);
+    ajax.addEventListener("load", completeHandler(type_suffix), false);
+    ajax.addEventListener("error", errorHandler(type_suffix), false);
+    ajax.addEventListener("abort", abortHandler(type_suffix), false);
     ajax.open("POST", "/update");
     ajax.send(formdata);
 }
 
-function progressHandler(event) {
-    //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-    var percent = Math.round((event.loaded / event.total) * 100);
-    _("progressBar").value = percent;
-    _("status").innerHTML = percent + "% uploaded... please wait";
+function progressHandler(type_suffix) {
+    return function (event) {
+        //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+        var percent = Math.round((event.loaded / event.total) * 100);
+        _("progressBar_" + type_suffix).value = percent;
+        _("status_" + type_suffix).innerHTML = percent + "% uploaded... please wait";
+    }
 }
 
-function completeHandler(event) {
-    _("status").innerHTML = "";
-    _("progressBar").value = 0;
-    var data = JSON.parse(event.target.responseText);
-    if (data.status === 'ok') {
+function completeHandler(type_suffix) {
+    return function(event) {
+        _("status_" + type_suffix).innerHTML = "";
+        _("progressBar_" + type_suffix).value = 0;
+        var data = JSON.parse(event.target.responseText);
+        if (data.status === 'ok') {
+            cuteAlert({
+                type: 'success',
+                title: "Update Succeeded",
+                message: data.msg
+            });
+        } else {
+            cuteAlert({
+                type: 'error',
+                title: "Update Failed",
+                message: data.msg
+            });
+        }
+    }
+}
+
+function errorHandler(type_suffix) {
+    return function(event) {
+        _("status_" + type_suffix).innerHTML = "";
+        _("progressBar_" + type_suffix).value = 0;
         cuteAlert({
-            type: 'success',
-            title: "Update Succeeded",
-            message: data.msg
-        });
-    } else {
-        cuteAlert({
-            type: 'error',
-            title: "Update Failed",
-            message: data.msg
+        type: "error",
+        title: "Update Failed",
+        message: event.target.responseText
         });
     }
 }
 
-function errorHandler(event) {
-    _("status").innerHTML = "";
-    _("progressBar").value = 0;
-    cuteAlert({
-      type: "error",
-      title: "Update Failed",
-      message: event.target.responseText
-    });
+function abortHandler(type_suffix) {
+    return function(event) {
+        _("status_" + type_suffix).innerHTML = "";
+        _("progressBar_" + type_suffix).value = 0;
+        cuteAlert({
+        type: "info",
+        title: "Update Aborted",
+        message: event.target.responseText
+        });
+    }
 }
 
-function abortHandler(event) {
-    _("status").innerHTML = "";
-    _("progressBar").value = 0;
-    cuteAlert({
-      type: "info",
-      title: "Update Aborted",
-      message: event.target.responseText
-    });
-}
-
-_('upload_form').addEventListener('submit', (e) => {
+_('upload_form_tx').addEventListener('submit', (e) => {
     e.preventDefault();
-    uploadFile();
+    uploadFile("tx");
 });
+
+_('upload_form_bp').addEventListener('submit', (e) => {
+    e.preventDefault();
+    uploadFile("bp");
+});
+
+//=========================================================
 
 function callback(title, msg, url, getdata) {
     return function(e) {
@@ -291,9 +307,9 @@ function cuteAlert({
     return new Promise((resolve) => {
       setInterval(() => {}, 5000);
       const body = document.querySelector("body");
-  
+
       const scripts = document.getElementsByTagName("script");
-  
+
       let closeStyleTemplate = "alert-close";
       if (closeStyle === "circle") {
         closeStyleTemplate = "alert-close-circle";
@@ -308,7 +324,7 @@ function cuteAlert({
 </div>
 `;
       }
-  
+
       let svgTemplate = `
 <svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
 <path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
@@ -319,7 +335,7 @@ function cuteAlert({
       if (type === "success") {
         svgTemplate = `
 <svg class="alert-img" xmlns="http://www.w3.org/2000/svg" fill="#fff" viewBox="0 0 52 52" xmlns:v="https://vecta.io/nano">
-<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24 
+<path d="M26 0C11.664 0 0 11.663 0 26s11.664 26 26 26 26-11.663 26-26S40.336 0 26 0zm0 50C12.767 50 2 39.233 2 26S12.767 2 26 2s24 10.767 24 24-10.767 24-24
 24zm12.252-34.664l-15.369 17.29-9.259-7.407a1 1 0 0 0-1.249 1.562l10 8a1 1 0 0 0 1.373-.117l16-18a1 1 0 1 0-1.496-1.328z"/>
 </svg>
 `;
@@ -348,13 +364,13 @@ function cuteAlert({
   </div>
 </div>
 `;
-  
+
       body.insertAdjacentHTML("afterend", template);
-  
+
       const alertWrapper = document.querySelector(".alert-wrapper");
       const alertFrame = document.querySelector(".alert-frame");
       const alertClose = document.querySelector(`.${closeStyleTemplate}`);
-  
+
       function resolveIt() {
         alertWrapper.remove();
         resolve();
@@ -370,15 +386,15 @@ function cuteAlert({
       if (type === "question") {
         const confirmButton = document.querySelector(".confirm-button");
         const cancelButton = document.querySelector(".cancel-button");
-  
+
         confirmButton.addEventListener("click", confirmIt);
           cancelButton.addEventListener("click", resolveIt);
       } else {
         const alertButton = document.querySelector(".alert-button");
-  
+
         alertButton.addEventListener("click", resolveIt);
       }
-  
+
       alertClose.addEventListener("click", resolveIt);
       alertWrapper.addEventListener("click", resolveIt);
       alertFrame.addEventListener("click", stopProp);
