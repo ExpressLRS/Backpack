@@ -81,6 +81,7 @@ void RebootIntoWifi()
 {
   DBGLN("Rebooting into wifi update mode...");
   config.SetStartWiFiOnBoot(true);
+  config.SetBootCount(0);
   config.Commit();
   rebootTime = millis();
 }

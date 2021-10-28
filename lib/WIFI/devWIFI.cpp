@@ -325,15 +325,17 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         STMUpdate.setFilename(filename);
       }
       else
-    #endif
-    {
+      {
+        updater = Update;
+      }
+    #else
       updater = Update;
-    }
+    #endif
     #if defined(PLATFORM_ESP8266)
       updater.runAsync(true);
       uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
       DBGLN("Free space = %u", maxSketchSpace);
-      if (!updater.begin(maxSketchSpace, U_FLASH)){//start with max available size
+      if (!updater.begin(maxSketchSpace, U_FLASH)){ //start with max available size
         updater.printError(Serial);
       }
     #else
