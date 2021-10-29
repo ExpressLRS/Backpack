@@ -166,6 +166,9 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   } else {
     s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID();
   }
+  #if defined(NAMIMNO_TX_BACKPACK)
+  s += "\",\"stm32\":\"yes";
+  #endif
   #if defined(TARGET_RX)
   s += "\",\"modelid\":\"" + String(config.GetModelId());
   #endif

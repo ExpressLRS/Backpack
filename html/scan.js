@@ -23,7 +23,9 @@ function get_mode() {
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
-            _('modelid').value = data.modelid;
+            if(data.stm32==="yes") {
+                _('stm32').style.display = 'block';
+            }
         }
     };
     xmlhttp.open("POST", json_url, true);
