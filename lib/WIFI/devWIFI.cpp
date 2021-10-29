@@ -321,10 +321,14 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 
   if (index == 0) {
     DBGLN("Update: %s", filename.c_str());
+    target_seen = false;
+    target_pos = 0;
+    totalSize = 0;
     #ifdef NAMIMNO_TX_BACKPACK
       if (request->arg("type").equals("tx"))
       {
         updater = STMUpdate;
+        target_seen = true;     // TODO get target_name from TX so we know what we're flashing
         STMUpdate.setFilename(filename);
       }
       else
@@ -346,9 +350,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         updater.printError(Serial);
       }
     #endif
-    target_seen = false;
-    target_pos = 0;
-    totalSize = 0;
   }
   if (len) {
     DBGVLN("writing %d", len);
