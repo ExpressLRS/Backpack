@@ -300,6 +300,7 @@ void setup()
     if (esp_now_init() != 0)
     {
       DBGLN("Error initializing ESP-NOW");
+      turnOffLED();
       ESP.restart();
     }
 
@@ -327,6 +328,7 @@ void loop()
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.
     if (rebootTime != 0 && now > rebootTime) {
+      turnOffLED();
       ESP.restart();
     }
   #endif

@@ -75,6 +75,11 @@ static int event()
     return DURATION_NEVER;
 }
 
+void turnOffLED()
+{
+    digitalWrite(PIN_LED, LOW);
+}
+
 void blinkLED()
 {
   blipLED = true;

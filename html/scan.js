@@ -209,9 +209,36 @@ function completeHandler(type_suffix) {
             });
         } else {
             cuteAlert({
-                type: 'error',
-                title: "Update Failed",
+                type: 'question',
+                title: "Targets Mismatch",
                 message: data.msg
+            }).then((e)=>{
+                xmlhttp = new XMLHttpRequest();
+                xmlhttp.onreadystatechange = function () {
+                    if (this.readyState == 4) {
+                        _("status_" + type_suffix).innerHTML = "";
+                        _("progressBar_" + type_suffix).value = 0;
+                        if (this.status == 200) {
+                            var data = JSON.parse(this.responseText);
+                            cuteAlert({
+                                type: "info",
+                                title: "Force Update",
+                                message: data.msg
+                            });
+                        }
+                        else {
+                            cuteAlert({
+                                type: "error",
+                                title: "Force Update",
+                                message: "An error occurred trying to force the update"
+                            });
+                        }
+                    }
+                };
+                xmlhttp.open("POST", "/forceupdate", true);
+                var data = new FormData();
+                data.append("action", e);
+                xmlhttp.send(data);
             });
         }
     }
@@ -394,7 +421,7 @@ function cuteAlert({
         const cancelButton = document.querySelector(".cancel-button");
 
         confirmButton.addEventListener("click", confirmIt);
-          cancelButton.addEventListener("click", resolveIt);
+        cancelButton.addEventListener("click", resolveIt);
       } else {
         const alertButton = document.querySelector(".alert-button");
 

@@ -81,7 +81,8 @@ static bool servicesStarted = false;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
-static bool force_update = false;
+static UpdaterClass &updater = Update;
+static uint32_t totalSize;
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -149,7 +150,6 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   { // If captive portal redirect instead of displaying the page.
     return;
   }
-  force_update = request->hasArg("force");
   AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
@@ -294,31 +294,28 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-static void WebUploadResponseHander(AsyncWebServerRequest *request) {
-  if (Update.hasError()) {
+static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
+  if (updater.hasError()) {
     StreamString p = StreamString();
-    Update.printError(p);
+    updater.printError(p);
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
     request->send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to resume blinking before disconnecting power.\"}");
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to turn on before disconnecting power.\"}");
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
       rebootTime = millis() + 200;
     } else {
-      request->send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Wrong firmware uploaded, does not match target type.\"}");
+      request->send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Flashing this firmware may cause unexpected behavior or problems, Do you wish to proceed?\"}");
     }
   }
 }
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
-  static uint32_t totalSize;
-  static UpdaterClass &updater = Update;
-
   if (index == 0) {
     DBGLN("Update: %s", filename.c_str());
     target_seen = false;
@@ -354,7 +351,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   if (len) {
     DBGVLN("writing %d", len);
     if (updater.write(data, len) == len) {
-      if (force_update || (totalSize == 0 && *data == 0x1F))
+      if (totalSize == 0 && *data == 0x1F) // gzipped image, we can't check
         target_seen = true;
       if (!target_seen) {
         for (size_t i=0 ; i<len ;i++) {
@@ -376,7 +373,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     DBGVLN("finish");
     if (target_seen) {
       if (updater.end(true)) { //true to set the size to the current progress
-        DBGLN("Upload Success: %ubytes\nPlease wait for LED to resume blinking before disconnecting power", totalSize);
+        DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
       } else {
         updater.printError(Serial);
       }
@@ -386,6 +383,23 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       #endif
       DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
+  }
+}
+
+static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
+  target_seen = true;
+  if (request->arg("action").equals("confirm")) {
+    if (updater.end(true)) { //true to set the size to the current progress
+      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
+    } else {
+      updater.printError(Serial);
+    }
+    WebUploadResponseHandler(request);
+  } else {
+    #if defined(PLATFORM_ESP32)
+      updater.abort();
+    #endif
+    request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
 }
 
@@ -500,7 +514,8 @@ static void startServices()
   server.on("/ncsi.txt", WebUpdateHandleRoot);
   server.on("/fwlink", WebUpdateHandleRoot);
 
-  server.on("/update", HTTP_POST, WebUploadResponseHander, WebUploadDataHandler);
+  server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
+  server.on("/forceupdate", WebUploadForceUpdateHandler);
 
   server.onNotFound(WebUpdateHandleNotFound);
 
