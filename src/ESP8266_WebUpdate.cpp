@@ -15,6 +15,9 @@
 #ifdef STEADYVIEW_BACKPACK
   #define STASSID "ExpressLRS SteadyView Backpack"
 #endif
+#ifdef FUSION_BACKPACK
+  #define STASSID "ExpressLRS Fusion Backpack"
+#endif
 #ifdef GENERIC_BACKPACK
   #define STASSID "ExpressLRS VRx Backpack"
 #endif

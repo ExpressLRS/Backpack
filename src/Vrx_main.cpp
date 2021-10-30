@@ -14,6 +14,8 @@
   #include "rx5808.h"
 #elif defined(STEADYVIEW_BACKPACK)
   #include "steadyview.h"
+#elif defined(FUSION_BACKPACK)
+  #include "fusion.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -56,6 +58,8 @@ MSP msp;
   RX5808 vrxModule;
 #elif defined(STEADYVIEW_BACKPACK)
   SteadyView vrxModule;
+#elif defined(FUSION_BACKPACK)
+  Fusion vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -287,7 +291,11 @@ void setup()
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH);
   
+  #ifdef FUSION_BACKPACK
+  Serial.begin(500000); // fusion uses 500k baud between the ESP8266 and the STM32
+  #else
   Serial.begin(460800);
+  #endif
 
   EEPROM.begin(512);
   EEPROM.get(EEPROM_ADDR_WIFI, startWebUpdater);
