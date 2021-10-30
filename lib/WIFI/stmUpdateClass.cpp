@@ -77,20 +77,15 @@ void STMUpdateClass::printError(Print &out){
 
 int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
 {
-  int8_t result = -1;
-
   if (filename.endsWith(".elrs")) {
     _errmsg = stk500_write_file(filename.c_str());
-    if (_errmsg != NULL)
-      _error = UPDATE_ERROR_NO_DATA;
-    return _error;
   } else if (filename.endsWith(".bin")) {
-    result = esp8266_spifs_write_file(filename.c_str(), flash_addr);
-  } else {
-
+    _errmsg = esp8266_spifs_write_file(filename.c_str(), flash_addr);
   }
   Serial.begin(460800);
-  return result;
+  if (_errmsg != NULL)
+    _error = UPDATE_ERROR_NO_DATA;
+  return _error;
 }
 
 STMUpdateClass STMUpdate;

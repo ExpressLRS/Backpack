@@ -128,7 +128,6 @@ uint8_t init_chip()
 			return 1;
 		}
 	}
-	DBGLN("[ERROR] init chip failed.");
 	return 0;
 }
 
@@ -160,7 +159,6 @@ uint8_t cmd_get()
 		DBGLN("Bootloader version: 0x%x", bootloader_ver);
 
 		if (bootloader_ver < 20 || bootloader_ver >= 100) {
-			DBGLN("[ERROR] Invalid bootloader");
 			bootloader_ver = 0;
 		}
 	}
@@ -184,7 +182,6 @@ uint8_t cmd_getID()
 		retval = wait_for_ack("cmd_getID");
 
 		if (id != 0x410) {
-			DBGLN("[ERROR] Wrong ID. No R9M found!");
 			retval = 0;
 		}
 	}
@@ -339,20 +336,18 @@ uint8_t cmd_go(uint32_t address)
 	return 0;
 }
 
-uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
+const __FlashStringHelper *esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 {
 	if (!SPIFFS.exists(filename))
 	{
-		DBGLN("[ERROR] file: %s doesn't exist!", filename);
-		return 0;
+		return F("file does not exist!");
 	}
 	File fp = SPIFFS.open(filename, "r");
 	uint32_t filesize = fp.size();
 	DBGLN("filesize: %d", filesize);
 	if ((FLASH_SIZE - FLASH_OFFSET) < filesize) {
-		DBGLN("[ERROR] file is too big!");
 		fp.close();
-		return 0;
+		return F("[ERROR] file is too big!");
 	}
 
 	if (begin_addr < FLASH_START)
@@ -366,25 +361,24 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 
 	if (init_chip() != 1) {
 		fp.close();
-		return 0;
+		return F("[ERROR] init chip failed.");
 	}
 
 	uint8_t bootloader_ver = cmd_get();
 	if (bootloader_ver == 0) {
 		fp.close();
-		return 0;
+		return F("[ERROR] Invalid bootloader");
 	}
 
 	if (cmd_getID() != 1) {
 		fp.close();
-		return 0;
+		return F("[ERROR] Wrong ID. No R9M found!");
 	}
 
 	if (cmd_erase(begin_addr, filesize, bootloader_ver) != 1)
 	{
-		DBGLN("[ERROR] erase Failed!");
 		fp.close();
-		return 0;
+		return F("[ERROR] erase Failed!");
 	}
 	DBGLN("erase Success!");
 
@@ -409,9 +403,8 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 		uint8_t result = cmd_write_memory(begin_addr + fp.position() - nread, nread);
 		if (result != 1)
 		{
-			DBGLN("[ERROR] file write failed.");
 			fp.close();
-			return 0;
+			return F("[ERROR] file write failed.");
 		}
 	}
 	DBGLN("file write succeeded.");
@@ -435,16 +428,15 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 		uint8_t result = cmd_read_memory(begin_addr + fp.position() - nread, nread);
 		if (result != 1)
 		{
-			DBGLN("[ERROR] read memory failed: %d", fp.position());
 			fp.close();
-			return 0;
+			DBGLN("[ERROR] read memory failed: %d", fp.position());
+			return F("[ERROR] read memory failed");
 		}
 		result = memcmp(file_buffer, memory_buffer, nread);
 		if (result != 0)
 		{
-			DBGLN("[ERROR] verify failed.");
 			fp.close();
-			return 0;
+			return F("[ERROR] verify failed.");
 		}
 	}
 
@@ -453,5 +445,5 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 	DBGLN("start application.");
 	//reset_stm32_to_app_mode();
 	cmd_go(FLASH_START);
-	return 1;
+	return NULL;
 }
