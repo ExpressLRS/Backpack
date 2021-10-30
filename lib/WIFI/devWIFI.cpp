@@ -3,21 +3,15 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
-#if defined(PLATFORM_ESP32)
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <Update.h>
-#else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
-#endif
+
 #include <DNSServer.h>
+#include <ESPAsyncWebServer.h>
 
 #include <set>
 #include <StreamString.h>
-
-#include <ESPAsyncWebServer.h>
 
 #include "common.h"
 #include "logging.h"
@@ -249,23 +243,6 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   sendResponse(request, msg, WIFI_AP);
 }
 
-#if defined(TARGET_RX)
-static void WebUpdateModelId(AsyncWebServerRequest *request)
-{
-  long modelid = request->arg("modelid").toInt();
-  if (modelid < 0 || modelid > 63) modelid = 255;
-  DBGLN("Setting model match id %u", (uint8_t)modelid);
-  config.SetModelId((uint8_t)modelid);
-  config.Commit();
-
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Model Match updated, rebooting receiver");
-  response->addHeader("Connection", "close");
-  request->send(response);
-  request->client()->close();
-  rebootTime = millis() + 100;
-}
-#endif
-
 static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 {
   if (captivePortal(request))
@@ -459,27 +436,17 @@ static void startMDNS()
 
   String instance = String(myHostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  #ifdef PLATFORM_ESP8266
-    // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
-    MDNS.setInstanceName(myHostname);
-    MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
-    MDNS.addServiceTxt(service, "vendor", "elrs");
-    MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt(service, "version", VERSION);
-    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
-    #if defined(TARGET_VRX_BACKPACK)
-      MDNS.addServiceTxt(service, "type", "vrx");
-    #elif defined(TARGET_TX_BACKPACK)
-      MDNS.addServiceTxt(service, "type", "txbp");
-    #endif
-  #else
-    MDNS.setInstanceName(instance);
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
-    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    MDNS.addServiceTxt("http", "tcp", "version", VERSION);
-    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+  // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
+  MDNS.setInstanceName(myHostname);
+  MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+  MDNS.addServiceTxt(service, "vendor", "elrs");
+  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+  MDNS.addServiceTxt(service, "version", VERSION);
+  MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+  #if defined(TARGET_VRX_BACKPACK)
+    MDNS.addServiceTxt(service, "type", "vrx");
+  #elif defined(TARGET_TX_BACKPACK)
+    MDNS.addServiceTxt(service, "type", "txbp");
   #endif
 }
 
@@ -605,11 +572,7 @@ static void HandleWebUpdate()
 
 static int start()
 {
-  #ifdef AUTO_WIFI_ON_INTERVAL
-    return AUTO_WIFI_ON_INTERVAL * 1000;
-  #else
-    return DURATION_NEVER;
-  #endif
+  return DURATION_NEVER;
 }
 
 static int event()
@@ -631,28 +594,6 @@ static int timeout()
     HandleWebUpdate();
     return DURATION_IMMEDIATELY;
   }
-
-  #if defined(TARGET_TX) && defined(AUTO_WIFI_ON_INTERVAL)
-  //if webupdate was requested before or AUTO_WIFI_ON_INTERVAL has been elapsed but uart is not detected
-  //start webupdate, there might be wrong configuration flashed.
-  if(webserverPreventAutoStart == false && connectionState < wifiUpdate && !wifiStarted){
-    DBGLN("No CRSF ever detected, starting WiFi");
-    connectionState = wifiUpdate;
-    return DURATION_IMMEDIATELY;
-  }
-  #elif defined(TARGET_RX) && defined(AUTO_WIFI_ON_INTERVAL)
-  if (!webserverPreventAutoStart && (connectionState == disconnected))
-  {
-    static bool pastAutoInterval = false;
-    if (!InBindingMode || AUTO_WIFI_ON_INTERVAL >= 60 || pastAutoInterval)
-    {
-      connectionState = wifiUpdate;
-      return DURATION_IMMEDIATELY;
-    }
-    pastAutoInterval = true;
-    return (60 - AUTO_WIFI_ON_INTERVAL) * 1000;
-  }
-  #endif
   return DURATION_NEVER;
 }
 
