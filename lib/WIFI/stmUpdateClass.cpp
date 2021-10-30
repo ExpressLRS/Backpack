@@ -54,23 +54,23 @@ bool STMUpdateClass::end(bool evenIfRemaining)
 {
     fsUploadFile.close(); // Close the file again
 
-    int8_t success = flashSTM32(BEGIN_ADDRESS);
+    _error = flashSTM32(BEGIN_ADDRESS);
     if (SPIFFS.exists(filename.c_str()))
         SPIFFS.remove(filename.c_str());
-    return success == 0;
+    return !hasError();
 }
 
 void STMUpdateClass::printError(Print &out){
-  out.printf_P(PSTR("ERROR[%u]: "), _error);
   if(_error == UPDATE_ERROR_OK){
     out.println(F("No Error"));
   } else if(_error == UPDATE_ERROR_READ){
-    out.println(F("SPIFFS Read Failed"));
+    out.println(F("ERROR: SPIFFS Read Failed"));
   } else if(_error == UPDATE_ERROR_WRITE){
-    out.println(F("Flash Write Failed"));
+    out.println(F("ERROR: Flash Write Failed"));
   } else if(_error == UPDATE_ERROR_SPACE){
-    out.println(F("Not Enough Space"));
+    out.println(F("ERROR: Not Enough Space"));
   } else {
+    out.print(F("ERROR: "));
     out.println(_errmsg);
   }
 }
@@ -80,12 +80,12 @@ int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
   if (filename.endsWith(".elrs")) {
     _errmsg = stk500_write_file(filename.c_str());
   } else if (filename.endsWith(".bin")) {
-    _errmsg = esp8266_spifs_write_file(filename.c_str(), flash_addr);
+    _errmsg = esp8266_spiffs_write_file(filename.c_str(), flash_addr);
   }
   Serial.begin(460800);
   if (_errmsg != NULL)
-    _error = UPDATE_ERROR_NO_DATA;
-  return _error;
+    return UPDATE_ERROR_NO_DATA;
+  return UPDATE_ERROR_STREAM;
 }
 
 STMUpdateClass STMUpdate;

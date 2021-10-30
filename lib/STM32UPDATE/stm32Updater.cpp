@@ -336,7 +336,7 @@ uint8_t cmd_go(uint32_t address)
 	return 0;
 }
 
-const __FlashStringHelper *esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
+const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t begin_addr)
 {
 	if (!SPIFFS.exists(filename))
 	{

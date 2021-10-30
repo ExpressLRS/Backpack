@@ -54,6 +54,7 @@ const __FlashStringHelper *stk500_write_file(const char *filename)
         }
     }
     if (STK_SYNC_CTN <= sync_iter) {
+        fp.close();
         return F("no sync! stopping");
     }
     DBGLN("Sync OK");
@@ -84,12 +85,12 @@ const __FlashStringHelper *stk500_write_file(const char *filename)
             return F("write failed.");
         }
     }
+    fp.close();
 
     if (prog_mode_exit() < 0) {
         return F("exit prog mode!");
     }
 
-    fp.close();
     DBGLN("write succeeded.");
     return NULL;
 }
