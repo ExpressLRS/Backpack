@@ -5,8 +5,6 @@
 
 #define BLOCK_SIZE 128
 
-char log_buffer[256];
-
 uint8_t memory_buffer[BLOCK_SIZE];
 uint8_t file_buffer[BLOCK_SIZE];
 
@@ -45,15 +43,9 @@ void stm32flasher_hardware_init()
 	Serial.setTimeout(5000);
 }
 
-void debug_log()
-{
-}
-
-
 uint8_t init_chip();
 uint8_t cmd_generic(uint8_t command);
 uint8_t cmd_get();
-
 
 uint8_t isp_serial_write(uint8_t *buffer, uint8_t length)
 {
@@ -94,17 +86,17 @@ uint8_t wait_for_ack(char const *when)
 		}
 		else if (cmd == 0x1F)
 		{ // nack
-			DBG("got NACK when: %s", when);
+			DBGLN("got NACK when: %s", when);
 			return 2;
 		}
 		else if (cmd == 0x76)
 		{ // busy
-			DBG("got BUSY when: %s", when);
+			DBGLN("got BUSY when: %s", when);
 			continue;
 		}
 		else if (nread)
 		{
-			DBG("[WARNING] got unknown response: %d when: %s.", cmd, when);
+			DBGLN("[WARNING] got unknown response: %d when: %s.", cmd, when);
 			break;
 		}
 		else
@@ -115,7 +107,7 @@ uint8_t wait_for_ack(char const *when)
 
 	if (!timeout)
 	{
-		DBG("[ERROR] no response when: %s.", when);
+		DBGLN("[ERROR] no response when: %s.", when);
 	}
 
 	return 0;
@@ -125,18 +117,18 @@ uint8_t init_chip()
 {
 	uint8_t cmd = 0x7F;
 
-	DBG("trying to init chip...");
+	DBGLN("trying to init chip...");
 
 	for (int i = 0; i < 10; i++)
 	{
 		isp_serial_write(&cmd, 1);
 		if (wait_for_ack("init_chip_write_cmd") > 0)
 		{ // ack or nack
-			DBG("init chip succeeded.");
+			DBGLN("init chip succeeded.");
 			return 1;
 		}
 	}
-	DBG("[ERROR] init chip failed.");
+	DBGLN("[ERROR] init chip failed.");
 	return 0;
 }
 
@@ -165,10 +157,10 @@ uint8_t cmd_get()
 		if (wait_for_ack("cmd_get") != 1)
 			return 0;
 
-		DBG("Bootloader version: 0x%02X", bootloader_ver);
+		DBGLN("Bootloader version: 0x%x", bootloader_ver);
 
 		if (bootloader_ver < 20 || bootloader_ver >= 100) {
-			DBG("[ERROR] Invalid bootloader");
+			DBGLN("[ERROR] Invalid bootloader");
 			bootloader_ver = 0;
 		}
 	}
@@ -187,12 +179,12 @@ uint8_t cmd_getID()
 		id <<= 8;
 		id += buffer[2];
 
-		DBG("Chip ID: 0x%X", id);
+		DBGLN("Chip ID: 0x%x", id);
 
 		retval = wait_for_ack("cmd_getID");
 
 		if (id != 0x410) {
-			DBG("[ERROR] Wrong ID. No R9M found!");
+			DBGLN("[ERROR] Wrong ID. No R9M found!");
 			retval = 0;
 		}
 	}
@@ -280,7 +272,7 @@ static uint8_t cmd_erase_all_memory(uint32_t const start_addr, uint32_t filesize
 	if (cmd_generic(0x43) == 1)
 	{
 #if 0 //(FLASH_OFFSET == 0)
-		DBG("erasing all memory...");
+		DBGLN("erasing all memory...");
 		// Global erase aka mass erase
 		uint8_t cmd[2];
 		cmd[0] = 0xFF;
@@ -294,7 +286,7 @@ static uint8_t cmd_erase_all_memory(uint32_t const start_addr, uint32_t filesize
 		if (filesize)
 			pages = (filesize + (FLASH_PAGE_SIZE - 1)) / FLASH_PAGE_SIZE;
 		uint8_t page_offset = ((start_addr - FLASH_START) / FLASH_PAGE_SIZE);
-		DBG("erasing pages: %u...%u", page_offset, (page_offset + pages));
+		DBGLN("erasing pages: %u...%u", page_offset, (page_offset + pages));
 		// Send to DFU
 		Serial.write((uint8_t)(pages-1));
 		checksum ^= (pages-1);
@@ -322,7 +314,7 @@ static uint8_t cmd_erase_all_memory_extended()
 		isp_serial_write(cmd, 3);
 		return wait_for_ack("mass_erase");
 #else
-		DBG("[ERROR] extended erase implementation missing!");
+		DBGLN("[ERROR] extended erase implementation missing!");
 #endif
 	}
 	return 0;
@@ -351,14 +343,14 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 {
 	if (!SPIFFS.exists(filename))
 	{
-		DBG("[ERROR] file: %s doesn't exist!", filename);
+		DBGLN("[ERROR] file: %s doesn't exist!", filename);
 		return 0;
 	}
 	File fp = SPIFFS.open(filename, "r");
 	uint32_t filesize = fp.size();
-	DBG("filesize: %d", filesize);
+	DBGLN("filesize: %d", filesize);
 	if ((FLASH_SIZE - FLASH_OFFSET) < filesize) {
-		DBG("[ERROR] file is too big!");
+		DBGLN("[ERROR] file is too big!");
 		fp.close();
 		return 0;
 	}
@@ -390,13 +382,13 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 
 	if (cmd_erase(begin_addr, filesize, bootloader_ver) != 1)
 	{
-		DBG("[ERROR] erase Failed!");
+		DBGLN("[ERROR] erase Failed!");
 		fp.close();
 		return 0;
 	}
-	DBG("erase Success!");
+	DBGLN("erase Success!");
 
-	DBG("begin to write file.");
+	DBGLN("begin to write file.");
 	uint32_t junks = (filesize + (BLOCK_SIZE - 1)) / BLOCK_SIZE;
 	uint32_t junk = 0;
 	uint8_t proc;
@@ -409,21 +401,21 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 		}
 		nread = fp.readBytes((char *)memory_buffer, nread);
 
-		//DBG("write bytes: %d, file position: %d", nread, fp.position());
+		//DBGLN("write bytes: %d, file position: %d", nread, fp.position());
 		proc = (++junk * 100) / junks;
 		if ((junk % 40) == 0 || junk >= junks)
-			DBG("Write %u%%", proc);
+			DBGLN("Write %u%%", proc);
 
 		uint8_t result = cmd_write_memory(begin_addr + fp.position() - nread, nread);
 		if (result != 1)
 		{
-			DBG("[ERROR] file write failed.");
+			DBGLN("[ERROR] file write failed.");
 			fp.close();
 			return 0;
 		}
 	}
-	DBG("file write succeeded.");
-	DBG("begin to verify file.");
+	DBGLN("file write succeeded.");
+	DBGLN("begin to verify file.");
 	fp.seek(0, SeekSet);
 	junk = 0;
 	while (fp.position() < filesize)
@@ -435,30 +427,30 @@ uint8_t esp8266_spifs_write_file(const char *filename, uint32_t begin_addr)
 		}
 		nread = fp.readBytes((char *)file_buffer, nread);
 
-		//DBG("read bytes: %d, file position: %d", nread, fp.position());
+		//DBGLN("read bytes: %d, file position: %d", nread, fp.position());
 		proc = (++junk * 100) / junks;
 		if ((junk % 40) == 0 || junk >= junks)
-			DBG("Verify %u%%", proc);
+			DBGLN("Verify %u%%", proc);
 
 		uint8_t result = cmd_read_memory(begin_addr + fp.position() - nread, nread);
 		if (result != 1)
 		{
-			DBG("[ERROR] read memory failed: %d", fp.position());
+			DBGLN("[ERROR] read memory failed: %d", fp.position());
 			fp.close();
 			return 0;
 		}
 		result = memcmp(file_buffer, memory_buffer, nread);
 		if (result != 0)
 		{
-			DBG("[ERROR] verify failed.");
+			DBGLN("[ERROR] verify failed.");
 			fp.close();
 			return 0;
 		}
 	}
 
 	fp.close();
-	DBG("verify file succeeded.");
-	DBG("start application.");
+	DBGLN("verify file succeeded.");
+	DBGLN("start application.");
 	//reset_stm32_to_app_mode();
 	cmd_go(FLASH_START);
 	return 1;

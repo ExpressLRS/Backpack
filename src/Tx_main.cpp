@@ -251,6 +251,7 @@ void setup()
   {
     connectionState = running;
   }
+  connectionState = wifiUpdate;
   DBGLN("Setup completed");
 }
 

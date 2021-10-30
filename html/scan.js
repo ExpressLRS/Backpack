@@ -207,11 +207,13 @@ function completeHandler(type_suffix) {
                 title: "Update Succeeded",
                 message: data.msg
             });
-        } else {
+        } else if (data.status === 'mismatch') {
             cuteAlert({
                 type: 'question',
                 title: "Targets Mismatch",
-                message: data.msg
+                message: data.msg,
+                confirmText: "Yes",
+                cancelText: "No"
             }).then((e)=>{
                 xmlhttp = new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function () {
@@ -239,6 +241,12 @@ function completeHandler(type_suffix) {
                 var data = new FormData();
                 data.append("action", e);
                 xmlhttp.send(data);
+            });
+        } else {
+            cuteAlert({
+                type: 'error',
+                title: "Update Failed",
+                message: data.msg
             });
         }
     }

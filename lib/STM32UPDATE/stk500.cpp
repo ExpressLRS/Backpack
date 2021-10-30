@@ -2,17 +2,9 @@
 #include "stm32Updater.h"
 #include <Arduino.h>
 #include <FS.h>
-
-extern char log_buffer[256];
-#define DEBUG_PRINT(...) \
-	do { \
-		snprintf(log_buffer, sizeof(log_buffer), "STK500: " __VA_ARGS__); \
-  		debug_log(); \
-	}while(0);
-
+#include "logging.h"
 
 uint8_t stk_data_buff[STK_PAGE_SIZE];
-
 
 int sync_get(void);
 int prog_params_set(void);
@@ -29,21 +21,18 @@ void serial_empty_rx(void)
         Serial.read();
 }
 
-
-uint8_t stk500_write_file(const char *filename)
+const __FlashStringHelper *stk500_write_file(const char *filename)
 {
     uint8_t sync_iter;
     if (!SPIFFS.exists(filename)) {
-        DEBUG_PRINT("[ERROR] file: %s doesn't exist!", filename);
-        return 0;
+        return F("file does not exist!");
     }
     File fp = SPIFFS.open(filename, "r");
     uint32_t filesize = fp.size();
-    DEBUG_PRINT("filesize: %d", filesize);
+    DBGLN("filesize: %d", filesize);
     if (FLASH_SIZE < filesize) {
-        DEBUG_PRINT("[ERROR] file is too big!");
         fp.close();
-        return 0;
+        return F("file is too big!");
     }
 
     // Put MCU to reset
@@ -59,33 +48,29 @@ uint8_t stk500_write_file(const char *filename)
 
     // Try to get sync...
     for (sync_iter = 0; sync_iter < STK_SYNC_CTN; sync_iter++) {
-        DEBUG_PRINT("Waiting sync...");
+        DBGLN("Waiting sync...");
         if (0 <= sync_get()) {
             break;
         }
     }
     if (STK_SYNC_CTN <= sync_iter) {
-        DEBUG_PRINT("[ERROR] no sync! stopping");
-        return 0;
+        return F("no sync! stopping");
     }
-    DEBUG_PRINT("Sync OK");
+    DBGLN("Sync OK");
 
 #if 0 // These are not used at the moment
     if (prog_params_set() < 0) {
-        DEBUG_PRINT("[ERROR] prog params!");
-        return 0;
+        return F("prog params!");
     }
     if (prog_params_ext_set() < 0) {
-        DEBUG_PRINT("[ERROR] prog params!");
-        return 0;
+        return F("prog params!");
     }
     if (prog_mode_enter() < 0) {
-        DEBUG_PRINT("[ERROR] enter prog mode!");
-        return 0;
+        return F("enter prog mode!");
     }
 #endif
 
-    DEBUG_PRINT("begin to write.");
+    DBGLN("begin to write.");
     uint32_t junks = (filesize + (sizeof(stk_data_buff) - 1)) / sizeof(stk_data_buff);
     uint32_t junk = 0;
     int result;
@@ -97,28 +82,26 @@ uint8_t stk500_write_file(const char *filename)
         }
         nread = fp.readBytes((char *)stk_data_buff, nread);
 
-        //DEBUG_PRINT("write bytes: %d, file position: %d", nread, fp.position());
+        //DBGLN("write bytes: %d, file position: %d", nread, fp.position());
         proc = (++junk * 100) / junks;
         if ((junk % 40) == 0 || junk >= junks)
-            DEBUG_PRINT("Write %u%%", proc);
+            DBGLN("Write %u%%", proc);
 
         result = prog_flash(
             (fp.position() - nread), stk_data_buff, nread);
         if (result < 0) {
-            DEBUG_PRINT("[ERROR] write failed.");
             fp.close();
-            return 0;
+            return F("write failed.");
         }
     }
 
     if (prog_mode_exit() < 0) {
-        DEBUG_PRINT("[ERROR] exit prog mode!");
-        return 0;
+        return F("exit prog mode!");
     }
 
     fp.close();
-    DEBUG_PRINT("write succeeded.");
-    return 1;
+    DBGLN("write succeeded.");
+    return NULL;
 }
 
 int sync_get(void)
@@ -161,7 +144,7 @@ int prog_flash(uint32_t offset, uint8_t* data, uint32_t length)
     // Send write address
     uint8_t addr[] = {(uint8_t)offset, (uint8_t)(offset >> 8)};
     if (command_send(STK_LOAD_ADDRESS, addr, sizeof(addr)) < 0) {
-        DEBUG_PRINT("[ERROR] addr set!");
+        DBGLN("[ERROR] addr set!");
         return -1;
     }
 
@@ -203,6 +186,6 @@ int verify_sync(uint32_t timeout)
             return 0;
         }
     }
-    DEBUG_PRINT("[ERROR] sync fail...");
+    DBGLN("[ERROR] sync fail...");
     return -1;
 }

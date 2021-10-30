@@ -23,9 +23,7 @@
 #include "logging.h"
 #include "options.h"
 
-#ifdef NAMIMNO_TX_BACKPACK
-#include "stmUpdateClass.h"
-#endif
+#include "UpdateWrapper.h"
 
 #include "WebContent.h"
 
@@ -81,8 +79,8 @@ static bool servicesStarted = false;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
-static UpdaterClass &updater = Update;
 static uint32_t totalSize;
+static UpdateWrapper updater = UpdateWrapper();
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -310,40 +308,42 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       request->client()->close();
       rebootTime = millis() + 200;
     } else {
-      request->send(200, "application/json", "{\"status\": \"error\", \"msg\": \"Flashing this firmware may cause unexpected behavior or problems, Do you wish to proceed?\"}");
+      request->send(200, "application/json", "{\"status\": \"mismatch\", \"msg\": \"Flashing this firmware may cause unexpected behavior or problems, Do you wish to proceed?\"}");
     }
   }
 }
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   if (index == 0) {
-    DBGLN("Update: %s", filename.c_str());
+    DBGLN("Update: %s, %s", filename.c_str(), request->arg("type").c_str());
     target_seen = false;
     target_pos = 0;
     totalSize = 0;
     #ifdef NAMIMNO_TX_BACKPACK
       if (request->arg("type").equals("tx"))
       {
-        updater = STMUpdate;
+        DBGLN("Set updater to STM");
+        updater.setSTMUpdate(true);
         target_seen = true;     // TODO get target_name from TX so we know what we're flashing
         STMUpdate.setFilename(filename);
       }
       else
       {
-        updater = Update;
+        DBGLN("Set updater to ESP");
+        updater.setSTMUpdate(false);
       }
     #else
-      updater = Update;
+      updater = &Update;
     #endif
     #if defined(PLATFORM_ESP8266)
       updater.runAsync(true);
       uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
       DBGLN("Free space = %u", maxSketchSpace);
-      if (!updater.begin(maxSketchSpace, U_FLASH)){ //start with max available size
+      if (!updater.begin(maxSketchSpace)){ //start with max available size
         updater.printError(Serial);
       }
     #else
-      if (!updater.begin()) { //start with max available size
+      if (!updater->begin()) { //start with max available size
         updater.printError(Serial);
       }
     #endif
@@ -369,7 +369,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       totalSize += len;
     }
   }
-  if (final && !updater.getError()) {
+  if (final && !updater.hasError()) {
     DBGVLN("finish");
     if (target_seen) {
       if (updater.end(true)) { //true to set the size to the current progress
@@ -379,7 +379,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       }
     } else {
       #if defined(PLATFORM_ESP32)
-        updater.abort();
+        updater->abort();
       #endif
       DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
     }
@@ -397,7 +397,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
-      updater.abort();
+      updater->abort();
     #endif
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
@@ -598,7 +598,7 @@ static void HandleWebUpdate()
     #endif
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-    if (!Update.isRunning())
+    if (!updater.isRunning())
       delay(1);
   }
 }
