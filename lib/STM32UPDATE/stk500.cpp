@@ -71,24 +71,14 @@ const __FlashStringHelper *stk500_write_file(const char *filename)
 #endif
 
     DBGLN("begin to write.");
-    uint32_t junks = (filesize + (sizeof(stk_data_buff) - 1)) / sizeof(stk_data_buff);
-    uint32_t junk = 0;
     int result;
-    uint8_t proc;
     while (fp.position() < filesize) {
         uint8_t nread = sizeof(stk_data_buff);
         if ((filesize - fp.position()) < sizeof(stk_data_buff)) {
             nread = filesize - fp.position();
         }
         nread = fp.readBytes((char *)stk_data_buff, nread);
-
-        //DBGLN("write bytes: %d, file position: %d", nread, fp.position());
-        proc = (++junk * 100) / junks;
-        if ((junk % 40) == 0 || junk >= junks)
-            DBGLN("Write %u%%", proc);
-
-        result = prog_flash(
-            (fp.position() - nread), stk_data_buff, nread);
+        result = prog_flash((fp.position() - nread), stk_data_buff, nread);
         if (result < 0) {
             fp.close();
             return F("write failed.");

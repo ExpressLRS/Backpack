@@ -275,7 +275,10 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     updater.printError(p);
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
-    request->send(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");

@@ -216,6 +216,9 @@ RF_PRE_INIT()
 
 void setup()
 {
+  #ifdef DEBUG_LOG
+    Serial1.begin(115200);
+  #endif
   Serial.begin(460800);
 
   eeprom.Begin();
@@ -251,7 +254,6 @@ void setup()
   {
     connectionState = running;
   }
-  connectionState = wifiUpdate;
   DBGLN("Setup completed");
 }
 
