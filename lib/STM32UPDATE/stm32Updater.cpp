@@ -79,6 +79,7 @@ uint8_t wait_for_ack(char const *when)
 	uint8_t timeout = 20;
 	uint8_t cmd = 0;
 	while (timeout--) {
+		ESP.wdtFeed();
 		uint8_t nread = isp_serial_read(&cmd, 1);
 		if (cmd == 0x79)
 		{ // ack

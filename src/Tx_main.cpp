@@ -218,6 +218,7 @@ void setup()
 {
   #ifdef DEBUG_LOG
     Serial1.begin(115200);
+    Serial1.setDebugOutput(true);
   #endif
   Serial.begin(460800);
 
@@ -254,6 +255,9 @@ void setup()
   {
     connectionState = running;
   }
+  #ifdef DEBUG_ELRS_WIFI
+    connectionState = wifiUpdate;
+  #endif
   DBGLN("Setup completed");
 }
 

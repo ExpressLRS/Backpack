@@ -85,7 +85,7 @@ int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
   Serial.begin(460800);
   if (_errmsg != NULL)
     return UPDATE_ERROR_NO_DATA;
-  return UPDATE_ERROR_STREAM;
+  return UPDATE_ERROR_OK;
 }
 
 STMUpdateClass STMUpdate;
