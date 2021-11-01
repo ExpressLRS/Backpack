@@ -312,8 +312,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         DBGLN("Set updater to ESP");
         updater.setSTMUpdate(false);
       }
-    #else
-      updater = &Update;
     #endif
     #if defined(PLATFORM_ESP8266)
       updater.runAsync(true);
