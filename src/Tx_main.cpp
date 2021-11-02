@@ -210,8 +210,11 @@ RF_PRE_INIT()
 
 void setup()
 {
+#ifdef AXIS_THOR_TX_BACKPACK
+  Serial.begin(420000);
+#else
   Serial.begin(460800);
-
+#endif
   EEPROM.begin(512);
   EEPROM.get(0, startWebUpdater);
   
