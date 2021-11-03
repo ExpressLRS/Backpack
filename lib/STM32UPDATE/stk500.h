@@ -2,6 +2,7 @@
 #define Stk500_h
 
 #include <stdint.h>
+#include <Arduino.h>
 
 #define STK_BAUD_RATE       115200
 #define STK_SYNC_CTN        30
@@ -66,6 +67,6 @@
 #define STK_READ_FUSE_EXT 0x77   // 'w'
 #define STK_READ_OSCCAL_EXT 0x78 // 'x'
 
-uint8_t stk500_write_file(const char *filename);
+const __FlashStringHelper *stk500_write_file(const char *filename);
 
 #endif

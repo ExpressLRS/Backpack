@@ -25,4 +25,4 @@ void stm32flasher_hardware_init();
 
 void debug_log();
 
-uint8_t esp8266_spifs_write_file(const char *filename, uint32_t const begin_addr);
+const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t const begin_addr);
