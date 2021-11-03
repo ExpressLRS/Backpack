@@ -1,17 +1,18 @@
 #include <Arduino.h>
-#include "ESP8266_WebUpdate.h"
 #include <espnow.h>
 #include <ESP8266WiFi.h>
-#include <EEPROM.h>
+
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
-// #include "config.h"
+#include "config.h"
+#include "common.h"
+#include "helpers.h"
 
-/////////// DEFINES ///////////
-
-#define EEPROM_ADDR_WIFI    0x00
-#define EEPROM_MAC          0x01 // 0x01 to 0x06
+#include "device.h"
+#include "devWIFI.h"
+#include "devButton.h"
+#include "devLED.h"
 
 /////////// GLOBALS ///////////
 
@@ -22,25 +23,31 @@ uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
+connectionState_e connectionState = starting;
+unsigned long rebootTime = 0;
+
 bool cacheFull = false;
 bool sendCached = false;
-uint8_t flashLED = false;
-bool startWebUpdater = false;
-uint8_t flashLedCounter = 0;
+
+device_t *ui_devices[] = {
+#ifdef PIN_LED
+  &LED_device,
+#endif
+#ifdef PIN_BUTTON
+  &Button_device,
+#endif
+  &WIFI_device,
+};
 
 /////////// CLASS OBJECTS ///////////
 
 MSP msp;
-// TxBackpackConfig config;
+ELRS_EEPROM eeprom;
+TxBackpackConfig config;
 mspPacket_t cachedVTXPacket;
 
 /////////// FUNCTION DEFS ///////////
 
-void RebootIntoWifi();
-void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len);
-void ProcessMSPPacketFromPeer(mspPacket_t *packet);
-void ProcessMSPPacketFromTX(mspPacket_t *packet);
-void SetSoftMACAddress();
 void sendMSPViaEspnow(mspPacket_t *packet);
 
 /////////////////////////////////////
@@ -48,10 +55,9 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 void RebootIntoWifi()
 {
   DBGLN("Rebooting into wifi update mode...");
-  startWebUpdater = true;
-  EEPROM.put(EEPROM_ADDR_WIFI, startWebUpdater);
-  EEPROM.commit();
-  ESP.restart();
+  config.SetStartWiFiOnBoot(true);
+  config.Commit();
+  rebootTime = millis();
 }
 
 void ProcessMSPPacketFromPeer(mspPacket_t *packet)
@@ -89,28 +95,28 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
       msp.markPacketReceived();
     }
   }
-  flashLedCounter++;
+  blinkLED();
 }
 
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
   {
+    config.SetGroupAddress(packet->payload);
     DBG("MSP_ELRS_BIND = ");
     for (int i = 0; i < 6; i++)
     {
-      EEPROM.put(EEPROM_MAC + i, packet->payload[i]);
       DBG("%x", packet->payload[i]); // Debug prints
       DBG(",");
     }
     DBG(""); // Extra line for serial output readability
-    EEPROM.commit();  
+    config.Commit();
     // delay(500); // delay may not be required
     sendMSPViaEspnow(packet);
     // delay(500); // delay may not be required
-    ESP.restart(); // restart to set SetSoftMACAddress
+    rebootTime = millis(); // restart to set SetSoftMACAddress
   }
-  
+
   switch (packet->function)
   {
   case MSP_SET_VTX_CONFIG:
@@ -127,7 +133,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
   case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
-    break;  
+    break;
   default:
     break;
   }
@@ -155,7 +161,7 @@ void sendMSPViaEspnow(mspPacket_t *packet)
     esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
   }
 
-  flashLedCounter++;
+  blinkLED();
 }
 
 void SendCachedMSP()
@@ -175,7 +181,7 @@ void SetSoftMACAddress()
   for (int i = 0; i < 6; i++)
   {
     #ifndef MY_UID
-    EEPROM.get(EEPROM_MAC + i, broadcastAddress[i]);
+    memcpy(broadcastAddress, config.GetGroupAddress(), 6);
     #endif
     DBG("%x", broadcastAddress[i]); // Debug prints
     DBG(",");
@@ -210,16 +216,24 @@ RF_PRE_INIT()
 
 void setup()
 {
+  #ifdef DEBUG_LOG
+    Serial1.begin(115200);
+    Serial1.setDebugOutput(true);
+  #endif
   Serial.begin(460800);
 
-  EEPROM.begin(512);
-  EEPROM.get(0, startWebUpdater);
-  
-  if (startWebUpdater)
+  eeprom.Begin();
+  config.SetStorageProvider(&eeprom);
+  config.Load();
+
+  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+
+  if (config.GetStartWiFiOnBoot())
   {
-    EEPROM.put(EEPROM_ADDR_WIFI, false);
-    EEPROM.commit();  
-    BeginWebUpdate();
+    config.SetStartWiFiOnBoot(false);
+    config.Commit();
+    connectionState = wifiUpdate;
+    devicesTriggerEvent();
   }
   else
   {
@@ -228,7 +242,7 @@ void setup()
     if (esp_now_init() != 0)
     {
       DBGLN("Error initializing ESP-NOW");
-      ESP.restart();
+      rebootTime = millis();
     }
 
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
@@ -236,59 +250,50 @@ void setup()
     esp_now_register_recv_cb(OnDataRecv);
   }
 
-  pinMode(PIN_BUTTON, INPUT);
-  pinMode(PIN_LED, OUTPUT);
-  
-  flashLedCounter = 2;
+  devicesStart();
+  if (connectionState == starting)
+  {
+    connectionState = running;
+  }
+  #ifdef DEBUG_ELRS_WIFI
+    connectionState = wifiUpdate;
+  #endif
   DBGLN("Setup completed");
-} 
+}
 
 void loop()
 {
-  uint8_t buttonPressed = !digitalRead(PIN_BUTTON);
-  
-  if (startWebUpdater)
-  {
-    HandleWebUpdate();
-    flashLedCounter = 1;
-    
-    // button press to exit wifi
-    if (buttonPressed)
+  uint32_t now = millis();
+
+  devicesUpdate(now);
+
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
       ESP.restart();
-  }
-  else
-  {   
-    // press the boot button to start webupdater
-    if (buttonPressed)
-      RebootIntoWifi();
-  
-    if (Serial.available())
-    {
-      uint8_t c = Serial.read();
-
-      if (msp.processReceivedByte(c))
-      {
-        // Finished processing a complete packet
-        ProcessMSPPacketFromTX(msp.getReceivedPacket());
-        msp.markPacketReceived();
-      }
     }
+  #endif
 
-    if (cacheFull && sendCached)
-    {
-      SendCachedMSP();
-      sendCached = false;
-    }
-  }
-
-  // TODO make LED non blocking
-  if (flashLedCounter)
+  if (connectionState == wifiUpdate)
   {
-    flashLedCounter--;
-    
-    digitalWrite(PIN_LED, LOW);
-    startWebUpdater == true ? delay(50) : delay(100);
-    digitalWrite(PIN_LED, HIGH);
-    startWebUpdater == true ? delay(50) : delay(100);
+    return;
+  }
+
+  if (Serial.available())
+  {
+    uint8_t c = Serial.read();
+
+    if (msp.processReceivedByte(c))
+    {
+      // Finished processing a complete packet
+      ProcessMSPPacketFromTX(msp.getReceivedPacket());
+      msp.markPacketReceived();
+    }
+  }
+
+  if (cacheFull && sendCached)
+  {
+    SendCachedMSP();
+    sendCached = false;
   }
 }
