@@ -54,6 +54,7 @@ Rapidfire::SendIndexCmd(uint8_t index)
     uint8_t newChannel = index % 8;
 
     SendBandCmd(newBand);
+	delay(100);
     SendChannelCmd(newChannel);
 }
 
