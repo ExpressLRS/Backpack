@@ -212,8 +212,8 @@ function completeHandler(type_suffix) {
                 type: 'question',
                 title: "Targets Mismatch",
                 message: data.msg,
-                confirmText: "Yes",
-                cancelText: "No"
+                confirmText: "Flash anyway",
+                cancelText: "Cancel"
             }).then((e)=>{
                 xmlhttp = new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function () {
@@ -360,8 +360,8 @@ function cuteAlert({
       if (type === "question") {
         btnTemplate = `
 <div class="question-buttons">
-  <button class="confirm-button ${type}-bg ${type}-btn">${confirmText}</button>
-  <button class="cancel-button error-bg error-btn">${cancelText}</button>
+  <button class="confirm-button error-bg error-btn">${confirmText}</button>
+  <button class="cancel-button question-bg question-btn">${cancelText}</button>
 </div>
 `;
       }

@@ -73,6 +73,9 @@ static bool servicesStarted = false;
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
+static String target_found;
+static bool target_complete = false;
+static bool force_update = false;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
@@ -142,6 +145,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   { // If captive portal redirect instead of displaying the page.
     return;
   }
+  force_update = request->hasArg("force");
   AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", (uint8_t*)INDEX_HTML, sizeof(INDEX_HTML));
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
@@ -288,7 +292,12 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       request->client()->close();
       rebootTime = millis() + 200;
     } else {
-      request->send(200, "application/json", "{\"status\": \"mismatch\", \"msg\": \"Flashing this firmware may cause unexpected behavior or problems, Do you wish to proceed?\"}");
+      String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
+      if (target_found.length() != 0) {
+        message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
+      }
+      message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
+      request->send(200, "application/json", message);
     }
   }
 }
@@ -297,6 +306,8 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   if (index == 0) {
     DBGLN("Update: %s, %s", filename.c_str(), request->arg("type").c_str());
     target_seen = false;
+    target_found.clear();
+    target_complete = false;
     target_pos = 0;
     totalSize = 0;
     #ifdef NAMIMNO_TX_BACKPACK
@@ -329,10 +340,21 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
   if (len) {
     DBGVLN("writing %d", len);
     if (updater.write(data, len) == len) {
-      if (totalSize == 0 && *data == 0x1F) // gzipped image, we can't check
+      if (force_update || (totalSize == 0 && *data == 0x1F)) // forced or gzipped image, we can't check
         target_seen = true;
       if (!target_seen) {
         for (size_t i=0 ; i<len ;i++) {
+          if (!target_complete && (target_pos >= 4 || target_found.length() > 0)) {
+            if (target_pos == 4) {
+              target_found.clear();
+            }
+            if (data[i] == 0 || target_found.length() > 50) {
+              target_complete = true;
+            }
+            else {
+              target_found += (char)data[i];
+            }
+          }
           if (data[i] == target_name[target_pos]) {
             ++target_pos;
             if (target_pos >= target_name_size) {
