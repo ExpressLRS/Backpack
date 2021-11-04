@@ -220,7 +220,11 @@ void setup()
     Serial1.begin(115200);
     Serial1.setDebugOutput(true);
   #endif
+#ifdef AXIS_THOR_TX_BACKPACK
+  Serial.begin(420000);
+#else
   Serial.begin(460800);
+#endif
 
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);

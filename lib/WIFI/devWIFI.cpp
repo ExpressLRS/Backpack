@@ -449,6 +449,14 @@ static void startMDNS()
   #elif defined(TARGET_TX_BACKPACK)
     MDNS.addServiceTxt(service, "type", "txbp");
   #endif
+  // If the probe result fails because there is another device on the network with the same name
+  // use our unique instance name as the hostname.
+  MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
+    if (!p_bProbeResult) {
+      WiFi.hostname(instance);
+      MDNS.setInstanceName(instance);
+    }
+  });
 }
 
 static void startServices()
