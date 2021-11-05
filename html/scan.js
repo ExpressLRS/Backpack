@@ -371,12 +371,12 @@ function cuteAlert({
         closeStyleTemplate = "alert-close-circle";
       }
 
-      let btnTemplate = `<button class="alert-button ${type}-bg ${type}-btn">${buttonText}</button>`;
+      let btnTemplate = `<button class="alert-button mui-btn mui-btn--primary">${buttonText}</button>`;
       if (type === "question") {
         btnTemplate = `
 <div class="question-buttons">
-  <button class="confirm-button error-bg error-btn">${confirmText}</button>
-  <button class="cancel-button question-bg question-btn">${cancelText}</button>
+  <button class="confirm-button mui-btn mui-btn--danger">${confirmText}</button>
+  <button class="cancel-button mui-btn">${cancelText}</button>
 </div>
 `;
       }

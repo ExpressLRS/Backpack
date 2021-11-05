@@ -31,31 +31,32 @@
 			</ul>
 
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
-				<legend>
-					<h2>Useful Links and Support</h2>
-				</legend>
+				<h2>Useful Links and Support</h2>
 				<a href="https://github.com/ExpressLRS/Backpack">GitHub Repository</a>
-				<br>
+				<br><br>
 				<a href="https://discord.gg/dS6ReFY">Discord Chat</a>
 			</div>
 
 			<div class="mui-tabs__pane" id="pane-justified-2">
 				<div id="apmode" style="display:none;">
-					<h2>Join Network</h2>
-					Here you can join a network and it will be saved as your &quot;home&quot; network.
-					When you are in range of your &quot;home&quot; network and start WiFi update the TX Module will automatically connect.
-					<form action="/sethome" id="sethome" method="POST" autocomplete="off" class="mui-form">
-						<div class="autocomplete mui-textfield" style="width: 80%;">
-							<input id="network" type="text" name="network" placeholder="SSID"/>
-						</div>
-						<div id="loader" style="float:right" class="loader"></div>
-						<div class="mui-textfield" style="width: 80%;">
-							<input type="password" id="password" name="password" placeholder="Password" />
-						</div>
-						<input type="submit" value="Join" class="mui-btn mui-btn--primary">
-					</form>
-					<br>
-					<a id="connect" href="#">Connect to &quot;home&quot; network: <span id="homenet"></span></a>
+					<div class="mui-panel">
+						<h2>Join Network</h2>
+						Here you can join a network and it will be saved as your &quot;home&quot; network.
+						When you are in range of your &quot;home&quot; network and start WiFi update the TX Module will automatically connect.
+						<form action="/sethome" id="sethome" method="POST" autocomplete="off" class="mui-form">
+							<div class="autocomplete mui-textfield" style="width: 80%;">
+								<input id="network" type="text" name="network" placeholder="SSID"/>
+							</div>
+							<div id="loader" style="float:right" class="loader"></div>
+							<div class="mui-textfield" style="width: 80%;">
+								<input type="password" id="password" name="password" placeholder="Password" />
+							</div>
+							<input type="submit" value="Join" class="mui-btn mui-btn--primary">
+						</form>
+					</div>
+					<div class="mui-panel">
+						<a id="connect" href="#">Connect to &quot;home&quot; network: <span id="homenet"></span></a>
+					</div>
 				</div>
 
 				<div id="stamode" style="display:none;">

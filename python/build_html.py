@@ -63,10 +63,9 @@ def build_html(mainfile, var, out, env):
 def build_common(out, env):
     build_html("scan.js", "SCAN_JS", out, env)
     build_html("mui.js", "MUI_JS", out, env)
-    build_html("main.css", "CSS", out, env)
     build_html("elrs.css", "ELRS_CSS", out, env)
     build_html("mui.css", "MUI_CSS", out, env)
-    build_html("logo.svg", "FLAG", out, env)
+    build_html("logo.svg", "FLAG_SVG", out, env)
 
 def build_txbp_html(env):
     out = open("include/WebContent.h", 'w')

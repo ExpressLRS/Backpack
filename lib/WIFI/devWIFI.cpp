@@ -126,12 +126,11 @@ static struct {
   const uint8_t* content;
   const size_t size;
 } files[] = {
-  {"/main.css", "text/css", (uint8_t*)CSS, sizeof(CSS)},
   {"/mui.css", "text/css", (uint8_t*)MUI_CSS, sizeof(MUI_CSS)},
   {"/elrs.css", "text/css", (uint8_t*)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/mui.js", "text/javascript", (uint8_t*)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS)},
-  {"/flag.svg", "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG)},
+  {"/flag.svg", "image/svg+xml", (uint8_t*)FLAG_SVG, sizeof(FLAG_SVG)},
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -480,7 +479,6 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendContent);
   server.on("/mui.css", WebUpdateSendContent);
   server.on("/elrs.css", WebUpdateSendContent);
   server.on("/mui.js", WebUpdateSendContent);
