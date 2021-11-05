@@ -24,11 +24,8 @@ function get_mode() {
                 scanTimer = setInterval(get_networks, 2000);
             }
             if((!data.stm32 || data.stm32==="no") && _('tx_tab')) {
+                mui.tabs.activate('pane-justified-2');
                 _('tx_tab').style.display = 'none';
-                _('tx_tab').classList.remove('mui--is-active');
-                _('pane-justified-1').classList.remove('mui--is-active');
-                _('bp_tab').classList.add('mui--is-active');
-                _('pane-justified-2').classList.add('mui--is-active');
             }
         }
     };
