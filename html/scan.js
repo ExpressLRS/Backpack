@@ -372,7 +372,7 @@ function cuteAlert({
         closeStyleTemplate = "alert-close-circle";
       }
 
-      let btnTemplate = `<button class="alert-button mui-btn mui-btn--primary">${buttonText}</button>`;
+      let btnTemplate = `<div><button class="alert-button mui-btn mui-btn--primary">${buttonText}</button></div>`;
       if (type === "question") {
         btnTemplate = `
 <div class="question-buttons">
