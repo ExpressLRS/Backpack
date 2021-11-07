@@ -8,6 +8,8 @@ public:
         _stmMode = stmMode;
     }
 
+    bool isSTMUpdate() { return _stmMode; }
+
     bool begin(size_t size) {
         _running = true;
 #ifdef NAMIMNO_TX_BACKPACK

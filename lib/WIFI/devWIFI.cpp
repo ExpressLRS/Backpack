@@ -290,7 +290,9 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
-      rebootTime = millis() + 200;
+      if (!updater.isSTMUpdate()) {
+        rebootTime = millis() + 200;
+      }
     } else {
       String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
       if (target_found.length() != 0) {
