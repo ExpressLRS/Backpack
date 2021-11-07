@@ -87,11 +87,6 @@ const __FlashStringHelper *stk500_write_file(const char *filename)
     }
     fp.close();
 
-    if (prog_mode_exit() < 0) {
-        // Seems we don't get the response!
-        // return F("exit prog mode!");
-    }
-
     DBGLN("write succeeded.");
     return NULL;
 }

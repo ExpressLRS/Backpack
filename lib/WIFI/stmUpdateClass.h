@@ -11,6 +11,8 @@ public:
     bool begin(size_t size);
     size_t write(uint8_t *data, size_t len);
     bool end(bool evenIfRemaining = false);
+    void finish();
+
     void printError(Print &out);
     bool hasError() { return _error != UPDATE_ERROR_OK; }
 

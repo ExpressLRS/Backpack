@@ -36,6 +36,13 @@ public:
         return Update.end(evenIfRemaining);
     }
 
+    void finish() {
+#ifdef NAMIMNO_TX_BACKPACK
+        if (_stmMode)
+            return STMUpdate.finish();
+#endif
+    }
+
     void printError(Print &out) {
 #ifdef NAMIMNO_TX_BACKPACK
         if (_stmMode)

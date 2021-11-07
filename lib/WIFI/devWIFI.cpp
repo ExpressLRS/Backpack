@@ -293,6 +293,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       if (!updater.isSTMUpdate()) {
         rebootTime = millis() + 200;
       }
+      updater.finish();
     } else {
       String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
       if (target_found.length() != 0) {

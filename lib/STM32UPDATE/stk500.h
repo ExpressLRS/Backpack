@@ -68,5 +68,6 @@
 #define STK_READ_OSCCAL_EXT 0x78 // 'x'
 
 const __FlashStringHelper *stk500_write_file(const char *filename);
+int prog_mode_exit(void);
 
 #endif

@@ -62,6 +62,15 @@ bool STMUpdateClass::end(bool evenIfRemaining)
     return !hasError();
 }
 
+void STMUpdateClass::finish()
+{
+  if (filename.endsWith(".elrs")) {
+    prog_mode_exit();
+  } else if (filename.endsWith(".bin")) {
+    stm32_restart();
+  }
+}
+
 void STMUpdateClass::printError(Print &out){
   if(_error == UPDATE_ERROR_OK){
     out.println(F("No Error"));

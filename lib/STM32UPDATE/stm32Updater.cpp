@@ -337,6 +337,11 @@ uint8_t cmd_go(uint32_t address)
 	return 0;
 }
 
+void stm32_restart()
+{
+	cmd_go(FLASH_START);
+}
+
 const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t begin_addr)
 {
 	if (!SPIFFS.exists(filename))
@@ -445,6 +450,5 @@ const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint3
 	DBGLN("verify file succeeded.");
 	DBGLN("start application.");
 	//reset_stm32_to_app_mode();
-	cmd_go(FLASH_START);
 	return NULL;
 }
