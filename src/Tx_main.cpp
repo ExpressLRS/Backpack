@@ -232,6 +232,10 @@ void setup()
 
   devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
+  #ifdef DEBUG_ELRS_WIFI
+    config.SetStartWiFiOnBoot(true);
+  #endif
+
   if (config.GetStartWiFiOnBoot())
   {
     config.SetStartWiFiOnBoot(false);
@@ -259,9 +263,6 @@ void setup()
   {
     connectionState = running;
   }
-  #ifdef DEBUG_ELRS_WIFI
-    connectionState = wifiUpdate;
-  #endif
   DBGLN("Setup completed");
 }
 

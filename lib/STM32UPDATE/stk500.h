@@ -67,7 +67,7 @@
 #define STK_READ_FUSE_EXT 0x77   // 'w'
 #define STK_READ_OSCCAL_EXT 0x78 // 'x'
 
-const __FlashStringHelper *stk500_write_file(const char *filename);
+const __FlashStringHelper *stk500_write_file(const char *filename, std::function<void(size_t)> progress);
 int prog_mode_exit(void);
 
 #endif

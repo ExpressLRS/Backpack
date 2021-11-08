@@ -48,14 +48,19 @@ def build_version(out, env):
     out.write('const char *VERSION = "%s";\n\n' % get_git_version(env))
 
 def build_html(mainfile, var, out, env):
+    debug = fnmatch.filter(env['BUILD_FLAGS'], '*DEBUG_ELRS_WIFI*')
     with open('html/%s' % mainfile, 'r') as file:
         data = file.read()
     if mainfile.endswith('.html'):
-        data = html_minifier.html_minify(data).replace('@VERSION@', get_git_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
+        if not debug:
+            data = html_minifier.html_minify(data)
+        data = data.replace('@VERSION@', get_git_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
     if mainfile.endswith('.css'):
-        data = rcssmin.cssmin(data)
+        if not debug:
+            data = rcssmin.cssmin(data)
     if mainfile.endswith('.js'):
-        data = rjsmin.jsmin(data)
+        if not debug:
+            data = rjsmin.jsmin(data)
     out.write('static const char PROGMEM %s[] = {\n' % var)
     out.write(','.join("0x{:02x}".format(c) for c in gzip.compress(data.encode('utf-8'))))
     out.write('\n};\n\n')

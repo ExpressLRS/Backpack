@@ -27,4 +27,4 @@ void debug_log();
 
 void stm32_restart();
 
-const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t const begin_addr);
+const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t const begin_addr, std::function<void(size_t)> progress);

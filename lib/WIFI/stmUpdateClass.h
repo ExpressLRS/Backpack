@@ -16,6 +16,8 @@ public:
     void printError(Print &out);
     bool hasError() { return _error != UPDATE_ERROR_OK; }
 
+    std::function<void(size_t)> callback;
+
 private:
     int8_t flashSTM32(uint32_t flash_addr);
     String filename;

@@ -21,7 +21,7 @@ void serial_empty_rx(void)
         Serial.read();
 }
 
-const __FlashStringHelper *stk500_write_file(const char *filename)
+const __FlashStringHelper *stk500_write_file(const char *filename, std::function<void(size_t)> progress)
 {
     uint8_t sync_iter;
     if (!SPIFFS.exists(filename)) {
@@ -84,6 +84,7 @@ const __FlashStringHelper *stk500_write_file(const char *filename)
             fp.close();
             return F("write failed.");
         }
+        progress(fp.position());
     }
     fp.close();
 
@@ -158,6 +159,7 @@ int wait_data_timeout(int const count, uint32_t timeout)
     uint32_t const start = millis();
     while ((millis() - start) < timeout) {
         ESP.wdtFeed();
+        delay(1);
         if (count <= Serial.available()) {
             return 0;
         }

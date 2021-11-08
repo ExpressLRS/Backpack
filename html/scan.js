@@ -173,82 +173,77 @@ function autocomplete(inp, arr) {
 
 //=========================================================
 
+var uploading = {};
+var source;
+
 function uploadFile(type_suffix) {
     var file = _("firmware_file_" + type_suffix).files[0];
     var formdata = new FormData();
     formdata.append("type", type_suffix);
     formdata.append("upload", file, file.name);
+    uploading = {"type": type_suffix, "size": file.size};
+
     var ajax = new XMLHttpRequest();
-    ajax.upload.addEventListener("progress", progressHandler(type_suffix), false);
-    ajax.addEventListener("load", completeHandler(type_suffix), false);
     ajax.addEventListener("error", errorHandler(type_suffix), false);
     ajax.addEventListener("abort", abortHandler(type_suffix), false);
     ajax.open("POST", "/update");
     ajax.send(formdata);
-}
-
-function progressHandler(type_suffix) {
-    return function (event) {
-        //_("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
-        var percent = Math.round((event.loaded / event.total) * 100);
-        _("progressBar_" + type_suffix).value = percent;
-        _("status_" + type_suffix).innerHTML = percent + "% uploaded... please wait";
+    if (!!window.EventSource) {
+        source = new EventSource('/events');
+        function progress(mode) { return (e) => {
+                var loaded = e.data;
+                var total = uploading.size;
+                var percent = Math.round((loaded / total) * 100);
+                _("progressBar_" + uploading.type).value = percent;
+                _("status_" + uploading.type).innerHTML = percent + "% (" + loaded + "/" + total + ") " + mode + "... please wait";
+            };
+        }
+        source.addEventListener('upload', progress("uploaded"), false);
+        source.addEventListener('flash', progress("flashed"), false);
+        source.addEventListener('complete', uploaded, false);
     }
 }
 
-function completeHandler(type_suffix) {
-    return function(event) {
-        _("status_" + type_suffix).innerHTML = "";
-        _("progressBar_" + type_suffix).value = 0;
-        var data = JSON.parse(event.target.responseText);
-        if (data.status === 'ok') {
-            cuteAlert({
-                type: 'success',
-                title: "Update Succeeded",
-                message: data.msg
-            });
-        } else if (data.status === 'mismatch') {
-            cuteAlert({
-                type: 'question',
-                title: "Targets Mismatch",
-                message: data.msg,
-                confirmText: "Flash anyway",
-                cancelText: "Cancel"
-            }).then((e)=>{
-                xmlhttp = new XMLHttpRequest();
-                xmlhttp.onreadystatechange = function () {
-                    if (this.readyState == 4) {
-                        _("status_" + type_suffix).innerHTML = "";
-                        _("progressBar_" + type_suffix).value = 0;
-                        if (this.status == 200) {
-                            var data = JSON.parse(this.responseText);
-                            cuteAlert({
-                                type: "info",
-                                title: "Force Update",
-                                message: data.msg
-                            });
-                        }
-                        else {
-                            cuteAlert({
-                                type: "error",
-                                title: "Force Update",
-                                message: "An error occurred trying to force the update"
-                            });
-                        }
-                    }
-                };
-                xmlhttp.open("POST", "/forceupdate", true);
-                var data = new FormData();
-                data.append("action", e);
-                xmlhttp.send(data);
-            });
-        } else {
-            cuteAlert({
-                type: 'error',
-                title: "Update Failed",
-                message: data.msg
-            });
-        }
+function uploaded(event) {
+    var type_suffix = uploading.type;
+    _("status_" + type_suffix).innerHTML = "";
+    _("progressBar_" + type_suffix).value = 0;
+    var data = JSON.parse(event.data);
+    if (data.status === 'ok') {
+        source.close();
+        cuteAlert({
+            type: 'success',
+            title: "Update Succeeded",
+            message: data.msg
+        });
+    } else if (data.status === 'cancelled') {
+        source.close();
+        cuteAlert({
+            type: 'success',
+            title: "Update Cancelled",
+            message: data.msg
+        });
+    } else if (data.status === 'mismatch') {
+        cuteAlert({
+            type: 'question',
+            title: "Targets Mismatch",
+            message: data.msg,
+            confirmText: "Flash anyway",
+            cancelText: "Cancel"
+        }).then((e) => {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("POST", "/forceupdate", true);
+            var data = new FormData();
+            data.append("action", e);
+            xmlhttp.send(data);
+        });
+    } else {
+        source.close();
+        cuteAlert({
+            type: 'error',
+            title: "Update Failed",
+            message: data.msg
+        });
     }
 }
 

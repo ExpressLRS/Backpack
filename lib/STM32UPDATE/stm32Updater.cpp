@@ -342,7 +342,7 @@ void stm32_restart()
 	cmd_go(FLASH_START);
 }
 
-const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t begin_addr)
+const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint32_t begin_addr, std::function<void(size_t)> progress)
 {
 	if (!SPIFFS.exists(filename))
 	{
@@ -389,58 +389,37 @@ const __FlashStringHelper *esp8266_spiffs_write_file(const char *filename, uint3
 	DBGLN("erase Success!");
 
 	DBGLN("begin to write file.");
-	uint32_t junks = (filesize + (BLOCK_SIZE - 1)) / BLOCK_SIZE;
-	uint32_t junk = 0;
-	uint8_t proc;
-	while (fp.position() < filesize)
-	{
+	while (fp.position() < filesize) {
 		uint8_t nread = BLOCK_SIZE;
-		if ((filesize - fp.position()) < BLOCK_SIZE)
-		{
+		if ((filesize - fp.position()) < BLOCK_SIZE) {
 			nread = filesize - fp.position();
 		}
 		nread = fp.readBytes((char *)memory_buffer, nread);
-
-		//DBGLN("write bytes: %d, file position: %d", nread, fp.position());
-		proc = (++junk * 100) / junks;
-		if ((junk % 40) == 0 || junk >= junks)
-			DBGLN("Write %u%%", proc);
-
 		uint8_t result = cmd_write_memory(begin_addr + fp.position() - nread, nread);
-		if (result != 1)
-		{
+		if (result != 1) {
 			fp.close();
 			return F("[ERROR] file write failed.");
 		}
+        progress(fp.position());
 	}
 	DBGLN("file write succeeded.");
+
 	DBGLN("begin to verify file.");
 	fp.seek(0, SeekSet);
-	junk = 0;
-	while (fp.position() < filesize)
-	{
+	while (fp.position() < filesize) {
 		uint8_t nread = BLOCK_SIZE;
-		if ((filesize - fp.position()) < BLOCK_SIZE)
-		{
+		if ((filesize - fp.position()) < BLOCK_SIZE) {
 			nread = filesize - fp.position();
 		}
 		nread = fp.readBytes((char *)file_buffer, nread);
-
-		//DBGLN("read bytes: %d, file position: %d", nread, fp.position());
-		proc = (++junk * 100) / junks;
-		if ((junk % 40) == 0 || junk >= junks)
-			DBGLN("Verify %u%%", proc);
-
 		uint8_t result = cmd_read_memory(begin_addr + fp.position() - nread, nread);
-		if (result != 1)
-		{
+		if (result != 1) {
 			fp.close();
 			DBGLN("[ERROR] read memory failed: %d", fp.position());
 			return F("[ERROR] read memory failed");
 		}
 		result = memcmp(file_buffer, memory_buffer, nread);
-		if (result != 0)
-		{
+		if (result != 0) {
 			fp.close();
 			return F("[ERROR] verify failed.");
 		}

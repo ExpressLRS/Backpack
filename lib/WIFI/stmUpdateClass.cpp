@@ -89,9 +89,9 @@ void STMUpdateClass::printError(Print &out){
 int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
 {
   if (filename.endsWith(".elrs")) {
-    _errmsg = stk500_write_file(spiffs_firmware_filename);
+    _errmsg = stk500_write_file(spiffs_firmware_filename, callback);
   } else if (filename.endsWith(".bin")) {
-    _errmsg = esp8266_spiffs_write_file(spiffs_firmware_filename, flash_addr);
+    _errmsg = esp8266_spiffs_write_file(spiffs_firmware_filename, flash_addr, callback);
   }
   Serial.begin(460800);
   if (_errmsg != NULL)

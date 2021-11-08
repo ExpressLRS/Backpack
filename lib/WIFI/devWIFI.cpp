@@ -69,6 +69,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
+static AsyncEventSource events("/events");
 static bool servicesStarted = false;
 
 static bool target_seen = false;
@@ -76,6 +77,8 @@ static uint8_t target_pos = 0;
 static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
+static bool begin_flashing = false;
+static String upload_complete;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
@@ -247,6 +250,27 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   sendResponse(request, msg, WIFI_AP);
 }
 
+static void flash()
+{
+  String message;
+  if (updater.end(true)) { //true to set the size to the current progress
+    DBGLN("Flasd Succeeded: %ubytes\nThe module will be restarted.", totalSize);
+    message = "{\"status\": \"ok\", \"msg\": \"Flashing complete. The module will be restarted.\"}";
+    updater.finish();
+  } else {
+    StreamString p = StreamString();
+    updater.printError(p);
+    #if defined(PLATFORM_ESP32)
+      updater.abort();
+    #endif
+    p.trim();
+    DBGLN("Failed to flash firmware: %s", p.c_str());
+    message = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
+  }
+  events.send(message.c_str(), "complete");
+  begin_flashing = false;
+}
+
 static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 {
   if (captivePortal(request))
@@ -274,35 +298,52 @@ static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
 }
 
 static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
+  String message;
   if (updater.hasError()) {
     StreamString p = StreamString();
     updater.printError(p);
+    #if defined(PLATFORM_ESP32)
+      updater.abort();
+    #endif
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
-    response->addHeader("Connection", "close");
-    request->send(response);
-    request->client()->close();
+    message = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
   } else {
     if (target_seen) {
-      DBGLN("Update complete, rebooting");
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to turn on before disconnecting power.\"}");
-      response->addHeader("Connection", "close");
-      request->send(response);
-      request->client()->close();
-      if (!updater.isSTMUpdate()) {
-        rebootTime = millis() + 200;
+      if (updater.isSTMUpdate()) {
+        message = "{\"status\": \"ok\", \"msg\": \"Upload complete. Please wait for flashing to complete before disconnecting power.\"}";
+        begin_flashing = true;
+      } else {
+        if (updater.end(true)) { //true to set the size to the current progress
+          DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
+          message = "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to turn on before disconnecting power.\"}";
+        } else {
+          StreamString p = StreamString();
+          updater.printError(p);
+          #if defined(PLATFORM_ESP32)
+            updater.abort();
+          #endif
+          p.trim();
+          DBGLN("Failed to flash firmware: %s", p.c_str());
+          message = String("{\"status\": \"error\", \"msg\": \"") + p + "\"}";
+        }
+        rebootTime = millis() + 1000;
       }
-      updater.finish();
     } else {
-      String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
+      DBGLN("Target mismatch");
+      message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
       if (target_found.length() != 0) {
         message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
       }
       message += "<br/>Flashing the wrong firmware may lock or damage your device.\"}";
-      request->send(200, "application/json", message);
     }
   }
+  AsyncWebServerResponse *response = request->beginResponse(200, "application/json", message.c_str());
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+  if (!begin_flashing)
+    upload_complete = message;
 }
 
 static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
@@ -335,7 +376,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         updater.printError(Serial);
       }
     #else
-      if (!updater->begin()) { //start with max available size
+      if (!updater.begin()) { //start with max available size
         updater.printError(Serial);
       }
     #endif
@@ -370,21 +411,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         }
       }
       totalSize += len;
-    }
-  }
-  if (final && !updater.hasError()) {
-    DBGVLN("finish");
-    if (target_seen) {
-      if (updater.end(true)) { //true to set the size to the current progress
-        DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
-      } else {
-        updater.printError(Serial);
-      }
-    } else {
-      #if defined(PLATFORM_ESP32)
-        updater->abort();
-      #endif
-      DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
+      events.send(String(totalSize).c_str(), "upload");
     }
   }
 }
@@ -392,17 +419,17 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
 static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
-    if (updater.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
-    } else {
-      updater.printError(Serial);
-    }
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
-      updater->abort();
+      updater.abort();
     #endif
-    request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"cancelled\", \"msg\": \"Update cancelled, rebooting\"}");
+    response->addHeader("Connection", "close");
+    request->send(response);
+    request->client()->close();
+    events.send("", "cancelled");
+    rebootTime = millis() + 1000;
   }
 }
 
@@ -518,6 +545,12 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
 
+  events.onConnect([](AsyncEventSourceClient *client){
+    DBGLN("Client connected! Last message ID that it got is: %u", client->lastId());
+    client->send("hello", NULL, 0, 1000);
+  });
+  server.addHandler(&events);
+
   server.onNotFound(WebUpdateHandleNotFound);
 
   server.begin();
@@ -601,11 +634,22 @@ static void HandleWebUpdate()
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
     if (!updater.isRunning())
       delay(1);
+    if (begin_flashing)
+      flash();
+    if (upload_complete.length()) {
+      events.send(upload_complete.c_str(), "complete");
+      upload_complete.clear();
+    }
   }
 }
 
 static int start()
 {
+  #if defined(NAMIMNO_TX_BACKPACK)
+    STMUpdate.callback = [](size_t currentPostion){
+      events.send(String(currentPostion).c_str(), "flash");
+    };
+  #endif
   return DURATION_NEVER;
 }
 
