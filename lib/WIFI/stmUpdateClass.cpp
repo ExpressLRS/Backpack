@@ -66,6 +66,7 @@ void STMUpdateClass::finish()
 {
   if (filename.endsWith(".elrs")) {
     prog_mode_exit();
+    reset_stm32_to_app_mode();
   } else if (filename.endsWith(".bin")) {
     stm32_restart();
   }
