@@ -134,6 +134,10 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
     break;
+  case MSP_CRSF_PACKET:
+    DBGLN("Processing MSP_CRSF_PACKET...");
+    sendMSPViaEspnow(packet);
+    break;
   default:
     break;
   }
