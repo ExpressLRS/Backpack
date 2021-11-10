@@ -254,7 +254,7 @@ static void flash()
 {
   String message;
   if (updater.end(true)) { //true to set the size to the current progress
-    DBGLN("Flasd Succeeded: %ubytes\nThe module will be restarted.", totalSize);
+    DBGLN("Flash Succeeded: %ubytes\nThe module will be restarted.", totalSize);
     message = "{\"status\": \"ok\", \"msg\": \"Flashing complete. The module will be restarted.\"}";
     updater.finish();
   } else {

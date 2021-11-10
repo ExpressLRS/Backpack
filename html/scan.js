@@ -211,11 +211,30 @@ function uploaded(event) {
     var data = JSON.parse(event.data);
     if (data.status === 'ok') {
         source.close();
-        cuteAlert({
-            type: 'success',
-            title: "Update Succeeded",
-            message: data.msg
-        });
+        function show_message() {
+            cuteAlert({
+                type: 'success',
+                title: "Update Succeeded",
+                message: data.msg
+            });
+        }
+        if (type_suffix === 'bp') {
+            // This is basically a delayed display of the success dialog with a fake progress
+            var percent = 0;
+            var interval = setInterval(()=>{
+                percent = percent + 1;
+                _("progressBar_" + uploading.type).value = percent;
+                _("status_" + uploading.type).innerHTML = percent + "% flashed... please wait";
+                if (percent == 100) {
+                    clearInterval(interval);
+                    _("status_" + type_suffix).innerHTML = "";
+                    _("progressBar_" + type_suffix).value = 0;
+                    show_message();
+                }
+            }, 100);
+        } else {
+            show_message();
+        }
     } else if (data.status === 'cancelled') {
         source.close();
         cuteAlert({
@@ -252,9 +271,9 @@ function errorHandler(type_suffix) {
         _("status_" + type_suffix).innerHTML = "";
         _("progressBar_" + type_suffix).value = 0;
         cuteAlert({
-        type: "error",
-        title: "Update Failed",
-        message: event.target.responseText
+            type: "error",
+            title: "Update Failed",
+            message: event.target.responseText
         });
     }
 }
@@ -264,9 +283,9 @@ function abortHandler(type_suffix) {
         _("status_" + type_suffix).innerHTML = "";
         _("progressBar_" + type_suffix).value = 0;
         cuteAlert({
-        type: "info",
-        title: "Update Aborted",
-        message: event.target.responseText
+            type: "info",
+            title: "Update Aborted",
+            message: event.target.responseText
         });
     }
 }
