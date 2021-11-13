@@ -76,6 +76,7 @@ static uint8_t target_pos = 0;
 static String target_found;
 static bool target_complete = false;
 static bool force_update = false;
+static bool do_flash = false;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
@@ -290,7 +291,7 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
-      rebootTime = millis() + 200;
+      do_flash = true;
     } else {
       String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
       if (target_found.length() != 0) {
@@ -369,31 +370,11 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
       totalSize += len;
     }
   }
-  if (final && !updater.hasError()) {
-    DBGVLN("finish");
-    if (target_seen) {
-      if (updater.end(true)) { //true to set the size to the current progress
-        DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
-      } else {
-        updater.printError(Serial);
-      }
-    } else {
-      #if defined(PLATFORM_ESP32)
-        updater->abort();
-      #endif
-      DBGLN("Wrong firmware uploaded, not %s, update aborted", &target_name[4]);
-    }
-  }
 }
 
 static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
-    if (updater.end(true)) { //true to set the size to the current progress
-      DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
-    } else {
-      updater.printError(Serial);
-    }
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
@@ -598,6 +579,15 @@ static void HandleWebUpdate()
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
     if (!updater.isRunning())
       delay(1);
+    if (do_flash) {
+      do_flash = false;
+      if (updater.end(true)) { //true to set the size to the current progress
+        DBGLN("Upload Success: %ubytes\nPlease wait for LED to turn on before disconnecting power", totalSize);
+      } else {
+        updater.printError(Serial);
+      }
+      rebootTime = millis() + 200;
+    }
   }
 }
 
