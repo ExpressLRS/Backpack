@@ -81,6 +81,7 @@ int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
 {
   if (filename.endsWith(".elrs")) {
     _errmsg = stk500_write_file(spiffs_firmware_filename);
+    reset_stm32_to_app_mode();
   } else if (filename.endsWith(".bin")) {
     _errmsg = esp8266_spiffs_write_file(spiffs_firmware_filename, flash_addr);
   }
