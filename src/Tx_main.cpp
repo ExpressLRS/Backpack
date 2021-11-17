@@ -266,9 +266,17 @@ void setup()
   DBGLN("Setup completed");
 }
 
+uint32_t nextSend = 5000;
+
 void loop()
 {
   uint32_t now = millis();
+
+  if (nextSend < now)
+  {
+    nextSend += 5000;
+    Serial.write(0);
+  }
 
   devicesUpdate(now);
 
