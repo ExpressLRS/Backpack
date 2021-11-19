@@ -323,9 +323,33 @@ void setup()
   DBGLN("Setup completed");
 }
 
+uint8_t testIndex = 0;
+uint32_t sendPeriod = 5000;
+uint32_t nextSend = 5000;
+
 void loop()
 {
   uint32_t now = millis();
+
+#ifdef SERIAL_BACKPACK
+  if (now > nextSend)
+  {
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_SET_VTX_CONFIG;
+    packet.addByte(testIndex);
+    msp.sendPacket(&packet, &Serial); 
+
+    nextSend += sendPeriod;
+    testIndex++;
+
+    if (testIndex > 47)
+    {
+      testIndex = 0;
+    }
+  }
+#endif   
 
   devicesUpdate(now);
 

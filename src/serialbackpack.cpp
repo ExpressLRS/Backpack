@@ -1,5 +1,7 @@
 #include "serialbackpack.h"
 #include "logging.h"
+#include "msp.h"
+#include "msptypes.h"
 
 void
 serialBackpack::Init()
@@ -10,5 +12,5 @@ serialBackpack::Init()
 void
 serialBackpack::SendIndexCmd(uint8_t index)
 {
-
+    
 }
