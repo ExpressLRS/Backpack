@@ -20,6 +20,8 @@
   #include "rx5808.h"
 #elif defined(STEADYVIEW_BACKPACK)
   #include "steadyview.h"
+#elif defined(SERIAL_BACKPACK)
+  #include "serialbackpack.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -67,6 +69,8 @@ VrxBackpackConfig config;
   RX5808 vrxModule;
 #elif defined(STEADYVIEW_BACKPACK)
   SteadyView vrxModule;
+#elif defined(SERIAL_BACKPACK)
+  serialBackpack vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
