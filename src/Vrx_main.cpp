@@ -280,7 +280,7 @@ RF_PRE_INIT()
 
 void setup()
 {
-  Serial.begin(460800);
+  Serial.begin(115200);
 
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
