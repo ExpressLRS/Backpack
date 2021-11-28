@@ -30,6 +30,12 @@
 #define NO_BINDING_TIMEOUT  120000
 #define BINDING_LED_PAUSE   1000
 
+/////////// TEST DEFINES - TODO: REMOVE ///////////
+
+#define   SEND_PERIOD 10000
+uint8_t   r_bandIndex = 32;   // start at R1
+uint32_t  lastSentTestValue = 0;
+
 /////////// GLOBALS ///////////
 
 #ifdef MY_UID
@@ -323,33 +329,31 @@ void setup()
   DBGLN("Setup completed");
 }
 
-uint8_t testIndex = 0;
-uint32_t sendPeriod = 5000;
-uint32_t nextSend = 5000;
-
 void loop()
 {
   uint32_t now = millis();
 
-#ifdef SERIAL_BACKPACK
-  if (now > nextSend)
+#if defined(SERIAL_BACKPACK)
+  // TODO: remove this block of test comms
+  if (now > lastSentTestValue + SEND_PERIOD)
   {
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
-    packet.function = MSP_SET_VTX_CONFIG;
-    packet.addByte(testIndex);
+    packet.function = 0x0380;
+    packet.addByte(r_bandIndex);
     msp.sendPacket(&packet, &Serial); 
 
-    nextSend += sendPeriod;
-    testIndex++;
+    lastSentTestValue = now;
+    r_bandIndex++;
 
-    if (testIndex > 47)
+    if (r_bandIndex > 39)
     {
-      testIndex = 0;
+      // wrap back to R1 after R8
+      r_bandIndex = 32;
     }
   }
-#endif   
+  #endif
 
   devicesUpdate(now);
 
