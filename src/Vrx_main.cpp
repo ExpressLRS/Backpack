@@ -340,7 +340,7 @@ void loop()
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
-    packet.function = 0x0380;
+    packet.function = 0x0301;
     packet.addByte(r_bandIndex);
     msp.sendPacket(&packet, &Serial); 
 
