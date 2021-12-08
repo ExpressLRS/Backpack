@@ -34,24 +34,15 @@ def etx_passthrough_init(port, requestedBaudrate):
     with streamexpect.wrap(s) as rl:
         rl.flush()
         rl.write(b"set pulses 0\n")
-        rl.expect_bytes(b"set: ", timeout=1.0)
-        rl.expect_bytes(b"> ", timeout=1.0)
+        time.sleep(0.1)
         rl.write(b"set rfmod 0 bootpin 1\n")
-        rl.expect_bytes(b"set: ", timeout=1.0)
-        rl.expect_bytes(b"> ", timeout=1.0)
-        time.sleep(1.0)
-        rl.write(b"set rfmod 0 bootpin 0\n")
-        rl.expect_bytes(b"set: ", timeout=1.0)
-        rl.expect_bytes(b"> ", timeout=1.0)
-        time.sleep(.2)
-
         cmd = "serialpassthrough rfmod 0 %s" % requestedBaudrate
-
         dbg_print("Enabling serial passthrough...")
         dbg_print("  CMD: '%s'" % cmd)
         rl.write(cmd.encode("utf-8"))
         rl.write(b'\n')
         time.sleep(.2)
+        rl.flush()
 
     s.close()
     dbg_print("======== PASSTHROUGH DONE ========")
