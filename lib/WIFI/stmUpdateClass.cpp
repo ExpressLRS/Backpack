@@ -6,6 +6,8 @@
 
 #include "logging.h"
 
+static const char *spiffs_firmware_filename = "firmware.bin";
+
 void STMUpdateClass::setFilename(const String& filename)
 {
     this->filename = filename;
@@ -16,8 +18,8 @@ bool STMUpdateClass::begin(size_t size)
     _error = UPDATE_ERROR_OK;
 
     /* Remove old file */
-    if (SPIFFS.exists(filename.c_str()))
-      SPIFFS.remove(filename.c_str());
+    if (SPIFFS.exists(spiffs_firmware_filename))
+      SPIFFS.remove(spiffs_firmware_filename);
 
     FSInfo fs_info;
     if (SPIFFS.info(fs_info))
@@ -41,7 +43,7 @@ bool STMUpdateClass::begin(size_t size)
         _error = UPDATE_ERROR_READ;
         return false;
     }
-    fsUploadFile = SPIFFS.open(filename.c_str(), "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
+    fsUploadFile = SPIFFS.open(spiffs_firmware_filename, "w");      // Open the file for writing in SPIFFS (create if it doesn't exist)
     return true;
 }
 
@@ -55,8 +57,8 @@ bool STMUpdateClass::end(bool evenIfRemaining)
     fsUploadFile.close(); // Close the file again
 
     _error = flashSTM32(BEGIN_ADDRESS);
-    if (SPIFFS.exists(filename.c_str()))
-        SPIFFS.remove(filename.c_str());
+    if (SPIFFS.exists(spiffs_firmware_filename))
+        SPIFFS.remove(spiffs_firmware_filename);
     return !hasError();
 }
 
@@ -78,9 +80,10 @@ void STMUpdateClass::printError(Print &out){
 int8_t STMUpdateClass::flashSTM32(uint32_t flash_addr)
 {
   if (filename.endsWith(".elrs")) {
-    _errmsg = stk500_write_file(filename.c_str());
+    _errmsg = stk500_write_file(spiffs_firmware_filename);
+    reset_stm32_to_app_mode();
   } else if (filename.endsWith(".bin")) {
-    _errmsg = esp8266_spiffs_write_file(filename.c_str(), flash_addr);
+    _errmsg = esp8266_spiffs_write_file(spiffs_firmware_filename, flash_addr);
   }
   Serial.begin(460800);
   if (_errmsg != NULL)
