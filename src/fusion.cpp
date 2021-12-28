@@ -1,5 +1,9 @@
 #include "fusion.h"
 #include "logging.h"
+#include "crc.h"
+#include "crsf_protocol.h"
+
+GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
 void
 Fusion::Init()
@@ -27,25 +31,11 @@ Fusion::SendIndexCmd(uint8_t index)
     buf[pos++] = f >> 8;    // freq byte 1
     buf[pos++] = f & 0xFF;  // freq byte 2
     buf[pos++] = 0x01;
-    buf[pos++] = crc8(buf, pos); // crc
+
+    buf[pos++] = crsf_crc.calc(&buf[2], pos - 3); // first 2 bytes not included in CRC, minus 1 for CRC itself
 
     for (uint8_t i = 0; i < pos; ++i)
     {
-        Serial.print("0x"); Serial.print(buf[i], HEX); Serial.print(", ");
+        Serial.write(buf[i]);
     }
-    Serial.println("");
-}
-
-// CRC function
-// Input: byte array, array length
-// Output: crc byte
-uint8_t
-Fusion::crc8(uint8_t* buf, uint8_t bufLen)
-{
-  uint32_t sum = 0;
-  for (uint8_t i = 0; i < bufLen; ++i)
-  {
-    sum += buf[i];
-  }
-  return sum & 0xFF;
 }

@@ -16,7 +16,4 @@ class Fusion
 public:
     void Init();
     void SendIndexCmd(uint8_t index);
-
-private:
-    uint8_t crc8(uint8_t* buf, uint8_t bufLen);
 };
