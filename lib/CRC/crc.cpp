@@ -15,12 +15,12 @@ GENERIC_CRC8::GENERIC_CRC8(uint8_t poly)
     }
 }
 
-uint8_t GENERIC_CRC8::calc(const uint8_t data)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t data)
 {
     return crc8tab[data];
 }
 
-uint8_t GENERIC_CRC8::calc(const uint8_t *data, uint8_t len, uint8_t crc)
+uint8_t ICACHE_RAM_ATTR GENERIC_CRC8::calc(const uint8_t *data, uint8_t len, uint8_t crc)
 {
     while (len--)
     {

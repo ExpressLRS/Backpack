@@ -1,8 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#undef ICACHE_RAM_ATTR
-#define ICACHE_RAM_ATTR IRAM_ATTR
+#define ICACHE_RAM_ATTR
 
 #define crclen 256
 
