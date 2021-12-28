@@ -43,7 +43,7 @@ GENERIC_CRC14::GENERIC_CRC14(uint16_t poly)
     }
 }
 
-uint16_t GENERIC_CRC14::calc(uint8_t *data, uint8_t len, uint16_t crc)
+uint16_t ICACHE_RAM_ATTR GENERIC_CRC14::calc(uint8_t *data, uint8_t len, uint16_t crc)
 {
     while (len--)
     {
@@ -52,7 +52,7 @@ uint16_t GENERIC_CRC14::calc(uint8_t *data, uint8_t len, uint16_t crc)
     return crc & 0x3FFF;
 }
 
-uint16_t GENERIC_CRC14::calc(volatile uint8_t *data, uint8_t len, uint16_t crc)
+uint16_t ICACHE_RAM_ATTR GENERIC_CRC14::calc(volatile uint8_t *data, uint8_t len, uint16_t crc)
 {
     while (len--)
     {

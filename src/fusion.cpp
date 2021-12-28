@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "crc.h"
 #include "crsf_protocol.h"
+#include <Arduino.h>
 
 GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 
@@ -32,10 +33,18 @@ Fusion::SendIndexCmd(uint8_t index)
     buf[pos++] = f & 0xFF;  // freq byte 2
     buf[pos++] = 0x01;
 
-    buf[pos++] = crsf_crc.calc(&buf[2], pos - 3); // first 2 bytes not included in CRC, minus 1 for CRC itself
+    uint8_t crc = crsf_crc.calc(&buf[2], pos - 2); // first 2 bytes not included in CRC
+    buf[pos++] = crc;
 
     for (uint8_t i = 0; i < pos; ++i)
     {
         Serial.write(buf[i]);
     }
+
+    // Leaving this in as its useful to debug
+    // for (uint8_t i = 0; i < pos; ++i)
+    // {
+    //     Serial.print("0x"); Serial.print(buf[i], HEX); Serial.print(", ");
+    // }
+    // Serial.println("");
 }
