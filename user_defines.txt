@@ -12,6 +12,9 @@
 # https://github.com/ExpressLRS/Backpack/wiki#binding
 #-DMY_BINDING_PHRASE="default ExpressLRS binding phrase"
 
+#-DHOME_WIFI_SSID=""
+#-DHOME_WIFI_PASSWORD=""
+
 # Turn on debug messages, if disabled then all debugging options (starting with DEBUG_) are disabled
 #-DDEBUG_LOG
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)

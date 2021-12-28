@@ -1,7 +1,9 @@
 #pragma once
 #include <stdint.h>
 
-#define ICACHE_RAM_ATTR
+#if !defined TARGET_NATIVE
+#include <Arduino.h>
+#endif
 
 #define crclen 256
 

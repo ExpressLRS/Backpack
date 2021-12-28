@@ -1,12 +1,18 @@
 #include <Arduino.h>
-#include "ESP8266_WebUpdate.h"
 #include <espnow.h>
+
 #include <ESP8266WiFi.h>
-#include <EEPROM.h>
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
-// #include "config.h"
+#include "helpers.h"
+#include "common.h"
+#include "config.h"
+
+#include "device.h"
+#include "devWIFI.h"
+#include "devButton.h"
+#include "devLED.h"
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -20,10 +26,6 @@
 
 /////////// DEFINES ///////////
 
-#define EEPROM_ADDR_WIFI    0x00
-#define EEPROM_MAC          0x01 // 0x01 to 0x06
-#define EEPROM_RST_COUNTER  0x07
-
 #define BINDING_TIMEOUT     30000
 #define NO_BINDING_TIMEOUT  120000
 #define BINDING_LED_PAUSE   1000
@@ -36,21 +38,30 @@ uint8_t broadcastAddress[6] = {MY_UID};
 uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 
-bool startWebUpdater = false;
-bool bindingMode = false;
-uint8_t bootCounter = 0;
-uint8_t flashLedCounter = 0;
-uint32_t nextBindingLedFlash = 0;
+connectionState_e connectionState = starting;
+unsigned long rebootTime = 0;
 
 uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
 uint32_t lastSentRequest = 0;
 
+device_t *ui_devices[] = {
+#ifdef PIN_LED
+  &LED_device,
+#endif
+#ifdef PIN_BUTTON
+  &Button_device,
+#endif
+  &WIFI_device,
+};
+
 /////////// CLASS OBJECTS ///////////
 
 MSP msp;
-// VrxBackpackConfig config;
+
+ELRS_EEPROM eeprom;
+VrxBackpackConfig config;
 
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
@@ -64,24 +75,19 @@ MSP msp;
 
 /////////// FUNCTION DEFS ///////////
 
-void RebootIntoWifi();
-void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len);
 void ProcessMSPPacket(mspPacket_t *packet);
-void SetSoftMACAddress();
-void RequestVTXPacket();
 void sendMSPViaEspnow(mspPacket_t *packet);
 void resetBootCounter();
-void checkIfInBindingMode();
 
 /////////////////////////////////////
 
 void RebootIntoWifi()
 {
   DBGLN("Rebooting into wifi update mode...");
-  startWebUpdater = true;
-  EEPROM.put(EEPROM_ADDR_WIFI, startWebUpdater);
-  EEPROM.commit();
-  ESP.restart();
+  config.SetStartWiFiOnBoot(true);
+  config.SetBootCount(0);
+  config.Commit();
+  rebootTime = millis();
 }
 
 // espnow on-receive callback
@@ -98,7 +104,7 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
       DBGLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
-      if (bindingMode || 
+      if (connectionState == binding ||
             (
             broadcastAddress[0] == mac_addr[0] &&
             broadcastAddress[1] == mac_addr[1] &&
@@ -119,26 +125,26 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
       msp.markPacketReceived();
     }
   }
-  flashLedCounter++;
+  blinkLED();
 }
 
 void ProcessMSPPacket(mspPacket_t *packet)
 {
-  if (bindingMode)
+  if (connectionState == binding)
   {
     DBGLN("Processing Binding Packet...");
     if (packet->function == MSP_ELRS_BIND)
     {
+      config.SetGroupAddress(packet->payload);
       DBGLN("MSP_ELRS_BIND MAC = ");
       for (int i = 0; i < 6; i++)
       {
-        EEPROM.put(EEPROM_MAC + i, packet->payload[i]);
         DBG("%x", packet->payload[i]); // Debug prints
         DBG(",");
       }
       DBG(""); // Extra line for serial output readability
       resetBootCounter();
-      ESP.restart();
+      rebootTime = millis();
     }
     return;
   }
@@ -157,11 +163,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
     {
       return; // Packets containing frequency in MHz are not yet supported.
     }
-    break;  
+    break;
   case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
-    break;  
+    break;
   default:
     break;
   }
@@ -173,7 +179,7 @@ void SetSoftMACAddress()
   for (int i = 0; i < 6; i++)
   {
     #ifndef MY_UID
-    EEPROM.get(EEPROM_MAC + i, broadcastAddress[i]);
+    memcpy(broadcastAddress, config.GetGroupAddress(), 6);
     #endif
     DBG("%x", broadcastAddress[i]); // Debug prints
     DBG(",");
@@ -192,20 +198,21 @@ void SetSoftMACAddress()
 }
 
 void RequestVTXPacket()
-{  
+{
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
   packet.function = MSP_ELRS_REQU_VTX_PKT;
   packet.addByte(0);  // empty byte
 
+  blinkLED();
   sendMSPViaEspnow(&packet);
 }
 
 void sendMSPViaEspnow(mspPacket_t *packet)
 {
   // Do not send while in binding mode.  The currently used broadcastAddress may be garbage.
-  if (bindingMode)
+  if (connectionState == binding)
     return;
 
   uint8_t packetSize = msp.getTotalPacketSize(packet);
@@ -224,14 +231,13 @@ void sendMSPViaEspnow(mspPacket_t *packet)
 
 void resetBootCounter()
 {
-  bootCounter = 0;
-  EEPROM.put(EEPROM_RST_COUNTER, bootCounter);
-  EEPROM.commit();
+  config.SetBootCount(0);
+  config.Commit();
 }
 
 void checkIfInBindingMode()
 {
-  EEPROM.get(EEPROM_RST_COUNTER, bootCounter);
+  uint8_t bootCounter = config.GetBootCount();
   bootCounter++;
 
   if (bootCounter > 2)
@@ -241,31 +247,20 @@ void checkIfInBindingMode()
     #ifdef MY_UID
     RebootIntoWifi();
     #else
-    bindingMode = true;
+    connectionState = binding;
     #endif
   }
   else
   {
-    EEPROM.put(EEPROM_RST_COUNTER, bootCounter);
-    EEPROM.commit();
+    config.SetBootCount(bootCounter);
+    config.Commit();
   }
 
   DBGLN(""); // blank line to clear below prints from serial boot garbage
   DBG("bootCounter = ");
   DBGLN("%x", bootCounter);
   DBG("bindingMode = ");
-  DBGLN("%x", bindingMode);
-}
-
-uint8_t isButtonPressed()
-{
-  uint8_t buttonPressed = false;
-
-  #ifdef PIN_BUTTON
-  buttonPressed = !digitalRead(PIN_BUTTON);
-  #endif
-
-  return buttonPressed;
+  DBGLN("%x", connectionState == binding);
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -287,30 +282,27 @@ RF_PRE_INIT()
 
 void setup()
 {
-  #ifdef PIN_BUTTON
-  pinMode(PIN_BUTTON, INPUT);
-  #endif
-  pinMode(PIN_LED, OUTPUT);
-  digitalWrite(PIN_LED, HIGH);
-  
   #ifdef FUSION_BACKPACK
   Serial.begin(500000); // fusion uses 500k baud between the ESP8266 and the STM32
   #else
   Serial.begin(460800);
   #endif
 
-  EEPROM.begin(512);
-  EEPROM.get(EEPROM_ADDR_WIFI, startWebUpdater);
+  eeprom.Begin();
+  config.SetStorageProvider(&eeprom);
+  config.Load();
 
-  if (startWebUpdater)
+  devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
+
+  if (config.GetStartWiFiOnBoot())
   {
-    EEPROM.put(EEPROM_ADDR_WIFI, false);
-    EEPROM.commit();  
-    BeginWebUpdate();
+    config.SetStartWiFiOnBoot(false);
+    config.Commit();
+    connectionState = wifiUpdate;
+    devicesTriggerEvent();
   }
   else
   {
-
     checkIfInBindingMode();
 
     SetSoftMACAddress();
@@ -318,80 +310,67 @@ void setup()
     if (esp_now_init() != 0)
     {
       DBGLN("Error initializing ESP-NOW");
+      turnOffLED();
       ESP.restart();
     }
 
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
     esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-    esp_now_register_recv_cb(OnDataRecv); 
+    esp_now_register_recv_cb(OnDataRecv);
 
     vrxModule.Init();
   }
-  
-  flashLedCounter = 2;
+
+  devicesStart();
+  if (connectionState == starting)
+  {
+    connectionState = running;
+  }
   DBGLN("Setup completed");
 }
 
 void loop()
 {
-  if (startWebUpdater)
-  {
-    HandleWebUpdate();
-    flashLedCounter = 1;
-    
-    // button press to exit wifi
-    if (isButtonPressed())
+  uint32_t now = millis();
+
+  devicesUpdate(now);
+
+  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
+    // If the reboot time is set and the current time is past the reboot time then reboot.
+    if (rebootTime != 0 && now > rebootTime) {
+      turnOffLED();
       ESP.restart();
-  }
-  else
+    }
+  #endif
+
+  if (connectionState == wifiUpdate)
   {
-    uint32_t now = millis();
-    
-    // press the boot button to start webupdater
-    if (isButtonPressed() || (bindingMode && now > NO_BINDING_TIMEOUT))
-    {
-      RebootIntoWifi();
-    }
-
-    if (sendChangesToVrx)
-    {
-      sendChangesToVrx = false;
-      vrxModule.SendIndexCmd(cachedIndex);
-    }
-
-    // spam out a bunch of requests for the desired band/channel for the first 5s
-    if (!gotInitialPacket && now < 5000 && now - lastSentRequest > 1000 && !bindingMode)
-    {
-      DBGLN("RequestVTXPacket...");
-      RequestVTXPacket();
-      lastSentRequest = now;
-    }
-
-    // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
-    if (now > BINDING_TIMEOUT && bootCounter)
-    {
-      DBGLN("resetBootCounter...");
-      resetBootCounter();
-      digitalWrite(PIN_LED, HIGH);
-    }
-    
-    if (bindingMode && now > nextBindingLedFlash)
-    {
-      nextBindingLedFlash += BINDING_LED_PAUSE;
-      flashLedCounter = 2;
-    }
+    return;
   }
 
-  // TODO make LED non blocking
-  if (flashLedCounter)
+  if (connectionState == binding && now > NO_BINDING_TIMEOUT)
   {
-    flashLedCounter--;
-    
-    digitalWrite(PIN_LED, LOW);
-    startWebUpdater == true ? delay(50) : delay(100);
-    digitalWrite(PIN_LED, HIGH);
-    startWebUpdater == true ? delay(50) : delay(100);
-    if (bindingMode)
-      digitalWrite(PIN_LED, LOW);
+    RebootIntoWifi();
+  }
+
+  if (sendChangesToVrx)
+  {
+    sendChangesToVrx = false;
+    vrxModule.SendIndexCmd(cachedIndex);
+  }
+
+  // spam out a bunch of requests for the desired band/channel for the first 5s
+  if (!gotInitialPacket && now < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
+  {
+    DBGLN("RequestVTXPacket...");
+    RequestVTXPacket();
+    lastSentRequest = now;
+  }
+
+  // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
+  if (now > BINDING_TIMEOUT && config.GetBootCount() > 0)
+  {
+    DBGLN("resetBootCounter...");
+    resetBootCounter();
   }
 }
