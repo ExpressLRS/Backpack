@@ -1,4 +1,7 @@
 .pio
+.pioenvs
+.piolibdeps
 .vscode
 __pycache__
+*.pyc
 include/WebContent.h
