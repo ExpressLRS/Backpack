@@ -1,9 +1,6 @@
 #pragma once
 #include <stdint.h>
-
-#if !defined TARGET_NATIVE
 #include <Arduino.h>
-#endif
 
 #define crclen 256
 
