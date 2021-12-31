@@ -130,7 +130,7 @@ static struct {
   {"/elrs.css", "text/css", (uint8_t*)ELRS_CSS, sizeof(ELRS_CSS)},
   {"/mui.js", "text/javascript", (uint8_t*)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS)},
-  {"/flag.svg", "image/svg+xml", (uint8_t*)FLAG_SVG, sizeof(FLAG_SVG)},
+  {"/logo.svg", "image/svg+xml", (uint8_t*)LOGO_SVG, sizeof(LOGO_SVG)},
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
