@@ -23,8 +23,9 @@ function get_mode() {
                 }
                 scanTimer = setInterval(get_networks, 2000);
             }
-            if(data.stm32==="yes") {
-                _('stm32').style.display = 'block';
+            if((!data.stm32 || data.stm32==="no") && _('tx_tab')) {
+                mui.tabs.activate('pane-justified-2');
+                _('tx_tab').style.display = 'none';
             }
         }
     };
@@ -371,12 +372,12 @@ function cuteAlert({
         closeStyleTemplate = "alert-close-circle";
       }
 
-      let btnTemplate = `<button class="alert-button ${type}-bg ${type}-btn">${buttonText}</button>`;
+      let btnTemplate = `<div><button class="alert-button mui-btn mui-btn--primary">${buttonText}</button></div>`;
       if (type === "question") {
         btnTemplate = `
 <div class="question-buttons">
-  <button class="confirm-button error-bg error-btn">${confirmText}</button>
-  <button class="cancel-button question-bg question-btn">${cancelText}</button>
+  <button class="confirm-button mui-btn mui-btn--danger">${confirmText}</button>
+  <button class="cancel-button mui-btn">${cancelText}</button>
 </div>
 `;
       }

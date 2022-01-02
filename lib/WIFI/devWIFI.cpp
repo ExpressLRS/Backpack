@@ -16,6 +16,7 @@
 #include "common.h"
 #include "logging.h"
 #include "options.h"
+#include "helpers.h"
 
 #include "UpdateWrapper.h"
 
@@ -119,25 +120,30 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
-static void WebUpdateSendCSS(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", (uint8_t*)CSS, sizeof(CSS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
+static struct {
+  const char *url;
+  const char *contentType;
+  const uint8_t* content;
+  const size_t size;
+} files[] = {
+  {"/mui.css", "text/css", (uint8_t*)MUI_CSS, sizeof(MUI_CSS)},
+  {"/elrs.css", "text/css", (uint8_t*)ELRS_CSS, sizeof(ELRS_CSS)},
+  {"/mui.js", "text/javascript", (uint8_t*)MUI_JS, sizeof(MUI_JS)},
+  {"/scan.js", "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS)},
+  {"/logo.svg", "image/svg+xml", (uint8_t*)LOGO_SVG, sizeof(LOGO_SVG)},
+};
 
-static void WebUpdateSendJS(AsyncWebServerRequest *request)
+static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
-}
-
-static void WebUpdateSendFlag(AsyncWebServerRequest *request)
-{
-  AsyncWebServerResponse *response = request->beginResponse_P(200, "image/svg+xml", (uint8_t*)FLAG, sizeof(FLAG));
-  response->addHeader("Content-Encoding", "gzip");
-  request->send(response);
+  for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
+    if (request->url().equals(files[i].url)) {
+      AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
+      response->addHeader("Content-Encoding", "gzip");
+      request->send(response);
+      return;
+    }
+  }
+  request->send(404, "text/plain", "File not found");
 }
 
 static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
@@ -473,9 +479,11 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/main.css", WebUpdateSendCSS);
-  server.on("/scan.js", WebUpdateSendJS);
-  server.on("/logo.svg", WebUpdateSendFlag);
+  server.on("/mui.css", WebUpdateSendContent);
+  server.on("/elrs.css", WebUpdateSendContent);
+  server.on("/mui.js", WebUpdateSendContent);
+  server.on("/scan.js", WebUpdateSendContent);
+  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -553,7 +561,7 @@ static void HandleWebUpdate()
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s'", config.GetSSID());
+        DBGLN("Connecting to home network '%s' '%s'", config.GetSSID(), config.GetPassword());
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
         WiFi.setHostname(myHostname); // hostname must be set after the mode is set to STA
