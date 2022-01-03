@@ -20,6 +20,8 @@
   #include "rx5808.h"
 #elif defined(STEADYVIEW_BACKPACK)
   #include "steadyview.h"
+#elif defined(FUSION_BACKPACK)
+  #include "fusion.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -67,6 +69,8 @@ VrxBackpackConfig config;
   RX5808 vrxModule;
 #elif defined(STEADYVIEW_BACKPACK)
   SteadyView vrxModule;
+#elif defined(FUSION_BACKPACK)
+  Fusion vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -186,6 +190,8 @@ void SetSoftMACAddress()
   broadcastAddress[0] = broadcastAddress[0] & ~0x01;
 
   WiFi.mode(WIFI_STA);
+  WiFi.begin("network-name", "pass-to-network", 1);
+  WiFi.disconnect();
 
   // Soft-set the MAC address to the passphrase UID for binding
   wifi_set_macaddr(STATION_IF, broadcastAddress);
@@ -276,7 +282,11 @@ RF_PRE_INIT()
 
 void setup()
 {
+  #ifdef FUSION_BACKPACK
+  Serial.begin(500000); // fusion uses 500k baud between the ESP8266 and the STM32
+  #else
   Serial.begin(460800);
+  #endif
 
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
