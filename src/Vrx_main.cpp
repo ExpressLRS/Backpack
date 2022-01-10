@@ -44,6 +44,7 @@ unsigned long rebootTime = 0;
 uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
+bool initDone = false;
 uint32_t lastSentRequest = 0;
 
 device_t *ui_devices[] = {
@@ -322,7 +323,6 @@ void setup()
     esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     esp_now_register_recv_cb(OnDataRecv);
 
-    vrxModule.Init();
   }
 
   devicesStart();
@@ -359,6 +359,10 @@ void loop()
 
   if (sendChangesToVrx)
   {
+    if (!initDone){
+      vrxModule.Init();
+      initDone = true;
+    }
     sendChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
   }
