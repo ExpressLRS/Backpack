@@ -7,6 +7,12 @@ Rapidfire::Init()
 {
     delay(2000);  // wait for rapidfire to boot
 
+    DBGLN("Rapid Fire init");
+}
+
+void
+Rapidfire::EnableSPIMode()
+{
     // Set pins to output to configure rapidfire in SPI mode
     pinMode(PIN_MOSI, OUTPUT);
     pinMode(PIN_CLK, OUTPUT);
@@ -26,6 +32,8 @@ Rapidfire::Init()
     pinMode(PIN_MOSI, INPUT);
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);
+
+    SPIModeEnabled = true;
 
     DBGLN("SPI config complete");
 }
@@ -52,6 +60,8 @@ Rapidfire::SendIndexCmd(uint8_t index)
 {  
     uint8_t newBand = index / 8 + 1;
     uint8_t newChannel = index % 8;
+
+    if (!SPIModeEnabled) EnableSPIMode();
 
     SendBandCmd(newBand);
 	delay(100);
