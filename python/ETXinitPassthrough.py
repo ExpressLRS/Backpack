@@ -36,6 +36,9 @@ def etx_passthrough_init(port, requestedBaudrate):
         rl.write(b"set pulses 0\n")
         time.sleep(0.1)
         rl.write(b"set rfmod 0 bootpin 1\n")
+        time.sleep(0.1)
+        rl.write(b"set rfmod 0 bootpin 0\n")
+        time.sleep(0.1)
         cmd = "serialpassthrough rfmod 0 %s" % requestedBaudrate
         dbg_print("Enabling serial passthrough...")
         dbg_print("  CMD: '%s'" % cmd)
