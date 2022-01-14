@@ -13,6 +13,11 @@ RX5808::Init()
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
 
+    #if defined(PIN_CS_2)
+        pinMode(PIN_CS_2, OUTPUT);
+        digitalWrite(PIN_CS_2, HIGH);
+    #endif
+
     DBGLN("SPI config complete");
 }
 
@@ -42,6 +47,9 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
     digitalWrite(PIN_CS, LOW);
+    #if defined(PIN_CS_2)
+        digitalWrite(PIN_CS_2, LOW);
+    #endif
     delayMicroseconds(periodMicroSec);
 
     for (uint8_t i = 0; i < RX5808_PACKET_LENGTH; ++i)
@@ -61,6 +69,9 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
     digitalWrite(PIN_MOSI, LOW);
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
+    #if defined(PIN_CS_2)
+        digitalWrite(PIN_CS_2, HIGH);
+    #endif
 }
 
 uint32_t
