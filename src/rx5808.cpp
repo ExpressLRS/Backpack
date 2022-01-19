@@ -5,6 +5,20 @@
 void
 RX5808::Init()
 {
+    pinMode(PIN_MOSI, INPUT);
+    pinMode(PIN_CLK, INPUT);
+    pinMode(PIN_CS, INPUT);
+
+    #if defined(PIN_CS_2)
+        pinMode(PIN_CS_2, INPUT);
+    #endif
+
+    DBGLN("RX5808 init complete");
+}
+
+void
+RX5808::EnableSPIMode()
+{
     pinMode(PIN_MOSI, OUTPUT);
     pinMode(PIN_CLK, OUTPUT);
     pinMode(PIN_CS, OUTPUT);
@@ -18,12 +32,19 @@ RX5808::Init()
         digitalWrite(PIN_CS_2, HIGH);
     #endif
 
+    SPIModeEnabled = true;
+
     DBGLN("SPI config complete");
 }
 
 void
 RX5808::SendIndexCmd(uint8_t index)
 {
+    if (!SPIModeEnabled) 
+    {
+        EnableSPIMode();
+    }
+
     DBG("Setting index ");
     DBGLN("%x", index);
 
