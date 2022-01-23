@@ -59,14 +59,40 @@ void
 Rapidfire::SendOSD()
 {
     DBGLN("OSD");
-    
-    uint8_t sizeOfPacket = 9;
+
+    uint8_t sizeOfPacket = 5;
 
     uint8_t cmd[sizeOfPacket];
-    cmd[0] = RF_API_OSD_CMD;   // 'S'
-    cmd[1] = RF_API_DIR_EQUAL; // '>'
+    cmd[0] = RF_API_SET_OSD_MODE_CMD;   // 'O'
+    cmd[1] = RF_API_DIR_EQUAL;          // '='
+    cmd[2] = 0x01;                      // len
+    cmd[3] = 0x03;
+
+    cmd[3] = crc8(cmd, sizeOfPacket - 1);
+
+    cmd[4] = 0x03;
+
+
+    // rapidfire sometimes missed a pkt, so send 3x
+    SendSPI(cmd, sizeOfPacket);
+    SendSPI(cmd, sizeOfPacket);
+    SendSPI(cmd, sizeOfPacket);
+    
+    
+    sizeOfPacket = 9;
+
+    cmd[sizeOfPacket];
+    cmd[0] = RF_API_OSD_CMD;    // 'S'
+    cmd[1] = RF_API_DIR_EQUAL;  // '='
     cmd[2] = 0x05;              // len
-    cmd[3] = 0x8a;
+    cmd[3] = 0x48;
+    cmd[4] = 0x65;
+    cmd[5] = 0x6c;
+    cmd[6] = 0x6c;
+    cmd[7] = 0x6f;
+
+    cmd[3] = crc8(cmd, sizeOfPacket - 1);
+
     cmd[4] = 0x48;
     cmd[5] = 0x65;
     cmd[6] = 0x6c;

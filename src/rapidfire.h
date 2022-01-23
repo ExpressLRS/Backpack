@@ -5,12 +5,13 @@
 #define BIT_BANG_FREQ       1000
 #define SPAM_COUNT          3
 
-#define RF_API_DIR_GRTHAN   0x3E    // '>'
-#define RF_API_DIR_EQUAL    0x3D    // '='
-#define RF_API_BEEP_CMD     0x53    // 'S'
-#define RF_API_OSD_CMD      0x54    // 'T'
-#define RF_API_CHANNEL_CMD  0x43    // 'C'
-#define RF_API_BAND_CMD     0x42    // 'B'
+#define RF_API_DIR_GRTHAN           0x3E    // '>'
+#define RF_API_DIR_EQUAL            0x3D    // '='
+#define RF_API_BEEP_CMD             0x53    // 'S'
+#define RF_API_OSD_CMD              0x54    // 'T'
+#define RF_API_CHANNEL_CMD          0x43    // 'C'
+#define RF_API_BAND_CMD             0x42    // 'B'
+#define RF_API_SET_OSD_MODE_CMD     0x4f    // 'O'
 
 class Rapidfire
 {
