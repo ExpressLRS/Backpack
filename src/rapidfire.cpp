@@ -56,8 +56,34 @@ Rapidfire::SendBuzzerCmd()
 }
 
 void
+Rapidfire::SendOSD()
+{
+    DBGLN("OSD");
+    
+    uint8_t sizeOfPacket = 9;
+
+    uint8_t cmd[sizeOfPacket];
+    cmd[0] = RF_API_OSD_CMD;   // 'S'
+    cmd[1] = RF_API_DIR_EQUAL; // '>'
+    cmd[2] = 0x05;              // len
+    cmd[3] = 0x8a;
+    cmd[4] = 0x48;
+    cmd[5] = 0x65;
+    cmd[6] = 0x6c;
+    cmd[7] = 0x6c;
+    cmd[8] = 0x6f;
+
+    // rapidfire sometimes missed a pkt, so send 3x
+    SendSPI(cmd, sizeOfPacket);
+    SendSPI(cmd, sizeOfPacket);
+    SendSPI(cmd, sizeOfPacket);
+}
+
+void
 Rapidfire::SendIndexCmd(uint8_t index)
 {  
+    SendOSD();
+
     uint8_t newBand = index / 8 + 1;
     uint8_t newChannel = index % 8;
 
