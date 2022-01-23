@@ -32,10 +32,6 @@ Rapidfire::EnableSPIMode()
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, LOW);
     delay(200);
-    
-    pinMode(PIN_MOSI, INPUT);
-    pinMode(PIN_CLK, INPUT);
-    pinMode(PIN_CS, INPUT);
 
     SPIModeEnabled = true;
 
@@ -45,21 +41,18 @@ Rapidfire::EnableSPIMode()
 void
 Rapidfire::SendBuzzerCmd()
 {
-    if (SPIModeEnabled)
-    {
-        DBGLN("Beep!");
-        
-        uint8_t cmd[4];
-        cmd[0] = RF_API_BEEP_CMD;   // 'S'
-        cmd[1] = RF_API_DIR_GRTHAN; // '>'
-        cmd[2] = 0x00;              // len
-        cmd[3] = crc8(cmd, 3);
+    DBGLN("Beep!");
+    
+    uint8_t cmd[4];
+    cmd[0] = RF_API_BEEP_CMD;   // 'S'
+    cmd[1] = RF_API_DIR_GRTHAN; // '>'
+    cmd[2] = 0x00;              // len
+    cmd[3] = crc8(cmd, 3);
 
-        // rapidfire sometimes missed a pkt, so send 3x
-        SendSPI(cmd, 4);
-        SendSPI(cmd, 4);
-        SendSPI(cmd, 4);
-    }
+    // rapidfire sometimes missed a pkt, so send 3x
+    SendSPI(cmd, 4);
+    SendSPI(cmd, 4);
+    SendSPI(cmd, 4);
 }
 
 void
@@ -165,9 +158,9 @@ Rapidfire::SendBandCmd(uint8_t band)
 void
 Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
 {
-    uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
-
     if (!SPIModeEnabled) EnableSPIMode();
+
+    uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
     pinMode(PIN_MOSI, OUTPUT);
     pinMode(PIN_CLK, OUTPUT);
