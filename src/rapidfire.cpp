@@ -8,8 +8,6 @@ Rapidfire::Init()
     pinMode(PIN_MOSI, INPUT);
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);
-    
-    delay(2000);  // wait for rapidfire to boot
 
     DBGLN("Rapid Fire init");
 }

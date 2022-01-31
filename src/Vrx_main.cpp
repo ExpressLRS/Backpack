@@ -22,6 +22,8 @@
   #include "steadyview.h"
 #elif defined(FUSION_BACKPACK)
   #include "fusion.h"
+#elif defined(HDZERO_BACKPACK)
+  #include "hdzero.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -45,6 +47,7 @@ uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
 uint32_t lastSentRequest = 0;
+uint32_t bootDelay = 0;
 
 device_t *ui_devices[] = {
 #ifdef PIN_LED
@@ -71,6 +74,8 @@ VrxBackpackConfig config;
   SteadyView vrxModule;
 #elif defined(FUSION_BACKPACK)
   Fusion vrxModule;
+#elif defined(HDZERO_BACKPACK)
+  HDZero vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -282,8 +287,20 @@ RF_PRE_INIT()
 
 void setup()
 {
+  #ifdef HDZERO_BACKPACK
+  // HDZero VRX sometimes does not seem to boot if the UART is initialised at power-on
+  // Give it a few seconds to boot up before continuing
+  bootDelay = 6000;
+  #elif RAPIDFIRE_BACKPACK
+  bootDelay = 2000;
+  #endif
+
+  delay(bootDelay);
+  
   #ifdef FUSION_BACKPACK
   Serial.begin(500000); // fusion uses 500k baud between the ESP8266 and the STM32
+  #elif HDZERO_BACKPACK
+  Serial.begin(115200); // hdzero uses 115k baud between the ESP8285 and the STM32
   #else
   Serial.begin(460800);
   #endif
@@ -364,7 +381,7 @@ void loop()
   }
 
   // spam out a bunch of requests for the desired band/channel for the first 5s
-  if (!gotInitialPacket && now < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
+  if (!gotInitialPacket && now - bootDelay < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
     DBGLN("RequestVTXPacket...");
     RequestVTXPacket();
