@@ -22,5 +22,7 @@ public:
 
 private:
     void SendSPI(uint8_t* buf, uint8_t bufLen);
+    void EnableSPIMode();
     uint8_t crc8(uint8_t* buf, uint8_t bufLen);
+    bool SPIModeEnabled = false;
 };

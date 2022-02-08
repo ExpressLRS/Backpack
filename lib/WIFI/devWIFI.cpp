@@ -81,6 +81,10 @@ static bool do_flash = false;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
+static AsyncEventSource logging("/logging");
+static char logBuffer[256];
+static int logPos = 0;
+
 /** Is this an IP? */
 static boolean isIp(String str)
 {
@@ -126,11 +130,13 @@ static struct {
   const uint8_t* content;
   const size_t size;
 } files[] = {
-  {"/mui.css", "text/css", (uint8_t*)MUI_CSS, sizeof(MUI_CSS)},
-  {"/elrs.css", "text/css", (uint8_t*)ELRS_CSS, sizeof(ELRS_CSS)},
-  {"/mui.js", "text/javascript", (uint8_t*)MUI_JS, sizeof(MUI_JS)},
-  {"/scan.js", "text/javascript", (uint8_t*)SCAN_JS, sizeof(SCAN_JS)},
-  {"/logo.svg", "image/svg+xml", (uint8_t*)LOGO_SVG, sizeof(LOGO_SVG)},
+  {"/mui.css", "text/css", (uint8_t *)MUI_CSS, sizeof(MUI_CSS)},
+  {"/elrs.css", "text/css", (uint8_t *)ELRS_CSS, sizeof(ELRS_CSS)},
+  {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
+  {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
+  {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
+  {"/log.js", "text/javascript", (uint8_t *)LOG_JS, sizeof(LOG_JS)},
+  {"/log.html", "text/html", (uint8_t *)LOG_HTML, sizeof(LOG_HTML)},
 };
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -504,6 +510,10 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
 
+  server.on("/log.js", WebUpdateSendContent);
+  server.on("/log.html", WebUpdateSendContent);
+  server.addHandler(&logging);
+
   server.onNotFound(WebUpdateHandleNotFound);
 
   server.begin();
@@ -579,6 +589,16 @@ static void HandleWebUpdate()
 
   if (servicesStarted)
   {
+    while (Serial.available()) {
+      int val = Serial.read();
+      logBuffer[logPos++] = val;
+      logBuffer[logPos] = 0;
+      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+        logging.send(logBuffer);
+        logPos = 0;
+      }
+    }
+
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
