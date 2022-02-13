@@ -94,6 +94,7 @@ public:
     bool            sendPacket(mspPacket_t* packet, Stream* port);
     uint8_t         convertToByteArray(mspPacket_t* packet, uint8_t* byteArray);
     uint8_t         getTotalPacketSize(mspPacket_t* packet);
+    bool            awaitPacket(mspPacket_t* packet, Stream* port, uint32_t timeoutMillis);
 
 private:
     mspState_e  m_inputState;

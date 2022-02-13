@@ -1,7 +1,15 @@
 #include <Arduino.h>
-#include <espnow.h>
 
-#include <ESP8266WiFi.h>
+#if defined(PLATFORM_ESP8266)
+  #include <espnow.h>
+  #include <ESP8266WiFi.h>
+#elif defined(PLATFORM_ESP32)
+  #include <esp_now.h>
+  #include <esp_wifi.h>
+  #include <WiFi.h>
+#endif
+
+
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
@@ -31,6 +39,14 @@
 #define BINDING_TIMEOUT     30000
 #define NO_BINDING_TIMEOUT  120000
 #define BINDING_LED_PAUSE   1000
+
+#if !defined(VRX_BOOT_DELAY)
+  #define VRX_BOOT_DELAY  0
+#endif
+
+#if !defined(VRX_UART_BAUD)
+  #define VRX_UART_BAUD  460800
+#endif
 
 /////////// GLOBALS ///////////
 
@@ -75,7 +91,7 @@ VrxBackpackConfig config;
 #elif defined(FUSION_BACKPACK)
   Fusion vrxModule;
 #elif defined(HDZERO_BACKPACK)
-  HDZero vrxModule;
+  HDZero vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -83,6 +99,7 @@ VrxBackpackConfig config;
 void ProcessMSPPacket(mspPacket_t *packet);
 void sendMSPViaEspnow(mspPacket_t *packet);
 void resetBootCounter();
+void SetupEspNow();
 
 /////////////////////////////////////
 
@@ -96,7 +113,11 @@ void RebootIntoWifi()
 }
 
 // espnow on-receive callback
+#if defined(PLATFORM_ESP8266)
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
+#elif defined(PLATFORM_ESP32)
+void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
+#endif
 {
   DBGLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
@@ -173,9 +194,48 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
     break;
+  case MSP_ELRS_BACKPACK_SET_RECORDING_STATE:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_RECORDING_STATE...");
+    #if defined(HDZERO_BACKPACK)
+    {
+      uint8_t state = packet->readByte();
+      uint16_t delay = packet->readByte();
+      delay = (delay << 8) | packet->readByte();
+      vrxModule.SetRecordingState(state, delay);
+    }
+    #endif
+    break;
   default:
+    DBGLN("Unknown command from ESPNOW");
     break;
   }
+}
+
+void SetupEspNow()
+{
+  if (esp_now_init() != 0)
+    {
+      DBGLN("Error initializing ESP-NOW");
+      turnOffLED();
+      ESP.restart();
+    }
+
+    #if defined(PLATFORM_ESP8266)
+      esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+      esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+    #elif defined(PLATFORM_ESP32)
+      esp_now_peer_info_t peerInfo;
+      memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+      if (esp_now_add_peer(&peerInfo) != ESP_OK)
+      {
+        DBGLN("ESP-NOW failed to add peer");
+        return;
+      }
+    #endif
+
+    esp_now_register_recv_cb(OnDataRecv);
 }
 
 void SetSoftMACAddress()
@@ -199,7 +259,11 @@ void SetSoftMACAddress()
   WiFi.disconnect();
 
   // Soft-set the MAC address to the passphrase UID for binding
-  wifi_set_macaddr(STATION_IF, broadcastAddress);
+  #if defined(PLATFORM_ESP8266)
+    wifi_set_macaddr(STATION_IF, broadcastAddress);
+  #elif defined(PLATFORM_ESP32)
+    esp_wifi_set_mac(WIFI_IF_STA, broadcastAddress);
+  #endif
 }
 
 void RequestVTXPacket()
@@ -287,24 +351,10 @@ RF_PRE_INIT()
 
 void setup()
 {
-  #ifdef HDZERO_BACKPACK
-  // HDZero VRX sometimes does not seem to boot if the UART is initialised at power-on
-  // Give it a few seconds to boot up before continuing
-  bootDelay = 6000;
-  #elif RAPIDFIRE_BACKPACK
-  bootDelay = 2000;
-  #endif
-
-  delay(bootDelay);
-  
-  #ifdef FUSION_BACKPACK
-  Serial.begin(500000); // fusion uses 500k baud between the ESP8266 and the STM32
-  #elif HDZERO_BACKPACK
-  Serial.begin(115200); // hdzero uses 115k baud between the ESP8285 and the STM32
-  #else
-  Serial.begin(460800);
-  #endif
-
+  // VRX module class needs to be initialised first, as it calls delay()
+  // for some modules that require a boot delay before being operational
+  vrxModule.Init();
+  Serial.begin(VRX_UART_BAUD);
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();
@@ -325,21 +375,8 @@ void setup()
   else
   {
     checkIfInBindingMode();
-
     SetSoftMACAddress();
-
-    if (esp_now_init() != 0)
-    {
-      DBGLN("Error initializing ESP-NOW");
-      turnOffLED();
-      ESP.restart();
-    }
-
-    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-    esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-    esp_now_register_recv_cb(OnDataRecv);
-
-    vrxModule.Init();
+    SetupEspNow();
   }
 
   devicesStart();
@@ -381,7 +418,7 @@ void loop()
   }
 
   // spam out a bunch of requests for the desired band/channel for the first 5s
-  if (!gotInitialPacket && now - bootDelay < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
+  if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
     DBGLN("RequestVTXPacket...");
     RequestVTXPacket();
