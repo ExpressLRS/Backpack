@@ -466,7 +466,11 @@ static void startMDNS()
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt(service, "type", "rx");
+    #if defined(TARGET_VRX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "vrx");
+    #elif defined(TARGET_TX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "txbp");
+    #endif
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
     // MDNSResponder::indexDomain and change wifi_hostname as well.
@@ -481,10 +485,13 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
-    // MDNS.addServiceTxt("http", "tcp", "device", device_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
-    MDNS.addServiceTxt("http", "tcp", "type", "tx");
+    #if defined(TARGET_VRX_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "vrx");
+    #elif defined(TARGET_TX_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "txbp");
+    #endif
   #endif
 }
 

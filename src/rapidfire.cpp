@@ -9,6 +9,8 @@ Rapidfire::Init()
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);
 
+    delay(VRX_BOOT_DELAY);
+
     DBGLN("Rapid Fire init");
 }
 

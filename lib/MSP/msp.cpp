@@ -297,13 +297,9 @@ MSP::awaitPacket(mspPacket_t* packet, Stream* port, uint32_t timeoutMillis)
     {
         while (port->available())
         {
-            uint8_t data = Serial.read();
+            uint8_t data = port->read();
             if (processReceivedByte(data))
             {
-                if (m_packet.function == packet->function)
-                {
-                    packet = &m_packet;
-                }
                 return true;
             }
         }

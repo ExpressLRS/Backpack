@@ -75,6 +75,13 @@ device_t *ui_devices[] = {
   &WIFI_device,
 };
 
+#if defined(PLATFORM_ESP32)
+// This seems to need to be global, as per this page,
+// otherwise we get errors about invalid peer:
+// https://rntlab.com/question/espnow-peer-interface-is-invalid/
+esp_now_peer_info_t peerInfo;
+#endif
+
 /////////// CLASS OBJECTS ///////////
 
 MSP msp;
@@ -224,7 +231,6 @@ void SetupEspNow()
       esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
       esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     #elif defined(PLATFORM_ESP32)
-      esp_now_peer_info_t peerInfo;
       memcpy(peerInfo.peer_addr, broadcastAddress, 6);
       peerInfo.channel = 0;
       peerInfo.encrypt = false;
