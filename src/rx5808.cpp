@@ -40,11 +40,6 @@ RX5808::EnableSPIMode()
 void
 RX5808::SendIndexCmd(uint8_t index)
 {
-    if (!SPIModeEnabled) 
-    {
-        EnableSPIMode();
-    }
-
     DBG("Setting index ");
     DBGLN("%x", index);
 
@@ -65,6 +60,11 @@ RX5808::SendIndexCmd(uint8_t index)
 void
 RX5808::rtc6705WriteRegister(uint32_t buf)
 {
+    if (!SPIModeEnabled) 
+    {
+        EnableSPIMode();
+    }
+
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
     digitalWrite(PIN_CS, LOW);
@@ -98,6 +98,11 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
 uint32_t
 RX5808::rtc6705readRegister(uint8_t readRegister)
 {
+    if (!SPIModeEnabled) 
+    {
+        EnableSPIMode();
+    }
+
     uint32_t buf = readRegister | (RX5808_READ_CTRL_BIT << 4);
     uint32_t registerData = 0;
 
