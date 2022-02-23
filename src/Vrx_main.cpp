@@ -63,7 +63,6 @@ uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
 uint32_t lastSentRequest = 0;
-uint32_t bootDelay = 0;
 
 device_t *ui_devices[] = {
 #ifdef PIN_LED
