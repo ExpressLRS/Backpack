@@ -206,8 +206,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
     #if defined(HDZERO_BACKPACK)
     {
       uint8_t state = packet->readByte();
-      uint16_t delay = packet->readByte();
-      delay = (delay << 8) | packet->readByte();
+      uint8_t lowByte = packet->readByte();
+      uint8_t highByte = packet->readByte();
+      uint16_t delay = lowByte | highByte << 8;
       vrxModule.SetRecordingState(state, delay);
     }
     #endif

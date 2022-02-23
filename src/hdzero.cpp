@@ -84,14 +84,16 @@ HDZero::GetRecordingState()
 void
 HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 {
+    DBGLN("SetRecordingState = %d delay = %d", recordingState, delay);
+    
     MSP msp;
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_ELRS_BACKPACK_SET_RECORDING_STATE;
     packet.addByte(recordingState);
-    packet.addByte(delay >> 8); // delay byte 1
-    packet.addByte(delay & 0xFF); // delay byte 2
+    packet.addByte(delay & 0xFF); // delay byte 1
+    packet.addByte(delay >> 8); // delay byte 2
 
     msp.sendPacket(&packet, m_port);
 }
