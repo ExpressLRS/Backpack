@@ -41,4 +41,6 @@ public:
 private:
     void rtc6705WriteRegister(uint32_t buf);
     uint32_t rtc6705readRegister(uint8_t readRegister);
+    void EnableSPIMode();
+    bool SPIModeEnabled = false;
 };

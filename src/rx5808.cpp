@@ -5,6 +5,20 @@
 void
 RX5808::Init()
 {
+    pinMode(PIN_MOSI, INPUT);
+    pinMode(PIN_CLK, INPUT);
+    pinMode(PIN_CS, INPUT);
+
+    #if defined(PIN_CS_2)
+        pinMode(PIN_CS_2, INPUT);
+    #endif
+
+    DBGLN("RX5808 init complete");
+}
+
+void
+RX5808::EnableSPIMode()
+{
     pinMode(PIN_MOSI, OUTPUT);
     pinMode(PIN_CLK, OUTPUT);
     pinMode(PIN_CS, OUTPUT);
@@ -17,6 +31,8 @@ RX5808::Init()
         pinMode(PIN_CS_2, OUTPUT);
         digitalWrite(PIN_CS_2, HIGH);
     #endif
+
+    SPIModeEnabled = true;
 
     DBGLN("SPI config complete");
 }
@@ -44,6 +60,11 @@ RX5808::SendIndexCmd(uint8_t index)
 void
 RX5808::rtc6705WriteRegister(uint32_t buf)
 {
+    if (!SPIModeEnabled) 
+    {
+        EnableSPIMode();
+    }
+
     uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
 
     digitalWrite(PIN_CS, LOW);
@@ -77,6 +98,11 @@ RX5808::rtc6705WriteRegister(uint32_t buf)
 uint32_t
 RX5808::rtc6705readRegister(uint8_t readRegister)
 {
+    if (!SPIModeEnabled) 
+    {
+        EnableSPIMode();
+    }
+
     uint32_t buf = readRegister | (RX5808_READ_CTRL_BIT << 4);
     uint32_t registerData = 0;
 
