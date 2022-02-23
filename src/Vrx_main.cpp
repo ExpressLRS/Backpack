@@ -357,10 +357,12 @@ RF_PRE_INIT()
 
 void setup()
 {
-  // VRX module class needs to be initialised first, as it calls delay()
-  // for some modules that require a boot delay before being operational
-  vrxModule.Init();
-  Serial.begin(VRX_UART_BAUD);
+  #if !defined(HDZERO_BACKPACK)
+    // Serial.begin() seems to prevent the HDZ VRX from booting
+    // If we're not on HDZ, init serial early for debug msgs
+    // Otherwise, delay it till the end of setup
+    Serial.begin(VRX_UART_BAUD);
+  #endif
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();
@@ -390,6 +392,11 @@ void setup()
   {
     connectionState = running;
   }
+
+  vrxModule.Init();
+  #if defined(HDZERO_BACKPACK)
+    Serial.begin(VRX_UART_BAUD);
+  #endif
   DBGLN("Setup completed");
 }
 
