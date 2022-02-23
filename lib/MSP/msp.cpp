@@ -284,3 +284,26 @@ MSP::getTotalPacketSize(mspPacket_t* packet)
 
     return totalSize;
 }
+
+bool
+MSP::awaitPacket(mspPacket_t* packet, Stream* port, uint32_t timeoutMillis)
+{
+    uint32_t requestTime = millis();
+
+    sendPacket(packet, port);
+
+    // wait up to <timeoutMillis> milliseconds for a response, then bail out
+    while(millis() - requestTime < timeoutMillis)
+    {
+        while (port->available())
+        {
+            uint8_t data = port->read();
+            if (processReceivedByte(data))
+            {
+                return true;
+            }
+        }
+    }
+    DBGLN("MSP::awaitPacket Exceeded timeout while waiting for packet");
+    return false;
+}

@@ -135,6 +135,8 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     RebootIntoWifi();
     break;
   default:
+    // transparently forward MSP packets via espnow to any subscribers
+    sendMSPViaEspnow(packet);
     break;
   }
 }

@@ -3,15 +3,21 @@
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
+#if defined(PLATFORM_ESP32)
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <Update.h>
+#else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #define wifi_mode_t WiFiMode_t
-
+#endif
 #include <DNSServer.h>
-#include <ESPAsyncWebServer.h>
 
 #include <set>
 #include <StreamString.h>
+
+#include <ESPAsyncWebServer.h>
 
 #include "common.h"
 #include "logging.h"
@@ -345,7 +351,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
         updater.printError(Serial);
       }
     #else
-      if (!updater->begin()) { //start with max available size
+      if (!updater.begin()) { //start with max available size
         updater.printError(Serial);
       }
     #endif
@@ -390,7 +396,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     WebUploadResponseHandler(request);
   } else {
     #if defined(PLATFORM_ESP32)
-      updater->abort();
+      updater.abort();
     #endif
     request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
   }
@@ -452,26 +458,41 @@ static void startMDNS()
 
   String instance = String(myHostname) + "_" + WiFi.macAddress();
   instance.replace(":", "");
-  // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
-  MDNS.setInstanceName(myHostname);
-  MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
-  MDNS.addServiceTxt(service, "vendor", "elrs");
-  MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
-  MDNS.addServiceTxt(service, "version", VERSION);
-  MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
-  #if defined(TARGET_VRX_BACKPACK)
-    MDNS.addServiceTxt(service, "type", "vrx");
-  #elif defined(TARGET_TX_BACKPACK)
-    MDNS.addServiceTxt(service, "type", "txbp");
+  #ifdef PLATFORM_ESP8266
+    // We have to do it differently on ESP8266 as setInstanceName has the side-effect of chainging the hostname!
+    MDNS.setInstanceName(myHostname);
+    MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
+    MDNS.addServiceTxt(service, "vendor", "elrs");
+    MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt(service, "version", VERSION);
+    MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
+    #if defined(TARGET_VRX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "vrx");
+    #elif defined(TARGET_TX_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "txbp");
+    #endif
+    // If the probe result fails because there is another device on the network with the same name
+    // use our unique instance name as the hostname. A better way to do this would be to use
+    // MDNSResponder::indexDomain and change wifi_hostname as well.
+    MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
+      if (!p_bProbeResult) {
+        WiFi.hostname(instance);
+        MDNS.setInstanceName(instance);
+      }
+    });
+  #else
+    MDNS.setInstanceName(instance);
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
+    MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    MDNS.addServiceTxt("http", "tcp", "version", VERSION);
+    MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
+    #if defined(TARGET_VRX_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "vrx");
+    #elif defined(TARGET_TX_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "txbp");
+    #endif
   #endif
-  // If the probe result fails because there is another device on the network with the same name
-  // use our unique instance name as the hostname.
-  MDNS.setHostProbeResultCallback([instance](const char* p_pcDomainName, bool p_bProbeResult) {
-    if (!p_bProbeResult) {
-      WiFi.hostname(instance);
-      MDNS.setInstanceName(instance);
-    }
-  });
 }
 
 static void startServices()

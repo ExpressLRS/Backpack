@@ -2,6 +2,9 @@
 
 #include <Arduino.h>
 
+#define VRX_BOOT_DELAY  1000
+#define VRX_UART_BAUD   500000   // fusion uses 500k baud between the ESP8266 and the STM32
+
 const uint16_t frequencyTable[48] = {
     5865, 5845, 5825, 5805, 5785, 5765, 5745, 5725, // A
     5733, 5752, 5771, 5790, 5809, 5828, 5847, 5866, // B
