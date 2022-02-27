@@ -41,14 +41,14 @@ extern unsigned long rebootTime;
 
 #if defined(TARGET_VRX_BACKPACK)
 static const char *myHostname = "elrs_vrx";
-static const char *ssid = "ExpressLRS VRx Backpack";
+static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
-static const char *ssid = "ExpressLRS TX Backpack";
+static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
 #else
 #error Unknown target
 #endif
-static const char *password = "expresslrs";
+static const char *wifi_ap_password = "expresslrs";
 
 static const char *home_wifi_ssid = ""
 #ifdef HOME_WIFI_SSID
@@ -60,6 +60,9 @@ static const char *home_wifi_password = ""
 STR(HOME_WIFI_PASSWORD)
 #endif
 ;
+
+static char station_ssid[33];
+static char station_password[65];
 
 static bool wifiStarted = false;
 bool webserverPreventAutoStart = false;
@@ -177,9 +180,9 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s;
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + config.GetSSID();
+    s = String("{\"mode\":\"STA\",\"ssid\":\"") + station_ssid;
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + config.GetSSID();
+    s = String("{\"mode\":\"AP\",\"ssid\":\"") + station_ssid;
   }
   #if defined(NAMIMNO_TX_BACKPACK)
   s += "\",\"stm32\":\"yes";
@@ -232,14 +235,14 @@ static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFi
 static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 {
   DBGLN("Starting Access Point");
-  String msg = String("Access Point starting, please connect to access point '") + ssid + "' with password '" + password + "'";
+  String msg = String("Access Point starting, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
   sendResponse(request, msg, WIFI_AP);
 }
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
 {
   DBGLN("Connecting to home network");
-  String msg = String("Connecting to network '") + config.GetSSID() + "', connect to http://" +
+  String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     myHostname + ".local from a browser on that network";
   sendResponse(request, msg, WIFI_STA);
 }
@@ -250,9 +253,14 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   String password = request->arg("password");
 
   DBGLN("Setting home network %s", ssid.c_str());
-  config.SetSSID(ssid.c_str());
-  config.SetPassword(password.c_str());
-  config.Commit();
+  strcpy(station_ssid, ssid.c_str());
+  strcpy(station_password, password.c_str());
+  // Only save to config if we don't have a flashed wifi network
+  if (home_wifi_ssid[0] == 0) {
+    config.SetSSID(ssid.c_str());
+    config.SetPassword(password.c_str());
+    config.Commit();
+  }
   WebUpdateConnect(request);
 }
 
@@ -262,8 +270,18 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetSSID("");
   config.SetPassword("");
   config.Commit();
-  String msg = String("Home network forgotten, please connect to access point '") + ssid + "' with password '" + password + "'";
-  sendResponse(request, msg, WIFI_AP);
+  // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
+  if (home_wifi_ssid[0]!=0) {
+    strcpy(station_ssid, home_wifi_ssid);
+    strcpy(station_password, home_wifi_password);
+    String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
+    sendResponse(request, msg, WIFI_STA);
+  } else {
+    station_ssid[0] = 0;
+    station_password[0] = 0;
+    String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
+    sendResponse(request, msg, WIFI_AP);
+  }
 }
 
 static void WebUpdateHandleNotFound(AsyncWebServerRequest *request)
@@ -432,12 +450,14 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (config.GetSSID()[0]==0 && home_wifi_ssid[0]!=0) {
-    config.SetSSID(home_wifi_ssid);
-    config.SetPassword(home_wifi_password);
-    config.Commit();
+  if (home_wifi_ssid[0]!=0) {
+    strcpy(station_ssid, home_wifi_ssid);
+    strcpy(station_password, home_wifi_password);
+  } else {
+    strcpy(station_ssid, config.GetSSID());
+    strcpy(station_password, config.GetPassword());
   }
-  if (config.GetSSID()[0]==0) {
+  if (station_ssid[0]==0) {
     changeTime = now;
     changeMode = WIFI_AP;
   } else {
@@ -587,17 +607,17 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
-        WiFi.softAP(ssid, password);
+        WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
         startServices();
         break;
       case WIFI_STA:
-        DBGLN("Connecting to home network '%s' '%s'", config.GetSSID(), config.GetPassword());
+        DBGLN("Connecting to home network '%s' '%s'", station_ssid, station_password);
         wifiMode = WIFI_STA;
         WiFi.mode(wifiMode);
         WiFi.setHostname(myHostname); // hostname must be set after the mode is set to STA
         changeTime = now;
-        WiFi.begin(config.GetSSID(), config.GetPassword());
+        WiFi.begin(station_ssid, station_password);
         startServices();
       default:
         break;
