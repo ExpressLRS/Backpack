@@ -271,12 +271,13 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetPassword("");
   config.Commit();
   // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (home_wifi_ssid[0]!=0) {
+  if (home_wifi_ssid[0] != 0) {
     strcpy(station_ssid, home_wifi_ssid);
     strcpy(station_password, home_wifi_password);
     String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
     sendResponse(request, msg, WIFI_STA);
-  } else {
+  }
+  else {
     station_ssid[0] = 0;
     station_password[0] = 0;
     String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
@@ -412,7 +413,8 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   target_seen = true;
   if (request->arg("action").equals("confirm")) {
     WebUploadResponseHandler(request);
-  } else {
+  }
+  else {
     #if defined(PLATFORM_ESP32)
       updater.abort();
     #endif
@@ -450,17 +452,19 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (home_wifi_ssid[0]!=0) {
+  if (home_wifi_ssid[0] != 0) {
     strcpy(station_ssid, home_wifi_ssid);
     strcpy(station_password, home_wifi_password);
-  } else {
+  }
+  else {
     strcpy(station_ssid, config.GetSSID());
     strcpy(station_password, config.GetPassword());
   }
-  if (station_ssid[0]==0) {
+  if (station_ssid[0] == 0) {
     changeTime = now;
     changeMode = WIFI_AP;
-  } else {
+  }
+  else {
     changeTime = now;
     changeMode = WIFI_STA;
   }
