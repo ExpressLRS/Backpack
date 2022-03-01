@@ -31,6 +31,10 @@ uint8_t crc8_dvb_s2(uint8_t crc, unsigned char a)
     return crc;
 }
 
+MSP::MSP() : m_inputState(MSP_IDLE)
+{
+}
+
 bool
 MSP::processReceivedByte(uint8_t c)
 {
@@ -287,7 +291,7 @@ MSP::getTotalPacketSize(mspPacket_t* packet)
 
 bool
 MSP::awaitPacket(mspPacket_t* packet, Stream* port, uint32_t timeoutMillis)
-{
+{    
     uint32_t requestTime = millis();
 
     sendPacket(packet, port);
