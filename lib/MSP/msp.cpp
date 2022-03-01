@@ -291,7 +291,7 @@ MSP::getTotalPacketSize(mspPacket_t* packet)
 
 bool
 MSP::awaitPacket(mspPacket_t* packet, Stream* port, uint32_t timeoutMillis)
-{    
+{
     uint32_t requestTime = millis();
 
     sendPacket(packet, port);
