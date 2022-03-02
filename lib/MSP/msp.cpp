@@ -31,6 +31,10 @@ uint8_t crc8_dvb_s2(uint8_t crc, unsigned char a)
     return crc;
 }
 
+MSP::MSP() : m_inputState(MSP_IDLE)
+{
+}
+
 bool
 MSP::processReceivedByte(uint8_t c)
 {
