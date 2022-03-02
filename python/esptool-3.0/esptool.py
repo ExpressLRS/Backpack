@@ -473,7 +473,22 @@ class ESPLoader(object):
         #
         # DTR & RTS are active low signals,
         # ie True = pin @ 0V, False = pin @ VCC.
-        if mode != 'no_reset':
+        if mode == 'passthru':
+            self._setDTR(False)  # IO0=HIGH
+            # self._setRTS(True)   # EN=LOW, chip in reset
+            time.sleep(0.1)
+            # if esp32r0_delay:
+            #     # Some chips are more likely to trigger the esp32r0
+            #     # watchdog reset silicon bug if they're held with EN=LOW
+            #     # for a longer period
+            #     time.sleep(1.2)
+            self._setRTS(False)  # EN=HIGH, chip out of reset
+            time.sleep(4.0)      # Wait for firmware to start
+            self._setDTR(True)   # IO0=LOW
+            time.sleep(0.2)
+            self._setDTR(False)  # IO0=HIGH, done
+            time.sleep(0.2)
+        elif mode != 'no_reset':
             self._setDTR(False)  # IO0=HIGH
             self._setRTS(True)   # EN=LOW, chip in reset
             time.sleep(0.1)
@@ -3284,7 +3299,7 @@ def main(custom_commandline=None):
     parser.add_argument(
         '--before',
         help='What to do before connecting to the chip',
-        choices=['default_reset', 'no_reset', 'no_reset_no_sync'],
+        choices=['default_reset', 'no_reset', 'no_reset_no_sync', 'passthru'],
         default=os.environ.get('ESPTOOL_BEFORE', 'default_reset'))
 
     parser.add_argument(
