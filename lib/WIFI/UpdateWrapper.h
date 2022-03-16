@@ -10,21 +10,18 @@ public:
         _stmMode = stmMode;
     }
 
-#ifdef PLATFORM_ESP8266
     bool begin(size_t size) {
         _running = true;
-        return Update.begin(size, U_FLASH);
-    }
-#elif NAMIMNO_TX_BACKPACK
-    bool begin(size_t size) {
+#ifdef NAMIMNO_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.begin(0); // we don't know the size!
-    }
-#elif PLATFORM_ESP32
-    bool begin() {
-        return Update.begin();
-    }
 #endif
+#if PLATFORM_ESP8266
+        return Update.begin(size, U_FLASH);
+#elif PLATFORM_ESP32
+        return Update.begin();
+#endif
+    }
 
     size_t write(uint8_t *data, size_t len) {
 #ifdef NAMIMNO_TX_BACKPACK
