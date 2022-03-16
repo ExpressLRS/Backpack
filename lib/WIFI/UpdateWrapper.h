@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
 #include "stmUpdateClass.h"
 #endif
 
@@ -12,7 +12,7 @@ public:
 
     bool begin(size_t size) {
         _running = true;
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.begin(0); // we don't know the size!
 #endif
@@ -24,7 +24,7 @@ public:
     }
 
     size_t write(uint8_t *data, size_t len) {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.write(data, len);
 #endif
@@ -33,7 +33,7 @@ public:
 
     bool end(bool evenIfRemaining = false) {
         _running = false;
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.end(evenIfRemaining);
 #endif
@@ -41,7 +41,7 @@ public:
     }
 
     void printError(Print &out) {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.printError(out);
 #endif
@@ -49,7 +49,7 @@ public:
     }
 
     bool hasError() {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.hasError();
 #endif

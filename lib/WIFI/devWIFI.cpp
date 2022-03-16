@@ -184,7 +184,7 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
   } else {
     s = String("{\"mode\":\"AP\",\"ssid\":\"") + station_ssid;
   }
-  #if defined(NAMIMNO_TX_BACKPACK)
+  #if defined(STM32_TX_BACKPACK)
   s += "\",\"stm32\":\"yes";
   #endif
   #if defined(TARGET_RX)
@@ -348,7 +348,7 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     target_complete = false;
     target_pos = 0;
     totalSize = 0;
-    #ifdef NAMIMNO_TX_BACKPACK
+    #ifdef STM32_TX_BACKPACK
       if (request->arg("type").equals("tx"))
       {
         DBGLN("Set updater to STM");
