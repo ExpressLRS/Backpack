@@ -10,15 +10,19 @@ public:
         _stmMode = stmMode;
     }
 
+#if PLATFORM_ESP8266
     bool begin(size_t size) {
-        _running = true;
+#else
+    bool begin() {
+#endif
+      _running = true;
 #ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.begin(0); // we don't know the size!
 #endif
 #if PLATFORM_ESP8266
         return Update.begin(size, U_FLASH);
-#elif PLATFORM_ESP32
+#else
         return Update.begin();
 #endif
     }
