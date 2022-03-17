@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
 #include "stmUpdateClass.h"
 #endif
 
@@ -10,24 +10,25 @@ public:
         _stmMode = stmMode;
     }
 
-#ifdef PLATFORM_ESP8266
+#if PLATFORM_ESP8266
     bool begin(size_t size) {
-        _running = true;
-        return Update.begin(size, U_FLASH);
-    }
-#elif NAMIMNO_TX_BACKPACK
-    bool begin(size_t size) {
+#else
+    bool begin() {
+#endif
+      _running = true;
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.begin(0); // we don't know the size!
-    }
-#elif PLATFORM_ESP32
-    bool begin() {
-        return Update.begin();
-    }
 #endif
+#if PLATFORM_ESP8266
+        return Update.begin(size, U_FLASH);
+#else
+        return Update.begin();
+#endif
+    }
 
     size_t write(uint8_t *data, size_t len) {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.write(data, len);
 #endif
@@ -36,7 +37,7 @@ public:
 
     bool end(bool evenIfRemaining = false) {
         _running = false;
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.end(evenIfRemaining);
 #endif
@@ -44,7 +45,7 @@ public:
     }
 
     void printError(Print &out) {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.printError(out);
 #endif
@@ -52,7 +53,7 @@ public:
     }
 
     bool hasError() {
-#ifdef NAMIMNO_TX_BACKPACK
+#ifdef STM32_TX_BACKPACK
         if (_stmMode)
             return STMUpdate.hasError();
 #endif
