@@ -7,8 +7,8 @@ Rapidfire::Init()
 {
     delay(VRX_BOOT_DELAY);
 
-    EnableSPIMode();
-    
+    EnableSPIMode(); // https://github.com/ExpressLRS/ExpressLRS/pull/1489 & https://github.com/ExpressLRS/Backpack/pull/65
+
     pinMode(PIN_MOSI, INPUT);
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);
