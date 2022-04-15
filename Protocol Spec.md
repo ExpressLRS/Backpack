@@ -19,9 +19,6 @@ This protocol defines the message set to be used for bi-directional communicatio
 | ------- | ---------------------------------------------------------------------------------- |
 | 1.0     | Initial protocol release for Backpack firmware v1.0                                |
 | 1.1     | Adopted MSP\_DISPLAYPORT message payload format for the “Set OSD Element” message. |
-|         |                                                                                    |
-|         |                                                                                    |
-|         |                                                                                    |
 
 ## Application Layer
 ### 4.1 Message Framing
@@ -323,9 +320,9 @@ For detailed message descriptions, see **section 5.2** below.
 | 8    | \<sub cmd>          | yes             | uint8. The displayport command type in this message*: <br>0x00 = heartbeat <br>0x01 = release the port <br>0x02 = clear screen <br>0x03 = write string <br>0x04 = draw screen |
 | 9    | \<row>              | yes             | uint8. Row number in the character array.                                                              |
 | 10   | \<column>           | yes             | uint8. Column number in the character array.                                                           |
-| 11   | \<attribute>        | yes             | uint8. A modifier code that changes the presentation of the text: <br>0x00 = DISPLAYPORT_ATTR_NONE <br>0x01 = DISPLAYPORT_ATTR_INFO <br>0x02 = DISPLAYPORT_ATTR_WARNING <br>0x03 = DISPLAYPORT_ATTR_CRITICAL <br>0x08 = DISPLAYPORT_ATTR_BLINK |
+| 11   | \<attribute>        | yes             | uint8. A modifier code that changes the presentation of the text**: <br>0x00 = DISPLAYPORT_ATTR_NONE <br>0x01 = DISPLAYPORT_ATTR_INFO <br>0x02 = DISPLAYPORT_ATTR_WARNING <br>0x03 = DISPLAYPORT_ATTR_CRITICAL <br>0x08 = DISPLAYPORT_ATTR_BLINK |
 | 12+n | \<ASCII characters> | yes             | uint8. ASCII character codes. One byte per character. <br> For example “ELRS” = \[0x45, 0x4c, 0x52, 0x53\]. |
 | 13+n | \<crc>              |                 | checksum                                                                                               |
 
 *As of version 1.1 of this protocol, only sub cmd 0x03 is used for communication between ELRS and the VRX.
-**As of version 1.1 of this protocol, only attribute 0x08 is used for communication between ELRS and the VRX.
+<br>**As of version 1.1 of this protocol, only attribute 0x08 is used for communication between ELRS and the VRX.
