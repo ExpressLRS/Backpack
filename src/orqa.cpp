@@ -1,55 +1,79 @@
 #include "orqa.h"
 
-Orqa::Orqa(Stream *port)
+GENERIC_CRC8 ghst_crc(GHST_CRC_POLY);
+
+Orqa::Orqa()
 {
-    m_port = port;
 }
 
 void Orqa::Init()
 {
-
+    delay(VRX_BOOT_DELAY);
 }
 
 void Orqa::SendIndexCmd(uint8_t index)
 {
+    uint8_t band = GetBand(index);
+    uint8_t channel = GetChannel(index);
+    channel++; // ELRS Channel is zero based
+    currentGHSTChannel = GHSTChannel(band, channel);
     currentFrequency = GetFrequency(index);
-    currentBand = GetBand(index);
-    currentChannel = GetChannel(index);
-    ghstChannel = GHSTChannel(currentBand, currentChannel);
 }
 
-void Orqa::Loop()
+void Orqa::Loop(uint32_t now)
 {
+    if(now - lastGHSTPacketTime >= 20)
+    {
+        lastGHSTPacketTime = now;
+        SendGHSTUpdate(currentFrequency, currentGHSTChannel);
+    }
+}
 
+void Orqa::SendGHSTUpdate(uint16_t freq, uint8_t ghstChannel)
+{
+    uint8_t packet[] = {
+        0x82, 0x0C, 0x20,                                       // Header
+        0x00, (uint8_t)(freq & 0xFF), (uint8_t)(freq >> 8),     // Frequency
+        0x01, 0x00, ghstChannel,                                // Band & Channel
+        0x00, 0x00, 0x00, 0x00,                                 // Power Level?
+        0x00 };                                                 // CRC
+    uint8_t crc = ghst_crc.calc(&packet[2], 11);
+    packet[13] = crc;
+
+    for(uint8_t i = 0; i < 14; i++)
+    {
+        Serial.write(packet[i]);
+    }
 }
 
 uint8_t Orqa::GHSTChannel(uint8_t band, uint8_t channel)
 {
     // ELRS Bands:  A, B, E, I/F, R, L
     // Orqa/Rapidfire Bands: I/F, R, E, B, A, L, X
-    uint8_t ghstChannel;
+    uint8_t ghstChannel = 0x00;
+
     switch(band)
     {
     case 0x01:
-        ghstChannel &= 0x50;
+        ghstChannel |= 0x50;
         break;
     case 0x02:
-        ghstChannel &= 0x40;
+        ghstChannel |= 0x40;
         break;
     case 0x03:
-        ghstChannel &= 0x30;
+        ghstChannel |= 0x30;
         break;
     case 0x04:
-        ghstChannel &= 0x10;
+        ghstChannel |= 0x10;
         break;
     case 0x05:
-        ghstChannel &= 0x20;
+        ghstChannel |= 0x20;
         break;
     case 0x06:
-        ghstChannel &= 0x60;
+        ghstChannel |= 0x60;
         break;
     }
-    ghstChannel &= channel;
+    ghstChannel |= channel;
 
     return ghstChannel;
 }
