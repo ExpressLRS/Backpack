@@ -15,19 +15,11 @@ void Orqa::SendIndexCmd(uint8_t index)
 {
     uint8_t band = GetBand(index);
     uint8_t channel = GetChannel(index);
-    channel++; // ELRS Channel is zero based
-    currentGHSTChannel = GHSTChannel(band, channel);
-    currentFrequency = GetFrequency(index);
+    uint8_t currentGHSTChannel = GHSTChannel(band, channel);
+    uint16_t currentFrequency = GetFrequency(index);
+    SendGHSTUpdate(currentFrequency, currentGHSTChannel);
 }
 
-void Orqa::Loop(uint32_t now)
-{
-    if(now - lastGHSTPacketTime >= 20)
-    {
-        lastGHSTPacketTime = now;
-        SendGHSTUpdate(currentFrequency, currentGHSTChannel);
-    }
-}
 
 void Orqa::SendGHSTUpdate(uint16_t freq, uint8_t ghstChannel)
 {
