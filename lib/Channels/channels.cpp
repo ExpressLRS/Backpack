@@ -15,5 +15,5 @@ uint8_t GetBand(uint8_t index)
 
 uint8_t GetChannel(uint8_t index)
 {
-    return index % 8;
+    return (index % 8) + 1;
 }
