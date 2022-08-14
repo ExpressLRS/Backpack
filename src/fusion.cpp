@@ -9,7 +9,7 @@ GENERIC_CRC8 crsf_crc(CRSF_CRC_POLY);
 void
 Fusion::Init()
 {
-    delay(VRX_BOOT_DELAY);
+    ModuleBase::Init();
     DBGLN("Fusion backpack init complete");
 }
 

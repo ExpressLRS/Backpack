@@ -32,6 +32,8 @@
   #include "fusion.h"
 #elif defined(HDZERO_BACKPACK)
   #include "hdzero.h"
+#elif defined(SKYZONE_MSP_BACKPACK)
+  #include "skyzone_msp.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -98,6 +100,8 @@ VrxBackpackConfig config;
   Fusion vrxModule;
 #elif defined(HDZERO_BACKPACK)
   HDZero vrxModule(&Serial);
+#elif defined(SKYZONE_MSP_BACKPACK)
+  SkyzoneMSP vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -202,7 +206,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
     break;
   case MSP_ELRS_BACKPACK_SET_RECORDING_STATE:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_RECORDING_STATE...");
-    #if defined(HDZERO_BACKPACK)
     {
       uint8_t state = packet->readByte();
       uint8_t lowByte = packet->readByte();
@@ -210,7 +213,6 @@ void ProcessMSPPacket(mspPacket_t *packet)
       uint16_t delay = lowByte | highByte << 8;
       vrxModule.SetRecordingState(state, delay);
     }
-    #endif
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
@@ -405,6 +407,7 @@ void loop()
   uint32_t now = millis();
 
   devicesUpdate(now);
+  vrxModule.ModuleLoop();
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

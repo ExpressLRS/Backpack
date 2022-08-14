@@ -5,7 +5,7 @@
 void
 Rapidfire::Init()
 {
-    delay(VRX_BOOT_DELAY);
+    ModuleBase::Init();
 
     EnableSPIMode(); // https://github.com/ExpressLRS/ExpressLRS/pull/1489 & https://github.com/ExpressLRS/Backpack/pull/65
 

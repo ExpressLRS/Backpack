@@ -5,6 +5,8 @@
 void
 SteadyView::Init()
 {
+    ModuleBase::Init();
+    
     pinMode(PIN_MOSI, OUTPUT);
     pinMode(PIN_CLK, OUTPUT);
     pinMode(PIN_CS, OUTPUT);
