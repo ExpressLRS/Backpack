@@ -1,5 +1,6 @@
 #pragma once
 
+#include "module_base.h"
 #include <Arduino.h>
 
 #define VRX_BOOT_DELAY  1000
@@ -14,7 +15,7 @@ const uint16_t frequencyTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
-class Fusion
+class Fusion : public ModuleBase
 {
 public:
     void Init();
