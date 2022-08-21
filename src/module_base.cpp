@@ -17,6 +17,6 @@ ModuleBase::SetRecordingState(uint8_t recordingState, uint16_t delay)
 }
 
 void
-ModuleBase::ModuleLoop()
+ModuleBase::Loop(uint32_t now)
 {
 }

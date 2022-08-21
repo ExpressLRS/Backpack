@@ -115,12 +115,12 @@ SkyzoneMSP::SendRecordingState()
 }
 
 void
-SkyzoneMSP::ModuleLoop()
+SkyzoneMSP::Loop(uint32_t now)
 {
     // Handle delay timer for SendRecordingState()
     if (m_delay != 0)
     {
-        if (millis() - m_delayStartMillis >= m_delay)
+        if (now - m_delayStartMillis >= m_delay)
         {
             SendRecordingState();
             m_delay = 0;
