@@ -5,7 +5,9 @@
 #include "module_base.h"
 #include <Arduino.h>
 
+#undef VRX_BOOT_DELAY
 #define VRX_BOOT_DELAY              7000
+
 #define VRX_RESPONSE_TIMEOUT        500
 #define VRX_UART_BAUD               115200  // hdzero uses 115k baud between the ESP8285 and the STM32
 

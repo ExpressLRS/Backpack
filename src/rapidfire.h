@@ -3,6 +3,7 @@
 #include "module_base.h"
 #include <Arduino.h>
 
+#undef VRX_BOOT_DELAY
 #define VRX_BOOT_DELAY  2000
 
 #define BIT_BANG_FREQ       1000
