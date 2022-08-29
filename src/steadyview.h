@@ -1,5 +1,6 @@
 #pragma once
 
+#include "module_base.h"
 #include <Arduino.h>
 
 #define BIT_BANG_FREQ                               10000
@@ -37,7 +38,7 @@ typedef enum {
     ModeDiversity
 } videoMode_t;
 
-class SteadyView
+class SteadyView : public ModuleBase
 {
 public:
     void Init();

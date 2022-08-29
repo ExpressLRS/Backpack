@@ -1,7 +1,9 @@
 #pragma once
 
+#include "module_base.h"
 #include <Arduino.h>
 
+#undef VRX_BOOT_DELAY
 #define VRX_BOOT_DELAY  2000
 
 #define BIT_BANG_FREQ       1000
@@ -13,7 +15,7 @@
 #define RF_API_CHANNEL_CMD  0x43    // 'C'
 #define RF_API_BAND_CMD     0x42    // 'B'
 
-class Rapidfire
+class Rapidfire : public ModuleBase
 {
 public:
     void Init();

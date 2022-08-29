@@ -1,20 +1,21 @@
-#include "hdzero.h"
+#include "skyzone_msp.h"
 #include "logging.h"
 #include <Arduino.h>
 
-HDZero::HDZero(Stream *port)
+SkyzoneMSP::SkyzoneMSP(Stream *port)
 {
     m_port = port;
 }
 
 void
-HDZero::Init()
+SkyzoneMSP::Init()
 {
     ModuleBase::Init();
+    m_delay = 0;
 }
 
 void
-HDZero::SendIndexCmd(uint8_t index)
+SkyzoneMSP::SendIndexCmd(uint8_t index)
 {  
     uint8_t retries = 3;
     while (GetChannelIndex() != index && retries > 0)
@@ -25,7 +26,7 @@ HDZero::SendIndexCmd(uint8_t index)
 }
 
 uint8_t
-HDZero::GetChannelIndex()
+SkyzoneMSP::GetChannelIndex()
 {
     MSP msp;
     mspPacket_t* packet = new mspPacket_t;
@@ -42,12 +43,12 @@ HDZero::GetChannelIndex()
         return packet->readByte();
     }
 
-    DBGLN("HDZero module: Exceeded timeout while waiting for channel index response");
+    DBGLN("Skyzone module: Exceeded timeout while waiting for channel index response");
     return CHANNEL_INDEX_UNKNOWN;
 }
 
 void
-HDZero::SetChannelIndex(uint8_t index)
+SkyzoneMSP::SetChannelIndex(uint8_t index)
 {  
     MSP msp;
     mspPacket_t packet;
@@ -60,7 +61,7 @@ HDZero::SetChannelIndex(uint8_t index)
 }
 
 uint8_t
-HDZero::GetRecordingState()
+SkyzoneMSP::GetRecordingState()
 {
     MSP msp;
     mspPacket_t* packet = new mspPacket_t;
@@ -77,23 +78,52 @@ HDZero::GetRecordingState()
         return packet->readByte() ? VRX_DVR_RECORDING_ACTIVE : VRX_DVR_RECORDING_INACTIVE;
     }
 
-    DBGLN("HDZero module: Exceeded timeout while waiting for recording state response");
+    DBGLN("Skyzone module: Exceeded timeout while waiting for recording state response");
     return VRX_DVR_RECORDING_UNKNOWN;
 }
 
 void
-HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
+SkyzoneMSP::SetRecordingState(uint8_t recordingState, uint16_t delay)
 {
     DBGLN("SetRecordingState = %d delay = %d", recordingState, delay);
+    
+    m_recordingState = recordingState;
+    m_delay = delay * 1000; // delay is in seconds, convert to milliseconds
+    m_delayStartMillis = millis();
+
+    if (m_delay == 0)
+    {
+        SendRecordingState();
+    }
+}
+
+void
+SkyzoneMSP::SendRecordingState()
+{
+    DBGLN("SendRecordingState = %d delay = %d", m_recordingState, m_delay);
     
     MSP msp;
     mspPacket_t packet;
     packet.reset();
     packet.makeCommand();
     packet.function = MSP_ELRS_BACKPACK_SET_RECORDING_STATE;
-    packet.addByte(recordingState);
-    packet.addByte(delay & 0xFF); // delay byte 1
-    packet.addByte(delay >> 8); // delay byte 2
+    packet.addByte(m_recordingState);
+    packet.addByte(m_delay & 0xFF); // delay byte 1
+    packet.addByte(m_delay >> 8); // delay byte 2
 
     msp.sendPacket(&packet, m_port);
+}
+
+void
+SkyzoneMSP::Loop(uint32_t now)
+{
+    // Handle delay timer for SendRecordingState()
+    if (m_delay != 0)
+    {
+        if (now - m_delayStartMillis >= m_delay)
+        {
+            SendRecordingState();
+            m_delay = 0;
+        }
+    }
 }

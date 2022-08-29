@@ -5,6 +5,8 @@
 void
 RX5808::Init()
 {
+    ModuleBase::Init();
+    
     pinMode(PIN_MOSI, INPUT);
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);

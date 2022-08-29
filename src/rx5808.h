@@ -1,5 +1,6 @@
 #pragma once
 
+#include "module_base.h"
 #include <Arduino.h>
 
 #define BIT_BANG_FREQ                               10000
@@ -32,7 +33,7 @@ const uint16_t frequencyTable[48] = {
     5333, 5373, 5413, 5453, 5493, 5533, 5573, 5613  // L
 };
 
-class RX5808
+class RX5808 : public ModuleBase
 {
 public:
     void Init();
