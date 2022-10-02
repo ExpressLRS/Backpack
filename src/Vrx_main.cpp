@@ -228,6 +228,27 @@ void ProcessMSPPacket(mspPacket_t *packet)
   case MSP_ELRS_SET_OSD:
     vrxModule.SetOSD(packet);
     break;
+  case MSP_ELRS_RACE_LAP_DETECTION:
+  {
+    uint8_t lapNumber = packet->readByte();
+    uint8_t isLapEnd = packet->readByte();
+    uint8_t isRaceEnd = packet->readByte();
+    uint8_t timeLen = packet->readByte();
+    
+    char timeAsText[timeLen + 1];
+    for (uint8_t i = 0; i < timeLen; ++i)
+    {
+      timeAsText[i] = packet->readByte();
+    }
+    timeAsText[timeLen] = '\0';
+
+    Serial.println(lapNumber);
+    Serial.println(isLapEnd);
+    Serial.println(isRaceEnd);
+    Serial.println(timeLen);
+    Serial.println(timeAsText);
+  }
+    break;
   default:
     DBGLN("Unknown command from ESPNOW");
     break;
@@ -429,12 +450,12 @@ RF_PRE_INIT()
 
 void setup()
 {
-
+  Serial.begin(115200);
   #if !defined(HDZERO_BACKPACK)
     // Serial.begin() seems to prevent the HDZ VRX from booting
     // If we're not on HDZ, init serial early for debug msgs
     // Otherwise, delay it till the end of setup
-    Serial.begin(VRX_UART_BAUD);
+    // Serial.begin(VRX_UART_BAUD);
   #endif
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);

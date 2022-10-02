@@ -76,6 +76,38 @@ void SendChannelIndexToPeer(uint8_t *address, uint8_t vtxIdx)
   sendMSPViaEspnow(address, &packet);
 }
 
+void SendDetectionToPeer(uint8_t *address, JsonObject detection)
+{
+  uint8_t lapNumber = detection["LapNumber"];
+  double time = detection["Time"];
+  bool isLapEnd = detection["IsLapEnd"];
+  bool isRaceEnd = detection["IsRaceEnd"];
+
+  char timeAsText[20];
+  int result = sprintf(timeAsText, "%f", time);
+  if (result < 0)
+  {
+    DBGLN("Failed to convert time to text for detection");
+    return;
+  }
+
+  uint8_t timeLen = strlen(timeAsText);
+  
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_RACE_LAP_DETECTION;
+  packet.addByte(lapNumber);
+  packet.addByte(isLapEnd ? 1 : 0);
+  packet.addByte(isRaceEnd ? 1 : 0);
+  packet.addByte(timeLen);
+  for (uint8_t i = 0; i < timeLen; ++i)
+  {
+    packet.addByte(timeAsText[i]);
+  }
+  sendMSPViaEspnow(address, &packet);
+}
+
 int16_t ParseVtxIdxFromPilotJson(JsonObject pilot)
 {
   const char* band = pilot["ChannelBand"];
@@ -178,14 +210,21 @@ void ProcessJsonDetectionFromTimer()
 {
   const char* pilotName = jsonReceived["PilotName"];
   double time = jsonReceived["Time"];
-  DBGLN("Got detection for pilot %s with time %f", pilotName, time);
+  DBG("Got detection for pilot %s with time ", pilotName);
+
+  char timeAsText[20];
+  sprintf(timeAsText, "%f", time);
+  DBGLN(timeAsText);
 
   // Iterate the collection of subscribers
   for (uint8_t i = 0; i < subscribers.size(); ++i)
   {
     if (subscribers[i]["name"] == pilotName)
     {
-      
+      uint8_t uid[6];
+      ParseUIDFromSubscriber(uid, subscribers[i]);
+
+      SendDetectionToPeer(uid, jsonReceived.as<JsonObject>());
     }
   }
 }
