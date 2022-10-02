@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+
+from PIL import Image
+from sys import exit
+from sys import argv
+
+def split_by_length(item, maxlen):
+    return [item[ind:ind+maxlen] for ind in range(0, len(item), maxlen)]
+
+def str_to_binary(str):
+    return int(str, 2)
+
+class Char:
+    height = 18
+    width = 12
+    size = (width, height)
+
+    def __init__(self):
+        self.image = Image.new(mode='RGBA', size=self.size)
+
+    def __init__(self, image):
+        self.image = image
+        if self.image.size != self.size:
+            print('Unsupported image size: {0}'.format(self.image.size))
+            exit(1)
+
+    def to_list(self):
+        bits = ''
+        for y in range(0, self.height):
+            for x in range(0, self.width):
+                point = (x, y)
+                (r, g, b, a) = self.image.getpixel(point)
+
+                bit_alpha = '0'
+                if (r, g, b) == (0xff, 0xff, 0xff):
+                    bit_color = '1'
+                elif (r, g, b) == (0x00, 0x00, 0x00):
+                    bit_color = '0'
+                else:
+                    bit_color = '0'
+                    bit_alpha = '1'
+
+                if (a != 0xff):
+                    bit_alpha = '1'
+                bits += bit_color
+                bits += bit_alpha
+
+        cbytes = split_by_length(bits, 8)
+        return list(map(str_to_binary, cbytes))
+
+    def to_image(self, clean):
+        self.errors_count = 0
+        pixels = self.image.load()
+        for y in range(0, self.height):
+            for x in range(0, self.width):
+                point = (x, y)
+                (r, g, b, a) = self.image.getpixel(point)
+
+                if clean:
+                    pixel_error = (0x00, 0x00, 0x00, 0x00)
+                else:
+                    pixel_error = (0xff, 0x00, 0x00, 0xff)
+
+                if (r, g, b) != (0xff, 0xff, 0xff) and (r, g, b) != (0x00, 0x00, 0x00):
+                    (r, g, b, a) = pixel_error
+                    self.errors_count += 1
+                elif a != 0xff and a != 0x00:
+                    (r, g, b, a) = pixel_error
+                    self.errors_count += 1
+                pixels[point] = (r, g, b, a)
+        return self.image
+
+class CharTable:
+    height = 16
+    width = 16
+
+    size_in_px = (192, 288)
+    size_in_px_with_nets = (208, 304)
+
+    def __init__(self):
+        self.data = [[None for i in range(self.height)] for j in range(self.width)]
+        self.nets = False
+        self.image = Image.new(mode='RGBA', size=self.size_in_px)
+
+    def load_from_image(self, filename):
+        self.image = Image.open(filename)
+
+        if self.image.size == self.size_in_px:
+            self.nets = False
+        elif self.image.size == self.size_in_px_with_nets:
+            self.nets = True
+        else:
+            print('Unsupported image size: {0}'.format(self.image.size))
+            exit(1)
+
+        if self.image.mode != 'RGBA':
+            self.image = self.image.convert("RGBA")
+
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                self.data[x][y] = Char(self.image.crop(self.get_character_rect(x, y)))
+
+    def to_c(self):
+        cbytes = []
+        for y in range(0, self.height):
+            for x in range(0, self.width):
+                cbytes += self.data[x][y].to_list()
+
+        list_to_c.item_count = 0
+        list_to_c.char_count = 0
+        print('const char charset[] PROGMEM = {')
+        print('{0}  {1}'.format(', '.join(map(list_to_c, cbytes)), list_to_c.previous_line_comment))
+        print('};')
+
+    def get_character_rect(self, x, y):
+        if self.nets:
+            rect = (x*13+1, y*19+1, (x+1)*13, (y+1)*19)
+        else:
+            rect = (x*12, y*18, (x+1)*12, (y+1)*18)
+        return rect
+
+    def to_image(self, clean = False):
+        for x in range(0, self.width):
+            for y in range(0, self.height):
+                character = self.data[x][y]
+                if character == None:
+                    continue
+                (up, left, bottom, right) = self.get_character_rect(x, y)
+                self.image.paste(character.to_image(clean), (up, left))
+                if character.errors_count:
+                    print('Warning: {0} pixels are not correctly set in character ({1}, {2})'.format(character.errors_count, x, y))
+        return self.image
+
+    @staticmethod
+    def data_id2xy(index):
+        (y, x) = divmod(index, CharTable.width)
+        return (x, y)
+
+    @staticmethod
+    def data_xy2id(xy):
+        (x, y) = xy
+        return y * CharTable.width + x
+
+    def import_(self, symbol, position = (0, 0)):
+        index = self.data_xy2id(position)
+        for sy in range(0, symbol.height):
+            for sx in range(0, symbol.width):
+                (cx, cy) = self.data_id2xy(index)
+                self.data[cx][cy] = symbol.get_character((sx, sy))
+                index += 1
+
+class Symbol:
+    def __init__(self, image):
+        self.image = image
+
+        self.height = int(self.image.height / Char.height)
+        self.width = int(self.image.width / Char.width)
+        self.size = (self.width, self.height)
+
+    def load_from_image(self, filename):
+        self.image = Image.open(filename)
+
+        if self.image.height % Char.height != 0 or self.image.width % Char.width!= 0:
+            print('Error: image size multiple of ({0}, {1}) but is {2}'.format(Char.width, Char.height, self.image.size))
+            exit(1)
+
+        self.height = int(self.image.height / Char.height)
+        self.width = int(self.image.width / Char.width)
+        self.size = (self.width, self.height)
+
+        print('Symbol loaded (size: {0})'.format(self.size))
+
+    def get_character(self, at):
+        (x, y) = at
+        (x, y) = (x*Char.width, y*Char.height)
+        return Char(self.image.crop((x, y, x + Char.width, y + Char.height)))
+
+class SymbolTable:
+    def load_from_image(self, filename, symbol_width, symbol_height):
+        self.image = Image.open(filename)
+
+        if self.image.height % symbol_height != 0 or self.image.width % symbol_width != 0:
+            print('Error: image size should be multiple of ({0}, {1}) but is {2}'.format(symbol_width, symbol_height, self.image.size))
+            exit(1)
+
+        self.symbol_width = symbol_width
+        self.symbol_height = symbol_height
+        self.width = int(self.image.width / (symbol_width * Char.width))
+        self.height = int(self.image.height / (symbol_height * Char.height))
+        self.size = (self.width, self.height)
+
+        print('SymbolTable loaded (size: {0})'.format(self.size))
+
+    def get_symbol(self, at):
+        (x, y) = at
+        symbol_width_px = self.symbol_width * Char.width
+        symbol_height_px = self.symbol_height * Char.height
+        (x, y) = (x * symbol_width_px, y * symbol_height_px)
+
+        return Symbol(self.image.crop((x, y, x + symbol_width_px, y + symbol_height_px)))
+
+    def get_symbols(self):
+        symbols = []
+        for y in range(self.height):
+            for x in range(self.width):
+                symbols.append(self.get_symbol((x, y)))
+        return symbols
+
+def pix_to_ascii(pix):
+    if pix == 0b00:
+        return '0'
+    elif pix == 0b10:
+        return '1'
+    else:
+        return ' '
+
+def max_to_ascii(byte):
+    out = ''
+    out += pix_to_ascii((byte>>6) & 0b11)
+    out += pix_to_ascii((byte>>4) & 0b11)
+    out += pix_to_ascii((byte>>2) & 0b11)
+    out += pix_to_ascii(byte & 0b11)
+    return out
+
+def list_to_c(byte):
+    byte_to_c = '0x{:02x}'.format(byte)
+    indent = '  '
+
+    if list_to_c.item_count == 0:
+        before = ''
+    else:
+        before = '\n\n'
+
+    if list_to_c.item_count == 0:
+        list_to_c.row_as_ascii = ''
+
+    if list_to_c.item_count % 3 == 0: # First byte of line
+        if list_to_c.row_as_ascii != '':
+            list_to_c.previous_line_comment = '/* \'{0}\' */'.format(list_to_c.row_as_ascii)
+        else:
+            list_to_c.previous_line_comment = ''
+        list_to_c.row_as_ascii = ''
+
+    if list_to_c.item_count % (18*3) == 0: # First byte of char
+        header_comment = indent + '/* {0} {1} */'.format(list_to_c.char_count, divmod(list_to_c.char_count, 16))
+        out = list_to_c.previous_line_comment + before + header_comment + '\n' + indent + byte_to_c
+        list_to_c.char_count += 1
+    elif list_to_c.item_count % 3 == 0: # First byte of line (but not first byte of char)
+        out = list_to_c.previous_line_comment + '\n' + indent + byte_to_c
+    else:
+        out = byte_to_c
+
+    list_to_c.row_as_ascii += max_to_ascii(byte)
+
+    list_to_c.item_count += 1
+    return out
+
+def print_usage():
+    print('Usage: {0} command'.format(argv[0]))
+    print('commands:')
+    print('  to_c charset.bmp')
+    print('  new charset.png')
+    print('  check dirty-charset.bmp charset-errors.png')
+    print('  clean dirty-charset.bmp clean-charset.png')
+    print('  import charset.png symbol.png 0 0')
+    print('  import charset.png symbols.png 0 0 3 2')
+
+def main():
+    if len(argv) < 2:
+        print_usage()
+        exit(1)
+
+    subcommand = argv[1]
+
+    if(subcommand == 'new'):
+        if len(argv) < 3:
+            print_usage()
+            exit(1)
+        ct = CharTable()
+        ct.to_image().save(argv[2])
+    elif(subcommand == 'to_c'):
+        if len(argv) < 3:
+            print_usage()
+            exit(1)
+        ct = CharTable()
+        ct.load_from_image(argv[2])
+        ct.to_c()
+    elif(subcommand == 'check'):
+        if len(argv) < 4:
+            print_usage()
+            exit(1)
+        ct = CharTable()
+        ct.load_from_image(argv[2])
+        ct.to_image().save(argv[3])
+    elif(subcommand == 'clean'):
+        if len(argv) < 4:
+            print_usage()
+            exit(1)
+        ct = CharTable()
+        ct.load_from_image(argv[2])
+        ct.to_image(clean = True).save(argv[3])
+    elif(subcommand == 'import'):
+        if len(argv) != 6 and len(argv) != 8:
+            print_usage()
+            exit(1)
+
+        charset_filename = argv[2]
+        symbols_filename = argv[3]
+        x = int(argv[4])
+        y = int(argv[5])
+        xy = (x, y)
+
+        ct = CharTable()
+        ct.load_from_image(charset_filename)
+
+        if len(argv) == 6:
+            s = Symbol()
+            s.load_from_image(symbols_filename)
+            ct.import_(s, xy)
+        else:
+            symbol_width = int(argv[6])
+            symbol_height = int(argv[7])
+            st = SymbolTable()
+            st.load_from_image(symbols_filename, symbol_width, symbol_height)
+
+            index = CharTable.data_xy2id(xy)
+            for s in st.get_symbols():
+                xy = CharTable.data_id2xy(index)
+                print('Import symbol at {0} {1}'.format(index, xy))
+                ct.import_(s, xy)
+                index += symbol_width * symbol_height
+
+        ct.to_image().save(charset_filename)
+    else:
+        print_usage()
+
+if __name__ == "__main__":
+    # execute only if run as a script
+    main()

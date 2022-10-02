@@ -1,6 +1,13 @@
 #include <Arduino.h>
-#include <espnow.h>
-#include <ESP8266WiFi.h>
+
+#if defined(PLATFORM_ESP8266)
+  #include <espnow.h>
+  #include <ESP8266WiFi.h>
+#elif defined(PLATFORM_ESP32)
+  #include <esp_now.h>
+  #include <esp_wifi.h>
+  #include <WiFi.h>
+#endif
 
 #include "msp.h"
 #include "msptypes.h"
@@ -52,6 +59,13 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 
 /////////////////////////////////////
 
+#if defined(PLATFORM_ESP32)
+// This seems to need to be global, as per this page,
+// otherwise we get errors about invalid peer:
+// https://rntlab.com/question/espnow-peer-interface-is-invalid/
+esp_now_peer_info_t peerInfo;
+#endif
+
 void RebootIntoWifi()
 {
   DBGLN("Rebooting into wifi update mode...");
@@ -74,7 +88,11 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 }
 
 // espnow on-receive callback
+#if defined(PLATFORM_ESP8266)
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
+#elif defined(PLATFORM_ESP32)
+void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
+#endif
 {
   DBGLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
@@ -198,7 +216,11 @@ void SetSoftMACAddress()
   WiFi.disconnect();
 
   // Soft-set the MAC address to the passphrase UID for binding
-  wifi_set_macaddr(STATION_IF, broadcastAddress);
+  #if defined(PLATFORM_ESP8266)
+    wifi_set_macaddr(STATION_IF, broadcastAddress);
+  #elif defined(PLATFORM_ESP32)
+    esp_wifi_set_mac(WIFI_IF_STA, broadcastAddress);
+  #endif
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -225,10 +247,12 @@ void setup()
     Serial1.setDebugOutput(true);
   #endif
 #ifdef AXIS_THOR_TX_BACKPACK
-  Serial.begin(420000);
+  Serial.begin(115200);
 #else
-  Serial.begin(460800);
+  Serial.begin(115200);
 #endif
+
+Serial2.begin(115200);
 
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
@@ -257,8 +281,20 @@ void setup()
       rebootTime = millis();
     }
 
-    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-    esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+    #if defined(PLATFORM_ESP8266)
+      esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+      esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+    #elif defined(PLATFORM_ESP32)
+      memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+      if (esp_now_add_peer(&peerInfo) != ESP_OK)
+      {
+        DBGLN("ESP-NOW failed to add peer");
+        return;
+      }
+    #endif
+
     esp_now_register_recv_cb(OnDataRecv);
   }
 
@@ -291,6 +327,8 @@ void loop()
   if (Serial.available())
   {
     uint8_t c = Serial.read();
+
+    Serial2.write(c);
 
     if (msp.processReceivedByte(c))
     {

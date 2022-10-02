@@ -5,9 +5,7 @@
 #include "module_base.h"
 #include <Arduino.h>
 
-#undef VRX_BOOT_DELAY
-#define VRX_BOOT_DELAY              7000
-
+#define VRX_BOOT_DELAY              0
 #define VRX_RESPONSE_TIMEOUT        500
 #define VRX_UART_BAUD               115200  // hdzero uses 115k baud between the ESP8285 and the STM32
 
@@ -26,6 +24,7 @@ public:
     void SetChannelIndex(uint8_t index);
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
+    void SetOSD(mspPacket_t *packet);
 
 private:
     Stream *m_port;

@@ -58,6 +58,8 @@ uint8_t broadcastAddress[6] = {MY_UID};
 uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 
+uint8_t raceBPAddress[6] = {238,254,186,226,83,164};
+
 connectionState_e connectionState = starting;
 unsigned long rebootTime = 0;
 
@@ -140,6 +142,7 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
       DBGLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
+      // or the race backpack
       if (connectionState == binding ||
             (
             broadcastAddress[0] == mac_addr[0] &&
@@ -148,6 +151,14 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
             broadcastAddress[3] == mac_addr[3] &&
             broadcastAddress[4] == mac_addr[4] &&
             broadcastAddress[5] == mac_addr[5]
+            ) ||
+            (
+            raceBPAddress[0] == mac_addr[0] &&
+            raceBPAddress[1] == mac_addr[1] &&
+            raceBPAddress[2] == mac_addr[2] &&
+            raceBPAddress[3] == mac_addr[3] &&
+            raceBPAddress[4] == mac_addr[4] &&
+            raceBPAddress[5] == mac_addr[5]
             )
           )
       {
@@ -214,6 +225,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
       vrxModule.SetRecordingState(state, delay);
     }
     break;
+  case MSP_ELRS_SET_OSD:
+    vrxModule.SetOSD(packet);
+    break;
   default:
     DBGLN("Unknown command from ESPNOW");
     break;
@@ -231,14 +245,25 @@ void SetupEspNow()
 
     #if defined(PLATFORM_ESP8266)
       esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-      esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+      esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0); // add tx backpack peer
+      esp_now_add_peer(raceBPAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0); // add race backpack peer
     #elif defined(PLATFORM_ESP32)
+      // add tx backpack peer
       memcpy(peerInfo.peer_addr, broadcastAddress, 6);
       peerInfo.channel = 0;
       peerInfo.encrypt = false;
       if (esp_now_add_peer(&peerInfo) != ESP_OK)
       {
         DBGLN("ESP-NOW failed to add peer");
+        return;
+      }
+      // add race backpack peer
+      memcpy(peerInfo.peer_addr, raceBPAddress, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+      if (esp_now_add_peer(&peerInfo) != ESP_OK)
+      {
+        DBGLN("ESP-NOW failed to add race backpack peer");
         return;
       }
     #endif
@@ -286,6 +311,39 @@ void RequestVTXPacket()
   sendMSPViaEspnow(&packet);
 }
 
+void SendSubscribePacket()
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_SUBSCRIBE_TO_RACE_BP;
+
+  for (uint8_t i = 0; i < 6; ++i)
+  {
+    packet.addByte(broadcastAddress[i]);
+    Serial.println(broadcastAddress[i]);
+  }
+
+  #define QUOTE(arg) #arg
+  #define STR(macro) QUOTE(macro)
+
+  static const char *pilot_name = ""
+  #ifdef PILOT_NAME
+  STR(PILOT_NAME)
+  #endif
+  ;
+
+  packet.addByte(strlen(pilot_name));
+
+  for (uint8_t i = 0; i < strlen(pilot_name); ++i)
+  {
+    packet.addByte(pilot_name[i]);
+  }
+
+  blinkLED();
+  sendMSPViaEspnow(&packet);
+}
+
 void sendMSPViaEspnow(mspPacket_t *packet)
 {
   // Do not send while in binding mode.  The currently used broadcastAddress may be garbage.
@@ -303,7 +361,14 @@ void sendMSPViaEspnow(mspPacket_t *packet)
     return;
   }
 
-  esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+  if (packet->function == MSP_ELRS_SUBSCRIBE_TO_RACE_BP)
+  {
+    esp_now_send(raceBPAddress, (uint8_t *) &nowDataOutput, packetSize);
+  }
+  else
+  {
+    esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+  }
 }
 
 void resetBootCounter()
@@ -359,12 +424,9 @@ RF_PRE_INIT()
 
 void setup()
 {
-  #if !defined(HDZERO_BACKPACK)
-    // Serial.begin() seems to prevent the HDZ VRX from booting
-    // If we're not on HDZ, init serial early for debug msgs
-    // Otherwise, delay it till the end of setup
-    Serial.begin(VRX_UART_BAUD);
-  #endif
+
+  Serial.begin(115200);
+
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();
@@ -438,6 +500,7 @@ void loop()
   {
     DBGLN("RequestVTXPacket...");
     RequestVTXPacket();
+    SendSubscribePacket();
     lastSentRequest = now;
   }
 

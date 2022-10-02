@@ -17,6 +17,11 @@ ModuleBase::SetRecordingState(uint8_t recordingState, uint16_t delay)
 }
 
 void
+ModuleBase::SetOSD(mspPacket_t *packet)
+{
+}
+
+void
 ModuleBase::Loop(uint32_t now)
 {
 }

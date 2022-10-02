@@ -16,6 +16,8 @@
 #define MSP_ELRS_REQU_VTX_PKT                   0x0B
 #define MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE      0x0C
 #define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE     0x0D
+#define MSP_ELRS_SUBSCRIBE_TO_RACE_BP           0x0E
+#define MSP_ELRS_SET_OSD                        0x00B6
 
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_PAYLOAD_SIZE           4
