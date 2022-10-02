@@ -30,9 +30,6 @@ uint8_t raceBPAddress[6] = {238,254,186,226,83,164};
 connectionState_e connectionState = starting;
 unsigned long rebootTime = 0;
 
-bool cacheFull = false;
-bool sendCached = false;
-
 device_t *ui_devices[] = {
 #ifdef PIN_LED
   &LED_device,
@@ -43,18 +40,25 @@ device_t *ui_devices[] = {
   &WIFI_device,
 };
 
-DynamicJsonDocument docPilotList(2048);
-DynamicJsonDocument docTransient(2048);
-DynamicJsonDocument docActiveBackpackSubs(2048);
-JsonArray subscribers = docActiveBackpackSubs.createNestedArray("subscribers");
-const char* testJson = "{\"subscribers\":[{\"name\":\"snipes\",\"UID\":[158,182,18,235,59,206]}]}";
+#if defined(PLATFORM_ESP32)
+// This seems to need to be global, as per this page,
+// otherwise we get errors about invalid peer:
+// https://rntlab.com/question/espnow-peer-interface-is-invalid/
+esp_now_peer_info_t peerInfo;
+#endif
+
+DynamicJsonDocument jsonReceived(4096);
+DynamicJsonDocument jsonPilotList(4096);
+DynamicJsonDocument jsonActiveBackpackSubs(4096);
+JsonArray subscribers = jsonActiveBackpackSubs.createNestedArray("subscribers");
+
+const char* jsonTestSubs = "{\"subscribers\":[{\"name\":\"Test Pilot\",\"UID\":[10,20,30,40,50,60]}]}"; // TODO: Remove when no longer needed
 
 /////////// CLASS OBJECTS ///////////
 
 MSP msp;
 ELRS_EEPROM eeprom;
 TxBackpackConfig config;
-mspPacket_t cachedVTXPacket;
 
 /////////// FUNCTION DEFS ///////////
 
@@ -62,12 +66,195 @@ void sendMSPViaEspnow(uint8_t *address, mspPacket_t *packet);
 
 /////////////////////////////////////
 
-#if defined(PLATFORM_ESP32)
-// This seems to need to be global, as per this page,
-// otherwise we get errors about invalid peer:
-// https://rntlab.com/question/espnow-peer-interface-is-invalid/
-esp_now_peer_info_t peerInfo;
-#endif
+void SendChannelIndexToPeer(uint8_t *address, uint8_t vtxIdx)
+{
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_SET_VTX_CONFIG;
+  packet.addByte(vtxIdx);
+  sendMSPViaEspnow(address, &packet);
+}
+
+int16_t ParseVtxIdxFromPilotJson(JsonObject pilot)
+{
+  const char* band = pilot["ChannelBand"];
+  uint8_t ch = pilot["ChannelNumber"];
+
+  ch--; // one-based to zero-based
+
+  // Convert to standard 48ch table index
+  if (strcmp(band, "A") == 0)
+  {
+    ch += 0;
+  }
+  if (strcmp(band, "B") == 0)
+  {
+    ch += 8;
+  }
+  if (strcmp(band, "E") == 0)
+  {
+    ch += 16;
+  }
+  if (strcmp(band, "Fatshark") == 0)
+  {
+    ch += 24;
+  }
+  if (strcmp(band, "Raceband") == 0)
+  {
+    ch += 32;
+  }
+  if (strcmp(band, "LowBand") == 0)
+  {
+    ch += 40;
+  }
+
+  if (ch >= 0 || ch <= 48)
+  {
+    return ch;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+void ParseUIDFromSubscriber(uint8_t* uid, JsonObject subscriber)
+{
+  JsonArray UID = subscriber["UID"];
+  for (uint8_t i = 0; i < UID.size(); ++i)
+  {
+    uid[i] = UID[i].as<int>();
+  }
+}
+
+void ProcessJsonPilotListFromTimer()
+{
+  jsonPilotList = jsonReceived;
+
+  // StaticJsonDocument<512> docTest; // TODO: Remove
+  // deserializeJson(docTest, jsonTestSubs);
+  // subscribers = docTest["subscribers"];
+  // serializeJson(docTest, Serial);
+
+  JsonArray pilots = jsonPilotList["Pilots"];
+
+  #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE)
+    DBGLN("Received pilots from race timing software:");
+    serializeJson(pilots, Serial);
+    DBGLN("");
+  #endif
+
+  for (uint8_t i = 0; i < pilots.size(); ++i)
+  {
+    for (uint8_t j = 0; j < subscribers.size(); ++j)
+    {
+      if (subscribers[j]["name"] == pilots[i]["Name"])
+      {
+        const char* subName = subscribers[j]["name"];
+        DBGLN("Got match in subscribers array from pilot list for sub: %s", subName);
+
+        int16_t vtxIdx = ParseVtxIdxFromPilotJson(pilots[i]);
+        if (vtxIdx == -1)
+        {
+          DBGLN("Failed to parse vtxIdx for subscriber from timing software");
+          return;
+        }
+
+        uint8_t uid[6];
+        ParseUIDFromSubscriber(uid, subscribers[j]);
+
+        DBGLN("Sending channel index %d to %s", vtxIdx, subName);
+        SendChannelIndexToPeer(uid, vtxIdx);
+      }
+    }
+  }
+}
+
+void ProcessJsonRaceStateFromTimer()
+{
+
+}
+
+void ProcessJsonDetectionFromTimer()
+{
+  const char* pilotName = jsonReceived["PilotName"];
+  double time = jsonReceived["Time"];
+  DBGLN("Got detection for pilot %s with time %f", pilotName, time);
+
+  // Iterate the collection of subscribers
+  for (uint8_t i = 0; i < subscribers.size(); ++i)
+  {
+    if (subscribers[i]["name"] == pilotName)
+    {
+      
+    }
+  }
+}
+
+void ProcessSubscribePacket(mspPacket_t *packet)
+{
+  // function opcode:   MSP_ELRS_SUBSCRIBE_TO_RACE_BP
+  // uint8_t[6]:        Subcriber's UID
+  // uint8_t:           Pilot name length (n bytes)
+  // char[n]            Subcriber's pilot name (c-string. string terminator NOT included)
+
+  uint8_t uid[6];
+  for (uint8_t i = 0; i < 6; ++i)
+  {
+    uid[i] = packet->readByte();
+  }
+  
+  uint8_t pilotNameLen = packet->readByte();
+  if (pilotNameLen == 0)
+  {
+    DBGLN("Subscriber pilot name cannot be blank");
+    return;
+  }
+
+  char pilotName[pilotNameLen + 1];
+  for (uint8_t i = 0; i < pilotNameLen; ++i)
+  {
+      pilotName[i] = packet->readByte();
+  }
+  pilotName[pilotNameLen] = '\0';
+
+  // Iterate the collection of subscribers,
+  // and if sub already exists, bail out
+  for (uint8_t i = 0; i < subscribers.size(); ++i)
+  {
+    if (subscribers[i]["name"] == pilotName)
+    {
+      return;
+    }
+  }
+
+  // Subscriber wasn't found in the collection,
+  // add name + UID as a new entry
+  JsonObject pilot = subscribers.createNestedObject();
+  pilot["name"] = pilotName;
+  JsonArray UID = pilot.createNestedArray("UID");
+  for (uint8_t i = 0; i < 6; ++i)
+  {
+    UID.add(uid[i]);
+  }
+
+  // Add the new subscriber's UID as a ESPNOW peer
+  memcpy(peerInfo.peer_addr, uid, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+  if (esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
+    DBGLN("ESP-NOW failed to add subscriber peer");
+    return;
+  }
+
+  #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE)
+    DBGLN("Successfully added new subscriber peer to collection:");
+    serializeJson(subscribers, Serial);
+    DBGLN("");
+  #endif
+}
 
 void RebootIntoWifi()
 {
@@ -81,62 +268,7 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_SUBSCRIBE_TO_RACE_BP)
   {
-    uint8_t uid[6];
-    for (uint8_t i = 0; i < 6; ++i)
-    {
-      uid[i] = packet->readByte();
-    }
-    
-    uint8_t pilotNameLen = packet->readByte();
-    char pilotName[pilotNameLen + 1];
-
-    Serial.print("pilotNameLen = "); Serial.println(pilotNameLen);
-
-    for (uint8_t i = 0; i < pilotNameLen; ++i)
-    {
-        pilotName[i] = packet->readByte();
-        Serial.println(pilotName[i]);
-    }
-
-    pilotName[pilotNameLen] = '\0';
-
-    // Iterate the collection of subscribers,
-    // and if sub already exists, bail out
-    Serial.print("subscribers.size() = "); Serial.println(subscribers.size());
-    for (uint8_t i = 0; i < subscribers.size(); ++i)
-    {
-      if (subscribers[i]["name"] == pilotName)
-      {
-        Serial.println("subscribers[i][\"name\"] == pilotName");
-        // JsonArray UID = subscribers[i].createNestedArray("UID");
-        // for (uint8_t j = 0; j < 6; ++j)
-        // {
-        //   UID.add(uid[j]);
-        // }
-        return;
-      }
-    }
-
-    // Subscriber wasn't found in the collection,
-    // add name + UID as a new entry
-    JsonObject pilot = subscribers.createNestedObject();
-    pilot["name"] = pilotName;
-    JsonArray UID = pilot.createNestedArray("UID");
-    
-    for (uint8_t i = 0; i < 6; ++i)
-    {
-      UID.add(uid[i]);
-    }
-
-    serializeJson(subscribers, Serial);
-    memcpy(peerInfo.peer_addr, uid, 6);
-    peerInfo.channel = 0;
-    peerInfo.encrypt = false;
-    if (esp_now_add_peer(&peerInfo) != ESP_OK)
-    {
-      DBGLN("ESP-NOW failed to add peer");
-      return;
-    }
+    ProcessSubscribePacket(packet);
   }
 }
 
@@ -178,14 +310,8 @@ void sendMSPViaEspnow(uint8_t *address, mspPacket_t *packet)
   }
 
   esp_now_send(address, (uint8_t *) &nowDataOutput, packetSize);
-  Serial.println("sent");
 
   blinkLED();
-}
-
-void SendCachedMSP()
-{
-  
 }
 
 void SetSoftMACAddress()
@@ -222,19 +348,17 @@ RF_PRE_INIT()
 }
 #endif
 
+//////////////////
+
 void setup()
 {
-  #ifdef DEBUG_LOG
-    Serial1.begin(115200);
-    Serial1.setDebugOutput(true);
-  #endif
-#ifdef AXIS_THOR_TX_BACKPACK
   Serial.begin(115200);
-#else
-  Serial.begin(115200);
-#endif
 
-Serial2.begin(115200);
+  // #ifdef DEBUG_LOG
+  //   Serial1.begin(115200);
+  //   Serial.setDebugOutput(true);
+  //   Serial2.begin(115200);
+  // #endif
 
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
@@ -308,132 +432,27 @@ void loop()
 
   if (Serial.available())
   {
-    DeserializationError error = deserializeJson(docTransient, Serial);
+    DeserializationError error = deserializeJson(jsonReceived, Serial);
 
     if (error)
     {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
+      DBG("deserializeJson() failed: ");
+      DBGLN(error.c_str());
     }
     else
     {
-      // StaticJsonDocument<512> docTest;
-      // deserializeJson(docTest, testJson);
-
-      bool isPilotList = docTransient.containsKey("Pilots");
-      bool isRaceState = docTransient.containsKey("State");
-      bool isDetection = docTransient.containsKey("PilotName");
-
-      if (isPilotList)
+      if (jsonReceived.containsKey("Pilots"))
       {
-        docPilotList = docTransient;
-
-        // serializeJson(docTest, Serial);
-        // serializeJson(docPilotList, Serial);
-        // subscribers = docTest["subscribers"];
-
-        JsonArray pilots = docPilotList["Pilots"];
-
-        serializeJson(pilots, Serial);
-        Serial.println(pilots.size());
-        Serial.println(subscribers.size());
-
-        for (uint8_t i = 0; i < pilots.size(); ++i)
-        {
-          for (uint8_t j = 0; j < subscribers.size(); ++j)
-          {
-            const char* pilotName = pilots[i]["Name"];
-            const char* subName = subscribers[j]["name"];
-            Serial.println(pilotName);
-            Serial.println(subName);
-            if (subscribers[j]["name"] == pilots[i]["Name"])
-            {
-              Serial.println("Got match in subscribers array for pilot list");
-
-              const char* band = pilots[i]["ChannelBand"];
-              uint8_t ch = pilots[i]["ChannelNumber"];
-
-              ch--; // one-based to zero-based
-
-              if (strcmp(band, "A") == 0)
-              {
-                ch += 0;
-              }
-              if (strcmp(band, "B") == 0)
-              {
-                ch += 8;
-              }
-              if (strcmp(band, "E") == 0)
-              {
-                ch += 16;
-              }
-              if (strcmp(band, "Fatshark") == 0)
-              {
-                ch += 24;
-              }
-              if (strcmp(band, "Raceband") == 0)
-              {
-                ch += 32;
-              }
-              if (strcmp(band, "LowBand") == 0)
-              {
-                ch += 40;
-              }
-
-              Serial.println(ch);
-              Serial.println("===");
-
-              uint8_t uid[6];
-
-              JsonArray UID = subscribers[j]["UID"];
-              for (uint8_t uidIndex = 0; uidIndex < UID.size(); ++uidIndex)
-              {
-                uid[uidIndex] = UID[uidIndex].as<int>();
-                Serial.println(uid[uidIndex]);
-              }
-
-              mspPacket_t packet;
-              packet.reset();
-              packet.makeCommand();
-              packet.function = MSP_SET_VTX_CONFIG;
-              packet.addByte(ch);
-              sendMSPViaEspnow(uid, &packet);
-            }
-          }
-        }
+        ProcessJsonPilotListFromTimer();
       }
-
-      if (isDetection)
+      if (jsonReceived.containsKey("State"))
       {
-        const char* pilotName = docTransient["PilotName"];
-        double time = docTransient["Time"];
-        Serial.print("Got detection for ");
-        Serial.print(pilotName);
-        Serial.println(" with time: ");
-        Serial.println(time);
-
-        // Iterate the collection of subscribers
-        for (uint8_t i = 0; i < subscribers.size(); ++i)
-        {
-          if (subscribers[i]["name"] == pilotName)
-          {
-            Serial.println("got match in subscribers array");
-
-            for (uint8_t j = 0; j < 6; ++j)
-            {
-              uint8_t val = subscribers[i]["UID"][j];
-              Serial.println(val);
-            }
-          }
-        }
+        ProcessJsonRaceStateFromTimer();
       }
-      // serializeJson(docTransient, Serial);
+      if (jsonReceived.containsKey("PilotName"))
+      {
+        ProcessJsonDetectionFromTimer();
+      }
     }
-  }
-
-  if (cacheFull && sendCached)
-  {
-    SendCachedMSP();
-    sendCached = false;
   }
 }

@@ -313,6 +313,11 @@ void RequestVTXPacket()
 
 void SendSubscribePacket()
 {
+  #ifndef PILOT_NAME
+    DBGLN("No pilot name set in defines. Cannot subscribe to race backpack.");
+    return;
+  #endif
+  
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
