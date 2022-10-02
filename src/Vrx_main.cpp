@@ -430,8 +430,12 @@ RF_PRE_INIT()
 void setup()
 {
 
-  Serial.begin(115200);
-
+  #if !defined(HDZERO_BACKPACK)
+    // Serial.begin() seems to prevent the HDZ VRX from booting
+    // If we're not on HDZ, init serial early for debug msgs
+    // Otherwise, delay it till the end of setup
+    Serial.begin(VRX_UART_BAUD);
+  #endif
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();

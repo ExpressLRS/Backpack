@@ -130,8 +130,6 @@ void ParseUIDFromSubscriber(uint8_t* uid, JsonObject subscriber)
 
 void ProcessJsonPilotListFromTimer()
 {
-  jsonPilotList = jsonReceived;
-
   // StaticJsonDocument<512> docTest; // TODO: Remove
   // deserializeJson(docTest, jsonTestSubs);
   // subscribers = docTest["subscribers"];
@@ -140,7 +138,7 @@ void ProcessJsonPilotListFromTimer()
   JsonArray pilots = jsonPilotList["Pilots"];
 
   #if defined(DEBUG_LOG) || defined(DEBUG_LOG_VERBOSE)
-    DBGLN("Received pilots from race timing software:");
+    DBGLN("Parse pilots from race timing software:");
     serializeJson(pilots, Serial);
     DBGLN("");
   #endif
@@ -254,6 +252,13 @@ void ProcessSubscribePacket(mspPacket_t *packet)
     serializeJson(subscribers, Serial);
     DBGLN("");
   #endif
+
+  // Check the existing pilot list from the timer
+  // and update subscriber's channel if available
+  if (!jsonPilotList.isNull())
+  {
+    ProcessJsonPilotListFromTimer();
+  }
 }
 
 void RebootIntoWifi()
@@ -443,6 +448,7 @@ void loop()
     {
       if (jsonReceived.containsKey("Pilots"))
       {
+        jsonPilotList = jsonReceived;
         ProcessJsonPilotListFromTimer();
       }
       if (jsonReceived.containsKey("State"))
