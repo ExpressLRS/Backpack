@@ -19,3 +19,5 @@
 #-DDEBUG_LOG
 # Use DEBUG_LOG_VERBOSE instead (or both) to see verbose debug logging (spammy stuff)
 #-DDEBUG_LOG_VERBOSE
+
+#-DPILOT_NAME=""

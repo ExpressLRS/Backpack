@@ -317,13 +317,8 @@ void loop()
     }
     else
     {
-      while (Serial.available())
-      {
-        Serial.read();
-      }
-
-      StaticJsonDocument<512> docTest;
-      deserializeJson(docTest, testJson);
+      // StaticJsonDocument<512> docTest;
+      // deserializeJson(docTest, testJson);
 
       bool isPilotList = docTransient.containsKey("Pilots");
       bool isRaceState = docTransient.containsKey("State");

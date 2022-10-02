@@ -252,8 +252,6 @@ void setup()
   Serial.begin(115200);
 #endif
 
-Serial2.begin(115200);
-
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();
@@ -327,8 +325,6 @@ void loop()
   if (Serial.available())
   {
     uint8_t c = Serial.read();
-
-    Serial2.write(c);
 
     if (msp.processReceivedByte(c))
     {
