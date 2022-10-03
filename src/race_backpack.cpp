@@ -76,6 +76,28 @@ void SendChannelIndexToPeer(uint8_t *address, uint8_t vtxIdx)
   sendMSPViaEspnow(address, &packet);
 }
 
+void SendRaceStateToPeer(uint8_t *address, JsonObject raceState)
+{
+  uint8_t round = raceState["Round"];
+  uint8_t race = raceState["Race"];
+  const char* state = raceState["State"];
+
+  uint8_t stateLen = strlen(state);
+  
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_RACE_STATE;
+  packet.addByte(round);
+  packet.addByte(race);
+  packet.addByte(stateLen);
+  for (uint8_t i = 0; i < stateLen; ++i)
+  {
+    packet.addByte(state[i]);
+  }
+  sendMSPViaEspnow(address, &packet);
+}
+
 void SendDetectionToPeer(uint8_t *address, JsonObject detection)
 {
   uint8_t lapNumber = detection["LapNumber"];
@@ -84,7 +106,7 @@ void SendDetectionToPeer(uint8_t *address, JsonObject detection)
   bool isRaceEnd = detection["IsRaceEnd"];
 
   char timeAsText[20];
-  int result = sprintf(timeAsText, "%f", time);
+  int result = sprintf(timeAsText, "%.2f", time);
   if (result < 0)
   {
     DBGLN("Failed to convert time to text for detection");
@@ -203,7 +225,14 @@ void ProcessJsonPilotListFromTimer()
 
 void ProcessJsonRaceStateFromTimer()
 {
-
+  // Iterate the collection of subscribers
+  for (uint8_t i = 0; i < subscribers.size(); ++i)
+  {
+    uint8_t uid[6];
+    ParseUIDFromSubscriber(uid, subscribers[i]);
+    
+    SendRaceStateToPeer(uid, jsonReceived.as<JsonObject>());
+  }
 }
 
 void ProcessJsonDetectionFromTimer()

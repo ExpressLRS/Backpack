@@ -18,6 +18,7 @@
 #define MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE     0x0D
 #define MSP_ELRS_SUBSCRIBE_TO_RACE_BP           0x0E
 #define MSP_ELRS_RACE_LAP_DETECTION             0x0F
+#define MSP_ELRS_RACE_STATE                     0x10
 #define MSP_ELRS_SET_OSD                        0x00B6
 
 // CRSF encapsulated msp defines

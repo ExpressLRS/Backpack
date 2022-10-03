@@ -23,9 +23,18 @@ static void shortPress()
     }
 }
 
+static void longPress()
+{
+    if (button.getLongCount() > 8)
+    {
+        RebootIntoWifi();
+    }
+}
+
 static void initialize()
 {
     button.OnShortPress = shortPress;
+    button.OnLongPress = longPress;
 }
 
 static int start()

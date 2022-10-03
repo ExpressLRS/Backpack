@@ -229,25 +229,10 @@ void ProcessMSPPacket(mspPacket_t *packet)
     vrxModule.SetOSD(packet);
     break;
   case MSP_ELRS_RACE_LAP_DETECTION:
-  {
-    uint8_t lapNumber = packet->readByte();
-    uint8_t isLapEnd = packet->readByte();
-    uint8_t isRaceEnd = packet->readByte();
-    uint8_t timeLen = packet->readByte();
-    
-    char timeAsText[timeLen + 1];
-    for (uint8_t i = 0; i < timeLen; ++i)
-    {
-      timeAsText[i] = packet->readByte();
-    }
-    timeAsText[timeLen] = '\0';
-
-    Serial.println(lapNumber);
-    Serial.println(isLapEnd);
-    Serial.println(isRaceEnd);
-    Serial.println(timeLen);
-    Serial.println(timeAsText);
-  }
+    vrxModule.ProcessRaceDetection(packet);
+    break;
+  case MSP_ELRS_RACE_STATE:
+    vrxModule.ProcessRaceState(packet);
     break;
   default:
     DBGLN("Unknown command from ESPNOW");

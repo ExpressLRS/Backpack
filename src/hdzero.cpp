@@ -13,19 +13,6 @@ void
 HDZero::Init()
 {
     ModuleBase::Init();
-Max7456 osd;
-
-    byte tab[] = {0xC8, 0xC9};
-
-    SPI.begin();
-
-    osd.init(4);
-    osd.setDisplayOffsets(50, 0);
-    osd.setBlinkParams(_8fields, _BT_BT);
-
-    osd.activateOSD();
-    osd.clearScreen();
-    osd.print("Hello world :)", 1, 3);
 }
 
 void
@@ -111,39 +98,4 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
     packet.addByte(delay >> 8); // delay byte 2
 
     msp.sendPacket(&packet, m_port);
-}
-
-void
-HDZero::SetOSD(mspPacket_t *packet)
-{
-    Max7456 osd;
-
-    byte tab[] = {0xC8, 0xC9};
-
-    SPI.begin();
-
-    osd.init(4);
-    osd.setDisplayOffsets(50, 10);
-    osd.setBlinkParams(_8fields, _BT_BT);
-
-    osd.activateOSD();
-    osd.clearScreen();
-
-    uint8_t len = packet->payloadSize;
-    packet->readByte(); // sub cmd
-    packet->readByte(); // row
-    packet->readByte(); // col
-    packet->readByte(); // attb
-
-    char buff[len - 4 + 1];
-
-    for (uint8_t i = 0; i < len - 4; ++i)
-    {
-        buff[i] = packet->readByte();
-    }
-
-    buff[len - 4] = '\0';
-
-
-    osd.print(buff, 1, 3);
 }
