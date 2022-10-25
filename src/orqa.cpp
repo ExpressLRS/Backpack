@@ -2,15 +2,6 @@
 
 GENERIC_CRC8 ghst_crc(GHST_CRC_POLY);
 
-Orqa::Orqa()
-{
-}
-
-void Orqa::Init()
-{
-    delay(VRX_BOOT_DELAY);
-}
-
 void Orqa::SendIndexCmd(uint8_t index)
 {
     uint8_t band = GetBand(index);
