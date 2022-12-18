@@ -61,6 +61,7 @@ uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 
 connectionState_e connectionState = starting;
+unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;
 
 uint8_t cachedIndex = 0;
@@ -329,6 +330,7 @@ void checkIfInBindingMode()
     RebootIntoWifi();
     #else
     connectionState = binding;
+    bindingStart = millis();
     #endif
   }
   else
@@ -342,6 +344,11 @@ void checkIfInBindingMode()
   DBGLN("%x", bootCounter);
   DBG("bindingMode = ");
   DBGLN("%x", connectionState == binding);
+}
+
+bool BindingExpired(uint32_t now)
+{
+  return (connectionState == binding) && ((now - bindingStart) > NO_BINDING_TIMEOUT);
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -426,7 +433,7 @@ void loop()
     return;
   }
 
-  if (connectionState == binding && now > NO_BINDING_TIMEOUT)
+  if (BindingExpired(now))
   {
     RebootIntoWifi();
   }
@@ -436,7 +443,7 @@ void loop()
     sendChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
   }
-  
+
   // spam out a bunch of requests for the desired band/channel for the first 5s
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.h"
 #include "msp.h"
 #include "msptypes.h"
 #include "module_base.h"
@@ -19,7 +20,7 @@
 class HDZero : public ModuleBase
 {
 public:
-    HDZero(Stream *port);
+    explicit HDZero(Stream *port) : m_port(port), lastConnState(connectionState)  {};
     void Init();
     void SendIndexCmd(uint8_t index);
     uint8_t GetChannelIndex();
@@ -30,5 +31,8 @@ public:
 
 private:
     Stream *m_port;
-    MSP mspIn;
+    MSP msp;
+    connectionState_e lastConnState;
+
+    void sendResponse(uint8_t response);
 };

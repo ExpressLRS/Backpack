@@ -1,14 +1,10 @@
 #include <Arduino.h>
 #include "hdzero.h"
 #include "logging.h"
-#include "common.h"
+#include "device.h"
 
 void RebootIntoWifi();
-
-HDZero::HDZero(Stream *port)
-{
-    m_port = port;
-}
+bool BindingExpired(uint32_t now);
 
 void
 HDZero::Init()
@@ -104,13 +100,25 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 void
 HDZero::Loop(uint32_t now)
 {
+    // if "binding" && timeout
+    if (BindingExpired(now))
+    {
+        connectionState = running;
+        sendResponse('F');  // FAILED
+    }
+    if (lastConnState == binding && connectionState == running)
+    {
+        sendResponse('O');  // OK
+    }
+    lastConnState = connectionState;
+
     while (m_port->available())
     {
         uint8_t data = m_port->read();
-        if (mspIn.processReceivedByte(data))
+        if (msp.processReceivedByte(data))
         {
             // process the packet
-            mspPacket_t *packet = mspIn.getReceivedPacket();
+            mspPacket_t *packet = msp.getReceivedPacket();
             if (packet->function == MSP_ELRS_BACKPACK_SET_MODE)
             {
                 if (packet->payloadSize == 1)
@@ -123,10 +131,24 @@ HDZero::Loop(uint32_t now)
                     else if (packet->payload[0] == 'W')
                     {
                         DBGLN("Enter WIFI mode...");
-                        RebootIntoWifi();
+                        connectionState = wifiUpdate;
+                        devicesTriggerEvent();
                     }
+                    // send "in-progress" response
+                    sendResponse('P');
                 }
             }
         }
     }
+}
+
+void
+HDZero::sendResponse(uint8_t response)
+{
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeResponse();
+    packet.function = MSP_ELRS_BACKPACK_SET_MODE;
+    packet.addByte(response);  // payload
+    msp.sendPacket(&packet, m_port);
 }

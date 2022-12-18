@@ -1,3 +1,5 @@
+#pragma once
+
 typedef enum
 {
     starting,
@@ -8,3 +10,4 @@ typedef enum
 } connectionState_e;
 
 extern connectionState_e connectionState;
+extern unsigned long bindingStart;
