@@ -1,6 +1,9 @@
+#include <Arduino.h>
 #include "hdzero.h"
 #include "logging.h"
-#include <Arduino.h>
+#include "common.h"
+
+void RebootIntoWifi();
 
 HDZero::HDZero(Stream *port)
 {
@@ -15,7 +18,7 @@ HDZero::Init()
 
 void
 HDZero::SendIndexCmd(uint8_t index)
-{  
+{
     uint8_t retries = 3;
     while (GetChannelIndex() != index && retries > 0)
     {
@@ -48,7 +51,7 @@ HDZero::GetChannelIndex()
 
 void
 HDZero::SetChannelIndex(uint8_t index)
-{  
+{
     MSP msp;
     mspPacket_t packet;
     packet.reset();
@@ -85,7 +88,7 @@ void
 HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 {
     DBGLN("SetRecordingState = %d delay = %d", recordingState, delay);
-    
+
     MSP msp;
     mspPacket_t packet;
     packet.reset();
@@ -96,4 +99,34 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
     packet.addByte(delay >> 8); // delay byte 2
 
     msp.sendPacket(&packet, m_port);
+}
+
+void
+HDZero::Loop(uint32_t now)
+{
+    while (m_port->available())
+    {
+        uint8_t data = m_port->read();
+        if (mspIn.processReceivedByte(data))
+        {
+            // process the packet
+            mspPacket_t *packet = mspIn.getReceivedPacket();
+            if (packet->function == MSP_ELRS_BACKPACK_SET_MODE)
+            {
+                if (packet->payloadSize == 1)
+                {
+                    if (packet->payload[0] == 'B')
+                    {
+                        DBGLN("Enter binding mode...");
+                        connectionState = binding;
+                    }
+                    else if (packet->payload[0] == 'W')
+                    {
+                        DBGLN("Enter WIFI mode...");
+                        RebootIntoWifi();
+                    }
+                }
+            }
+        }
+    }
 }
