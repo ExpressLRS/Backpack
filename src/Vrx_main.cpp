@@ -185,7 +185,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
       }
       DBG(""); // Extra line for serial output readability
       resetBootCounter();
-      rebootTime = millis();
+      connectionState = running;
+      rebootTime = millis() + 200;
     }
     return;
   }

@@ -126,6 +126,7 @@ HDZero::Loop(uint32_t now)
                     if (packet->payload[0] == 'B')
                     {
                         DBGLN("Enter binding mode...");
+                        bindingStart =  now;
                         connectionState = binding;
                     }
                     else if (packet->payload[0] == 'W')
