@@ -396,7 +396,9 @@ void setup()
   }
   else
   {
+#if !defined(NO_AUTOBIND)
     checkIfInBindingMode();
+#endif
     SetSoftMACAddress();
     SetupEspNow();
   }
@@ -434,9 +436,15 @@ void loop()
     return;
   }
 
+#if !defined(NO_AUTOBIND)
   if (BindingExpired(now))
   {
     RebootIntoWifi();
+  }
+  else
+#endif
+  {
+    connectionState = running;
   }
 
   if (sendChangesToVrx)
@@ -453,10 +461,12 @@ void loop()
     lastSentRequest = now;
   }
 
+#if !defined(NO_AUTOBIND)
   // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
   if (now > BINDING_TIMEOUT && config.GetBootCount() > 0)
   {
     DBGLN("resetBootCounter...");
     resetBootCounter();
   }
+#endif
 }
