@@ -100,17 +100,21 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 void
 HDZero::Loop(uint32_t now)
 {
+    static bool isBinding = false;
     // if "binding" && timeout
     if (BindingExpired(now))
     {
         connectionState = running;
+        isBinding = false;
+        DBGLN("Bind timeout");
         sendResponse('F');  // FAILED
     }
-    if (lastConnState == binding && connectionState == running)
+    if (isBinding && connectionState == running)
     {
+        DBGLN("Bind completed");
+        isBinding = false;
         sendResponse('O');  // OK
     }
-    lastConnState = connectionState;
 
     while (m_port->available())
     {
@@ -128,6 +132,7 @@ HDZero::Loop(uint32_t now)
                         DBGLN("Enter binding mode...");
                         bindingStart =  now;
                         connectionState = binding;
+                        isBinding = true;
                     }
                     else if (packet->payload[0] == 'W')
                     {

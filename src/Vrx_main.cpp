@@ -436,15 +436,14 @@ void loop()
     return;
   }
 
-#if !defined(NO_AUTOBIND)
   if (BindingExpired(now))
   {
+    DBGLN("Binding expired");
+#if !defined(NO_AUTOBIND)
     RebootIntoWifi();
-  }
-  else
-#endif
-  {
+#else
     connectionState = running;
+#endif
   }
 
   if (sendChangesToVrx)
