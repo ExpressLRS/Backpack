@@ -1,8 +1,5 @@
 #pragma once
 
-#include "common.h"
-#include "msp.h"
-#include "msptypes.h"
 #include "module_base.h"
 #include <Arduino.h>
 
@@ -17,22 +14,14 @@
 #define VRX_DVR_RECORDING_INACTIVE  0
 #define VRX_DVR_RECORDING_UNKNOWN   255
 
-class HDZero : public ModuleBase
+class HDZero : public MSPModuleBase
 {
 public:
-    explicit HDZero(Stream *port) : m_port(port), lastConnState(connectionState)  {};
+    explicit HDZero(Stream *port) : MSPModuleBase(port) {};
     void Init();
     void SendIndexCmd(uint8_t index);
     uint8_t GetChannelIndex();
     void SetChannelIndex(uint8_t index);
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
-    void Loop(uint32_t now);
-
-private:
-    Stream *m_port;
-    MSP msp;
-    connectionState_e lastConnState;
-
-    void sendResponse(uint8_t response);
 };

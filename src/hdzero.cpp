@@ -1,10 +1,7 @@
 #include <Arduino.h>
 #include "hdzero.h"
+#include "msptypes.h"
 #include "logging.h"
-#include "device.h"
-
-void RebootIntoWifi();
-bool BindingExpired(uint32_t now);
 
 void
 HDZero::Init()
@@ -94,67 +91,5 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
     packet.addByte(delay & 0xFF); // delay byte 1
     packet.addByte(delay >> 8); // delay byte 2
 
-    msp.sendPacket(&packet, m_port);
-}
-
-void
-HDZero::Loop(uint32_t now)
-{
-    static bool isBinding = false;
-    // if "binding" && timeout
-    if (BindingExpired(now))
-    {
-        connectionState = running;
-        isBinding = false;
-        DBGLN("Bind timeout");
-        sendResponse('F');  // FAILED
-    }
-    if (isBinding && connectionState == running)
-    {
-        DBGLN("Bind completed");
-        isBinding = false;
-        sendResponse('O');  // OK
-    }
-
-    while (m_port->available())
-    {
-        uint8_t data = m_port->read();
-        if (msp.processReceivedByte(data))
-        {
-            // process the packet
-            mspPacket_t *packet = msp.getReceivedPacket();
-            if (packet->function == MSP_ELRS_BACKPACK_SET_MODE)
-            {
-                if (packet->payloadSize == 1)
-                {
-                    if (packet->payload[0] == 'B')
-                    {
-                        DBGLN("Enter binding mode...");
-                        bindingStart =  now;
-                        connectionState = binding;
-                        isBinding = true;
-                    }
-                    else if (packet->payload[0] == 'W')
-                    {
-                        DBGLN("Enter WIFI mode...");
-                        connectionState = wifiUpdate;
-                        devicesTriggerEvent();
-                    }
-                    // send "in-progress" response
-                    sendResponse('P');
-                }
-            }
-        }
-    }
-}
-
-void
-HDZero::sendResponse(uint8_t response)
-{
-    mspPacket_t packet;
-    packet.reset();
-    packet.makeResponse();
-    packet.function = MSP_ELRS_BACKPACK_SET_MODE;
-    packet.addByte(response);  // payload
     msp.sendPacket(&packet, m_port);
 }
