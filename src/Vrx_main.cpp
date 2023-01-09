@@ -60,6 +60,8 @@ uint8_t broadcastAddress[6] = {MY_UID};
 uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 
+uint8_t backpackVersion[] = {LATEST_VERSION, 0};
+
 connectionState_e connectionState = starting;
 unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;

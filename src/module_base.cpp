@@ -7,6 +7,7 @@
 
 void RebootIntoWifi();
 bool BindingExpired(uint32_t now);
+extern uint8_t backpackVersion[];
 
 void
 ModuleBase::Init()
@@ -39,13 +40,13 @@ MSPModuleBase::Loop(uint32_t now)
         connectionState = running;
         isBinding = false;
         DBGLN("Bind timeout");
-        sendResponse(MSP_ELRS_BACKPACK_SET_MODE, "F", 1); // FAILED
+        sendResponse(MSP_ELRS_BACKPACK_SET_MODE, (const uint8_t *)"F", 1); // FAILED
     }
     if (isBinding && connectionState == running)
     {
         DBGLN("Bind completed");
         isBinding = false;
-        sendResponse(MSP_ELRS_BACKPACK_SET_MODE, "O", 1); // OK
+        sendResponse(MSP_ELRS_BACKPACK_SET_MODE, (const uint8_t *)"O", 1); // OK
     }
 
     while (m_port->available())
@@ -73,8 +74,12 @@ MSPModuleBase::Loop(uint32_t now)
                         devicesTriggerEvent();
                     }
                     // send "in-progress" response
-                    sendResponse(MSP_ELRS_BACKPACK_SET_MODE, "P", 1);
+                    sendResponse(MSP_ELRS_BACKPACK_SET_MODE, (const uint8_t *)"P", 1);
                 }
+            }
+            else if (packet->function == MSP_ELRS_BACKPACK_GET_VERSION)
+            {
+                sendResponse(MSP_ELRS_BACKPACK_GET_VERSION, backpackVersion, strlen((const char *)backpackVersion));
             }
         }
     }
@@ -82,7 +87,7 @@ MSPModuleBase::Loop(uint32_t now)
 
 
 void
-MSPModuleBase::sendResponse(uint16_t function, uint8_t *response, uint32_t responseSize)
+MSPModuleBase::sendResponse(uint16_t function, const uint8_t *response, uint32_t responseSize)
 {
     mspPacket_t packet;
     packet.reset();
