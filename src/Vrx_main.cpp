@@ -34,6 +34,8 @@
   #include "hdzero.h"
 #elif defined(SKYZONE_MSP_BACKPACK)
   #include "skyzone_msp.h"
+#elif defined(ORQA_BACKPACK)
+  #include "orqa.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -102,6 +104,8 @@ VrxBackpackConfig config;
   HDZero vrxModule(&Serial);
 #elif defined(SKYZONE_MSP_BACKPACK)
   SkyzoneMSP vrxModule(&Serial);
+#elif defined(ORQA_BACKPACK)
+  Orqa vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -435,7 +439,7 @@ void loop()
     sendChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
   }
-
+  
   // spam out a bunch of requests for the desired band/channel for the first 5s
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
