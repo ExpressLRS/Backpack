@@ -24,7 +24,7 @@
 
 /////////// GLOBALS ///////////
 
-uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t bindingAddress[UID_SIZE] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 const uint8_t version[] = {LATEST_VERSION};
 
@@ -144,19 +144,30 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
   {
-    config.SetGroupAddress(packet->payload);
+    // If the backpack was flashed with passphrase then we override the packet with the flashed UID,
+    // if not then store the given UID in the config, send it and reboot to use it.
+    if (firmwareOptions.hasUID)
+    {
+      if (memcmp(packet->payload, firmwareOptions.uid, UID_SIZE) != 0)
+      {
+        ERRLN("Mismatched bind-phrase UIDs, flash the TX backpack with the same bind-phrase as the TX module.");
+        return;
+      }
+    }
+    else if (memcmp(packet->payload, config.GetGroupAddress(), UID_SIZE) != 0)
+    {
+      config.SetGroupAddress(packet->payload);
+      config.Commit();
+      rebootTime = 100 + millis(); // restart to set SetSoftMACAddress
+    }
     DBG("MSP_ELRS_BIND = ");
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < UID_SIZE; i++)
     {
       DBG("%x", packet->payload[i]); // Debug prints
       DBG(",");
     }
     DBG(""); // Extra line for serial output readability
-    config.Commit();
-    // delay(500); // delay may not be required
     sendMSPViaEspnow(packet);
-    // delay(500); // delay may not be required
-    rebootTime = millis(); // restart to set SetSoftMACAddress
   }
 
   switch (packet->function)
@@ -240,10 +251,10 @@ void SetSoftMACAddress()
 {
   if (!firmwareOptions.hasUID)
   {
-    memcpy(firmwareOptions.uid, config.GetGroupAddress(), 6);
+    memcpy(firmwareOptions.uid, config.GetGroupAddress(), UID_SIZE);
   }
   DBG("EEPROM MAC = ");
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < UID_SIZE; i++)
   {
     DBG("%x", firmwareOptions.uid[i]); // Debug prints
     DBG(",");
@@ -328,7 +339,7 @@ void setup()
       esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
       esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     #elif defined(PLATFORM_ESP32)
-      memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
+      memcpy(peerInfo.peer_addr, firmwareOptions.uid, UID_SIZE);
       peerInfo.channel = 0;
       peerInfo.encrypt = false;
       if (esp_now_add_peer(&peerInfo) != ESP_OK)
