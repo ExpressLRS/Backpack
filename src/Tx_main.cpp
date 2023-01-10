@@ -102,7 +102,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
   {
+#ifdef MY_UID
+    memcpy(packet->payload, broadcastAddress, sizeof(broadcastAddress));
+#else
     config.SetGroupAddress(packet->payload);
+    config.Commit();
+#endif
     DBG("MSP_ELRS_BIND = ");
     for (int i = 0; i < 6; i++)
     {
@@ -110,11 +115,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
       DBG(",");
     }
     DBG(""); // Extra line for serial output readability
-    config.Commit();
     // delay(500); // delay may not be required
     sendMSPViaEspnow(packet);
     // delay(500); // delay may not be required
+#ifndef MY_UID
     rebootTime = millis(); // restart to set SetSoftMACAddress
+#endif
   }
 
   switch (packet->function)
