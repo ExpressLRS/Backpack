@@ -70,6 +70,7 @@ SkyzoneMSP::GetRecordingState()
     if (receivedResponse)
     {
         packet = msp.getReceivedPacket();
+        msp.markPacketReceived();
         return packet->readByte() ? VRX_DVR_RECORDING_ACTIVE : VRX_DVR_RECORDING_INACTIVE;
     }
 

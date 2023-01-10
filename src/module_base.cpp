@@ -92,6 +92,7 @@ MSPModuleBase::Loop(uint32_t now)
                 memcpy(&response[1], broadcastAddress, 6);
                 sendResponse(MSP_ELRS_BACKPACK_GET_STATUS, response, sizeof(response));
             }
+            msp.markPacketReceived();
         }
     }
 }
