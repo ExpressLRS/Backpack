@@ -42,3 +42,4 @@
 #define MSP_ELRS_BACKPACK_SET_MODE              0x0380
 #define MSP_ELRS_BACKPACK_GET_VERSION           0x0381
 #define MSP_ELRS_BACKPACK_GET_STATUS            0x0382
+#define MSP_ELRS_BACKPACK_SET_PTR               0x0383

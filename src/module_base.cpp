@@ -9,6 +9,7 @@ void RebootIntoWifi();
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
 extern uint8_t broadcastAddress[6];
+void sendMSPViaEspnow(mspPacket_t *packet);
 
 void
 ModuleBase::Init()
@@ -91,6 +92,10 @@ MSPModuleBase::Loop(uint32_t now)
                 response[0] |= memcmp(broadcastAddress, unbound, 6) != 0 ? 4 : 0;
                 memcpy(&response[1], broadcastAddress, 6);
                 sendResponse(MSP_ELRS_BACKPACK_GET_STATUS, response, sizeof(response));
+            }
+            else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR)
+            {
+                  sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();
         }

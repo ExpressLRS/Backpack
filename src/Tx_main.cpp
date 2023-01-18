@@ -71,6 +71,10 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
       sendCached = true;
     }
   }
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR)
+  {
+    msp.sendPacket(packet, &Serial);
+  }
 }
 
 // espnow on-receive callback
