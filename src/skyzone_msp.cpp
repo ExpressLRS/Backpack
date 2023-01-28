@@ -16,7 +16,7 @@ SkyzoneMSP::Init()
 
 void
 SkyzoneMSP::SendIndexCmd(uint8_t index)
-{  
+{
     uint8_t retries = 3;
     while (GetChannelIndex() != index && retries > 0)
     {
@@ -40,6 +40,7 @@ SkyzoneMSP::GetChannelIndex()
     if (receivedResponse)
     {
         packet = msp.getReceivedPacket();
+        msp.markPacketReceived();
         return packet->readByte();
     }
 
@@ -49,7 +50,7 @@ SkyzoneMSP::GetChannelIndex()
 
 void
 SkyzoneMSP::SetChannelIndex(uint8_t index)
-{  
+{
     MSP msp;
     mspPacket_t packet;
     packet.reset();
@@ -87,7 +88,7 @@ void
 SkyzoneMSP::SetRecordingState(uint8_t recordingState, uint16_t delay)
 {
     DBGLN("SetRecordingState = %d delay = %d", recordingState, delay);
-    
+
     m_recordingState = recordingState;
     m_delay = delay * 1000; // delay is in seconds, convert to milliseconds
     m_delayStartMillis = millis();
@@ -102,7 +103,7 @@ void
 SkyzoneMSP::SendRecordingState()
 {
     DBGLN("SendRecordingState = %d delay = %d", m_recordingState, m_delay);
-    
+
     MSP msp;
     mspPacket_t packet;
     packet.reset();
