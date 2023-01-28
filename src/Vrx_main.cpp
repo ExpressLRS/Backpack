@@ -69,6 +69,7 @@ unsigned long rebootTime = 0;
 uint8_t cachedIndex = 0;
 bool sendChangesToVrx = false;
 bool gotInitialPacket = false;
+bool headTrackingEnabled = false;
 uint32_t lastSentRequest = 0;
 
 device_t *ui_devices[] = {
@@ -221,6 +222,10 @@ void ProcessMSPPacket(mspPacket_t *packet)
       uint16_t delay = lowByte | highByte << 8;
       vrxModule.SetRecordingState(state, delay);
     }
+    break;
+  case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
+    headTrackingEnabled = packet->readByte();
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
