@@ -67,7 +67,8 @@ unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;
 
 uint8_t cachedIndex = 0;
-bool sendChangesToVrx = false;
+bool sendChannelChangesToVrx = false;
+bool sendHeadTrackingChangesToVrx = false;
 bool gotInitialPacket = false;
 bool headTrackingEnabled = false;
 uint32_t lastSentRequest = 0;
@@ -202,7 +203,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
     {
       // cache changes here, to be handled outside this callback, in the main loop
       cachedIndex = packet->payload[0];;
-      sendChangesToVrx = true;
+      sendChannelChangesToVrx = true;
     }
     else
     {
@@ -226,6 +227,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
+    sendHeadTrackingChangesToVrx = true;
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
@@ -453,10 +455,15 @@ void loop()
 #endif
   }
 
-  if (sendChangesToVrx)
+  if (sendChannelChangesToVrx)
   {
-    sendChangesToVrx = false;
+    sendChannelChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
+  }
+  if (sendHeadTrackingChangesToVrx)
+  {
+    sendHeadTrackingChangesToVrx = false;
+    vrxModule.SendHeadTrackingEnableCmd(headTrackingEnabled);
   }
 
   // spam out a bunch of requests for the desired band/channel for the first 5s

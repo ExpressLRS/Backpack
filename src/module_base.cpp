@@ -29,6 +29,11 @@ ModuleBase::SetRecordingState(uint8_t recordingState, uint16_t delay)
 }
 
 void
+ModuleBase::SendHeadTrackingEnableCmd(bool enable)
+{
+}
+
+void
 ModuleBase::Loop(uint32_t now)
 {
 }

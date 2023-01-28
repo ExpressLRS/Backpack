@@ -95,3 +95,16 @@ HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 
     msp.sendPacket(&packet, m_port);
 }
+
+void
+HDZero::SendHeadTrackingEnableCmd(bool enable)
+{
+    MSP msp;
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
+    packet.addByte(enable);
+
+    msp.sendPacket(&packet, m_port);
+}

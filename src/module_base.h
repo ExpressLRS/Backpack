@@ -11,6 +11,7 @@ public:
     void Init();
     void SendIndexCmd(uint8_t index);
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
+    void SendHeadTrackingEnableCmd(bool enable);
     void Loop(uint32_t now);
 };
 
