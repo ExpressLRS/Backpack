@@ -7,6 +7,7 @@ Rapidfire::Init()
 {
     ModuleBase::Init();
 
+    delay(VRX_BOOT_DELAY);
     EnableSPIMode(); // https://github.com/ExpressLRS/ExpressLRS/pull/1489 & https://github.com/ExpressLRS/Backpack/pull/65
 
     pinMode(PIN_MOSI, INPUT);
@@ -44,7 +45,7 @@ void
 Rapidfire::SendBuzzerCmd()
 {
     DBGLN("Beep!");
-    
+
     uint8_t cmd[4];
     cmd[0] = RF_API_BEEP_CMD;   // 'S'
     cmd[1] = RF_API_DIR_GRTHAN; // '>'
@@ -59,7 +60,7 @@ Rapidfire::SendBuzzerCmd()
 
 void
 Rapidfire::SendIndexCmd(uint8_t index)
-{  
+{
     uint8_t newBand = index / 8 + 1;
     uint8_t newChannel = index % 8;
 
@@ -194,7 +195,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
             digitalWrite(PIN_CLK, HIGH);
             delayMicroseconds(periodMicroSec / 2);
 
-            bufByte <<= 1; 
+            bufByte <<= 1;
         }
     }
     DBGLN("");
@@ -203,7 +204,7 @@ Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
     digitalWrite(PIN_CLK, LOW);
     digitalWrite(PIN_CS, HIGH);
     delay(100);
-    
+
     pinMode(PIN_MOSI, INPUT);
     pinMode(PIN_CLK, INPUT);
     pinMode(PIN_CS, INPUT);
