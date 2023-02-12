@@ -105,7 +105,7 @@ MSPModuleBase::sendResponse(uint16_t function, const uint8_t *response, uint32_t
     packet.reset();
     packet.makeResponse();
     packet.function = function;
-    for (uint32_t i = 0 ; i<responseSize ; i++)
+    for (uint32_t i = 0 ; i < responseSize ; i++)
     {
         packet.addByte(response[i]);
     }
