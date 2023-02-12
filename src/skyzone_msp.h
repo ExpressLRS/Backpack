@@ -26,6 +26,7 @@ public:
     void SetChannelIndex(uint8_t index);
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
+    void SetOSD(mspPacket_t *packet);
     void Loop(uint32_t now);
 
 private:

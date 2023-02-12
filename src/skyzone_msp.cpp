@@ -115,6 +115,13 @@ SkyzoneMSP::SendRecordingState()
 }
 
 void
+SkyzoneMSP::SetOSD(mspPacket_t *packet)
+{
+    MSP msp;
+    msp.sendPacket(packet, m_port);
+}
+
+void
 SkyzoneMSP::Loop(uint32_t now)
 {
     // Handle delay timer for SendRecordingState()
