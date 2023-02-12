@@ -3,7 +3,6 @@
 void
 ModuleBase::Init()
 {
-    delay(VRX_BOOT_DELAY);
 }
 
 void
