@@ -106,8 +106,10 @@ void SendVersionResponse()
   out.reset();
   out.makeResponse();
   out.function = MSP_ELRS_GET_BACKPACK_VERSION;
-  for (size_t i=0 ; i<sizeof(version) ; i++)
+  for (size_t i = 0 ; i < sizeof(version) ; i++)
+  {
     out.addByte(version[i]);
+  }
   msp.sendPacket(&out, &Serial);
 }
 
