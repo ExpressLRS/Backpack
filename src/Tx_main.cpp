@@ -30,6 +30,8 @@ uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
+const uint8_t version[] = {LATEST_VERSION};
+
 connectionState_e connectionState = starting;
 unsigned long rebootTime = 0;
 
@@ -116,6 +118,19 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
   blinkLED();
 }
 
+void SendVersionResponse()
+{
+  mspPacket_t out;
+  out.reset();
+  out.makeResponse();
+  out.function = MSP_ELRS_GET_BACKPACK_VERSION;
+  for (size_t i = 0 ; i < sizeof(version) ; i++)
+  {
+    out.addByte(version[i]);
+  }
+  msp.sendPacket(&out, &Serial);
+}
+
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
@@ -151,6 +166,10 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
   case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
+    break;
+  case MSP_ELRS_GET_BACKPACK_VERSION:
+    DBGLN("Processing MSP_ELRS_GET_BACKPACK_VERSION...");
+    SendVersionResponse();
     break;
   default:
     // transparently forward MSP packets via espnow to any subscribers
