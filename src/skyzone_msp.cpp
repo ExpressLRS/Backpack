@@ -2,11 +2,6 @@
 #include "logging.h"
 #include <Arduino.h>
 
-SkyzoneMSP::SkyzoneMSP(Stream *port)
-{
-    m_port = port;
-}
-
 void
 SkyzoneMSP::Init()
 {
@@ -126,6 +121,8 @@ SkyzoneMSP::SetOSD(mspPacket_t *packet)
 void
 SkyzoneMSP::Loop(uint32_t now)
 {
+    MSPModuleBase::Loop(now);
+
     // Handle delay timer for SendRecordingState()
     if (m_delay != 0)
     {

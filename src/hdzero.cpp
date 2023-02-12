@@ -1,11 +1,7 @@
-#include "hdzero.h"
-#include "logging.h"
 #include <Arduino.h>
-
-HDZero::HDZero(Stream *port)
-{
-    m_port = port;
-}
+#include "hdzero.h"
+#include "msptypes.h"
+#include "logging.h"
 
 void
 HDZero::Init()
@@ -15,7 +11,7 @@ HDZero::Init()
 
 void
 HDZero::SendIndexCmd(uint8_t index)
-{  
+{
     uint8_t retries = 3;
     while (GetChannelIndex() != index && retries > 0)
     {
@@ -49,7 +45,7 @@ HDZero::GetChannelIndex()
 
 void
 HDZero::SetChannelIndex(uint8_t index)
-{  
+{
     MSP msp;
     mspPacket_t packet;
     packet.reset();
@@ -87,7 +83,7 @@ void
 HDZero::SetRecordingState(uint8_t recordingState, uint16_t delay)
 {
     DBGLN("SetRecordingState = %d delay = %d", recordingState, delay);
-    
+
     MSP msp;
     mspPacket_t packet;
     packet.reset();

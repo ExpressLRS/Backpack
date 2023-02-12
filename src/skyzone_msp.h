@@ -15,10 +15,10 @@
 #define VRX_DVR_RECORDING_INACTIVE  0
 #define VRX_DVR_RECORDING_UNKNOWN   255
 
-class SkyzoneMSP : public ModuleBase
+class SkyzoneMSP : public MSPModuleBase
 {
 public:
-    SkyzoneMSP(Stream *port);
+    SkyzoneMSP(Stream *port) : MSPModuleBase(port) {};
     void Init();
     void SendIndexCmd(uint8_t index);
     uint8_t GetChannelIndex();
@@ -31,7 +31,6 @@ public:
 private:
     void SendRecordingState();
 
-    Stream      *m_port;
     uint8_t     m_recordingState;
     uint16_t    m_delay;
     uint32_t    m_delayStartMillis;

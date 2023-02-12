@@ -60,7 +60,10 @@ uint8_t broadcastAddress[6] = {MY_UID};
 uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
 #endif
 
+uint8_t backpackVersion[] = {LATEST_VERSION, 0};
+
 connectionState_e connectionState = starting;
+unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;
 
 uint8_t cachedIndex = 0;
@@ -184,7 +187,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
       }
       DBG(""); // Extra line for serial output readability
       resetBootCounter();
-      rebootTime = millis();
+      connectionState = running;
+      rebootTime = millis() + 200; // Add 200ms to allow for any response message(s) to be sent back to device
     }
     return;
   }
@@ -332,6 +336,7 @@ void checkIfInBindingMode()
     RebootIntoWifi();
     #else
     connectionState = binding;
+    bindingStart = millis();
     #endif
   }
   else
@@ -345,6 +350,11 @@ void checkIfInBindingMode()
   DBGLN("%x", bootCounter);
   DBG("bindingMode = ");
   DBGLN("%x", connectionState == binding);
+}
+
+bool BindingExpired(uint32_t now)
+{
+  return (connectionState == binding) && ((now - bindingStart) > NO_BINDING_TIMEOUT);
 }
 
 #if defined(PLATFORM_ESP8266)
@@ -391,7 +401,9 @@ void setup()
   }
   else
   {
+#if !defined(NO_AUTOBIND)
     checkIfInBindingMode();
+#endif
     SetSoftMACAddress();
     SetupEspNow();
   }
@@ -429,9 +441,14 @@ void loop()
     return;
   }
 
-  if (connectionState == binding && now > NO_BINDING_TIMEOUT)
+  if (BindingExpired(now))
   {
+    DBGLN("Binding expired");
+#if !defined(NO_AUTOBIND)
     RebootIntoWifi();
+#else
+    connectionState = running;
+#endif
   }
 
   if (sendChangesToVrx)
@@ -439,7 +456,7 @@ void loop()
     sendChangesToVrx = false;
     vrxModule.SendIndexCmd(cachedIndex);
   }
-  
+
   // spam out a bunch of requests for the desired band/channel for the first 5s
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
@@ -448,10 +465,12 @@ void loop()
     lastSentRequest = now;
   }
 
+#if !defined(NO_AUTOBIND)
   // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
   if (now > BINDING_TIMEOUT && config.GetBootCount() > 0)
   {
     DBGLN("resetBootCounter...");
     resetBootCounter();
   }
+#endif
 }
