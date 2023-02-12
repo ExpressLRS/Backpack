@@ -222,6 +222,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
       vrxModule.SetRecordingState(state, delay);
     }
     break;
+  case MSP_ELRS_SET_OSD:
+    vrxModule.SetOSD(packet);
+    break;
   default:
     DBGLN("Unknown command from ESPNOW");
     break;

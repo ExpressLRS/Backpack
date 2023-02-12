@@ -3,7 +3,6 @@
 #include "module_base.h"
 #include <Arduino.h>
 
-#undef VRX_BOOT_DELAY
 #define VRX_BOOT_DELAY              7000
 
 #define VRX_RESPONSE_TIMEOUT        500
