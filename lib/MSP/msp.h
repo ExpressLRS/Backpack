@@ -2,7 +2,11 @@
 
 #include <Arduino.h>
 
-#define MSP_PORT_INBUF_SIZE 32
+// TODO: MSP_PORT_INBUF_SIZE should be changed to
+// dynamically allocate array length based on the payload size
+// Hardcoding payload size to 64 bytes for now, to allow enough space
+// for custom OSD text.
+#define MSP_PORT_INBUF_SIZE 64
 
 #define CHECK_PACKET_PARSING() \
   if (packet->readError) {\

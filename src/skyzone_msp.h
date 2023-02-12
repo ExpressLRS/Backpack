@@ -5,7 +5,6 @@
 #include "module_base.h"
 #include <Arduino.h>
 
-#undef VRX_BOOT_DELAY
 #define VRX_BOOT_DELAY              2000
 
 #define VRX_RESPONSE_TIMEOUT        500
@@ -26,6 +25,7 @@ public:
     void SetChannelIndex(uint8_t index);
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
+    void SetOSD(mspPacket_t *packet);
     void SendHeadTrackingEnableCmd(bool enable);
     void Loop(uint32_t now);
 

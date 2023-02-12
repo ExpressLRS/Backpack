@@ -15,7 +15,6 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 void
 ModuleBase::Init()
 {
-    delay(VRX_BOOT_DELAY);
 }
 
 void
@@ -25,6 +24,11 @@ ModuleBase::SendIndexCmd(uint8_t index)
 
 void
 ModuleBase::SetRecordingState(uint8_t recordingState, uint16_t delay)
+{
+}
+
+void
+ModuleBase::SetOSD(mspPacket_t *packet)
 {
 }
 
@@ -116,7 +120,7 @@ MSPModuleBase::sendResponse(uint16_t function, const uint8_t *response, uint32_t
     packet.reset();
     packet.makeResponse();
     packet.function = function;
-    for (uint32_t i = 0 ; i<responseSize ; i++)
+    for (uint32_t i = 0 ; i < responseSize ; i++)
     {
         packet.addByte(response[i]);
     }
