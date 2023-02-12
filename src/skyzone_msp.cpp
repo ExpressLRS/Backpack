@@ -119,6 +119,19 @@ SkyzoneMSP::SetOSD(mspPacket_t *packet)
 }
 
 void
+SkyzoneMSP::SendHeadTrackingEnableCmd(bool enable)
+{
+    MSP msp;
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
+    packet.addByte(enable);
+
+    msp.sendPacket(&packet, m_port);
+}
+
+void
 SkyzoneMSP::Loop(uint32_t now)
 {
     MSPModuleBase::Loop(now);

@@ -54,6 +54,7 @@ MSP msp;
 ELRS_EEPROM eeprom;
 TxBackpackConfig config;
 mspPacket_t cachedVTXPacket;
+mspPacket_t cachedHTPacket;
 
 /////////// FUNCTION DEFS ///////////
 
@@ -86,6 +87,11 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
     {
       sendCached = true;
     }
+  }
+  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR)
+  {
+    DBGLN("MSP_ELRS_BACKPACK_SET_PTR...");
+    msp.sendPacket(packet, &Serial);
   }
 }
 
@@ -171,6 +177,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_GET_BACKPACK_VERSION...");
     SendVersionResponse();
     break;
+  case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
+    cachedHTPacket = *packet;
+    cacheFull = true;
+    sendMSPViaEspnow(packet);
+    break;
   default:
     // transparently forward MSP packets via espnow to any subscribers
     sendMSPViaEspnow(packet);
@@ -211,7 +223,14 @@ void SendCachedMSP()
     return;
   }
 
-  sendMSPViaEspnow(&cachedVTXPacket);
+  if (cachedVTXPacket.type != MSP_PACKET_UNKNOWN)
+  {
+    sendMSPViaEspnow(&cachedVTXPacket);
+  }
+  if (cachedHTPacket.type != MSP_PACKET_UNKNOWN)
+  {
+    sendMSPViaEspnow(&cachedHTPacket);
+  }
 }
 
 void SetSoftMACAddress()

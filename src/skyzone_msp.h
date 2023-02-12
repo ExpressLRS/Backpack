@@ -26,6 +26,7 @@ public:
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
     void SetOSD(mspPacket_t *packet);
+    void SendHeadTrackingEnableCmd(bool enable);
     void Loop(uint32_t now);
 
 private:

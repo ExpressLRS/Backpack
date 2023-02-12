@@ -9,6 +9,8 @@ void RebootIntoWifi();
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
 extern uint8_t broadcastAddress[6];
+extern bool headTrackingEnabled;
+void sendMSPViaEspnow(mspPacket_t *packet);
 
 void
 ModuleBase::Init()
@@ -27,6 +29,11 @@ ModuleBase::SetRecordingState(uint8_t recordingState, uint16_t delay)
 
 void
 ModuleBase::SetOSD(mspPacket_t *packet)
+{
+}
+
+void
+ModuleBase::SendHeadTrackingEnableCmd(bool enable)
 {
 }
 
@@ -95,6 +102,10 @@ MSPModuleBase::Loop(uint32_t now)
                 response[0] |= memcmp(broadcastAddress, unbound, 6) != 0 ? 4 : 0;
                 memcpy(&response[1], broadcastAddress, 6);
                 sendResponse(MSP_ELRS_BACKPACK_GET_STATUS, response, sizeof(response));
+            }
+            else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && headTrackingEnabled)
+            {
+                  sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();
         }
