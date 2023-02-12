@@ -179,7 +179,6 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     cachedHTPacket = *packet;
     cacheFull = true;
-    // transparently forward MSP packets via espnow to any subscribers
     sendMSPViaEspnow(packet);
     break;
   default:
