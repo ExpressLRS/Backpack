@@ -432,7 +432,9 @@ static void WebUploadRTCUpdateHandler(AsyncWebServerRequest *request) {
 
   DBGLN("Getting NTP data from %s", ntpServer.c_str());
   configTime(dst, utcOffset, ntpServer.c_str());
+  #if defined(TARGET_VRX_BACKPACK)
   sendRTCChangesToVrx = true;
+  #endif
   AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "RTC clock synced with NTP server.");
   response->addHeader("Connection", "close");
   request->send(response);
