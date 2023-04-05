@@ -24,4 +24,5 @@ public:
     uint8_t GetRecordingState();
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
     void SendHeadTrackingEnableCmd(bool enable);
+    void SetRTC();
 };

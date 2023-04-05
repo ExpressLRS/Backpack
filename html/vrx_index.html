@@ -27,6 +27,7 @@
 			<ul class="mui-tabs__bar mui-tabs__bar--justified">
 				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Update</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Network</a></li>
+				<li id="rtctab" style="display:none;"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">RTC Time</a></li>
 			</ul>
 
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
@@ -79,6 +80,29 @@
 					Disconnect from &quot;home&quot; network start access point
 					<br>
 					<a id="access" href="#" class="mui-btn mui-btn--primary">Disconnect</a>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-justified-3">
+				<div class="mui-panel">
+					<h2>RTC Update via NTP</h2>
+					Here you can update your goggle RTC clock time using any available NTP server.
+					Make sure that the home network you're connected to has access to the Internet in order to connect to the NTP server.
+					<form action="/setrtc" id="setrtc" method="POST" class="mui-form">
+						<div class="mui-textfield" style="width: 50%;">
+							<input id="server" type="text" name="server" placeholder="NTP Server"/>
+						</div>
+						<div class="mui-textfield" style="width: 50%;">
+							<input id="offset" type="number" name="offset" min="-12" max="12" placeholder="UTC Offset"/>
+						</div>
+						<div class="mui-checkbox">
+							<label>
+								<input id="dst" type="checkbox" name="dst">
+								Daylight Saving
+							</label>
+						</div>
+						<input type="submit" value="Set Time" class="mui-btn mui-btn--primary">
+					</form>
 				</div>
 			</div>
 		</div>
