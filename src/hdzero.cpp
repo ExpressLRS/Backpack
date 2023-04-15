@@ -2,6 +2,7 @@
 #include "hdzero.h"
 #include "msptypes.h"
 #include "logging.h"
+#include "time.h"
 
 void
 HDZero::Init()
@@ -106,5 +107,28 @@ HDZero::SendHeadTrackingEnableCmd(bool enable)
     packet.function = MSP_ELRS_BACKPACK_SET_HEAD_TRACKING;
     packet.addByte(enable);
 
+    msp.sendPacket(&packet, m_port);
+}
+
+void
+HDZero::SetRTC()
+{
+    MSP msp;
+    mspPacket_t packet;
+    tm timeData;
+    if(!getLocalTime(&timeData)) {
+        DBGLN("Could not obtain time data.");
+        return;
+    }
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_SET_RTC;
+    packet.addByte(timeData.tm_year);
+    packet.addByte(timeData.tm_mon);
+    packet.addByte(timeData.tm_mday);
+    packet.addByte(timeData.tm_hour);
+    packet.addByte(timeData.tm_min);
+    packet.addByte(timeData.tm_sec);
+    
     msp.sendPacket(&packet, m_port);
 }

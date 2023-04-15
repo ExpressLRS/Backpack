@@ -11,6 +11,7 @@ public:
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
     void SetOSD(mspPacket_t *packet);
     void SendHeadTrackingEnableCmd(bool enable);
+    void SetRTC();
     void Loop(uint32_t now);
 };
 

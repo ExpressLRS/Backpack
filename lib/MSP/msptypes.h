@@ -43,6 +43,7 @@
 #define MSP_ELRS_BACKPACK_SET_BUZZER            0x030B
 #define MSP_ELRS_BACKPACK_SET_OSD_ELEMENT       0x030C
 #define MSP_ELRS_BACKPACK_SET_HEAD_TRACKING     0x030D  // enable/disable head-tracking forwarding packets to the TX
+#define MSP_ELRS_BACKPACK_SET_RTC               0x030E
 
 // incoming, packets originating from the VRx
 #define MSP_ELRS_BACKPACK_SET_MODE              0x0380  // enable wifi/binding mode
