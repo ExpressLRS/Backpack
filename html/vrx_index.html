@@ -90,14 +90,14 @@
 					Make sure that the home network you're connected to has access to the Internet in order to connect to the NTP server.
 					<form action="/setrtc" id="setrtc" method="POST" class="mui-form">
 						<div class="mui-textfield" style="width: 50%;">
-							<input id="server" type="text" name="server" placeholder="NTP Server"/>
+							<input id="server" type="text" name="server" value="pool.ntp.org"/>
 						</div>
 						<div class="mui-textfield" style="width: 50%;">
 							<input id="offset" type="number" name="offset" min="-12" max="12" placeholder="UTC Offset"/>
 						</div>
 						<div class="mui-checkbox">
 							<label>
-								<input id="dst" type="checkbox" name="dst">
+								<input id="dst" type="checkbox" name="dst" checked>
 								Daylight Saving
 							</label>
 						</div>
