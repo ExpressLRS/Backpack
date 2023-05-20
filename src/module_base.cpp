@@ -38,6 +38,11 @@ ModuleBase::SendHeadTrackingEnableCmd(bool enable)
 }
 
 void
+ModuleBase::SetRTC()
+{
+}
+
+void
 ModuleBase::Loop(uint32_t now)
 {
 }

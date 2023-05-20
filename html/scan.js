@@ -13,6 +13,7 @@ function get_mode() {
             var data = JSON.parse(this.responseText);
             if (data.mode==="STA") {
                 _('stamode').style.display = 'block';
+                _('rtctab').style.display = 'block';
                 _('ssid').textContent = data.ssid;
             } else {
                 _('apmode').style.display = 'block';
@@ -347,6 +348,9 @@ _('forget').addEventListener('click', callback("Forget Home Network", "An error 
 if (_('modelmatch') != undefined) {
     _('modelmatch').addEventListener('submit', callback("Set Model Match", "An error occurred updating the model match number", "/model", null));
 }
+_('setrtc').addEventListener('submit', callback("Set RTC Time", "An error occured setting the RTC time", "/setrtc", function() {
+    return new FormData(_('setrtc'));
+}));
 
 //=========================================================
 

@@ -25,12 +25,14 @@
 #include "helpers.h"
 
 #include "UpdateWrapper.h"
+#include "time.h"
 
 #include "WebContent.h"
 
 #include "config.h"
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
+extern bool sendRTCChangesToVrx;
 #else
 extern TxBackpackConfig config;
 #endif
@@ -422,6 +424,33 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
   }
 }
 
+static void WebUploadRTCUpdateHandler(AsyncWebServerRequest *request) {
+  static String ntpServer = request->arg("server");
+  long offset = request->arg("offset").toInt();
+  long dst = request->arg("dst") == "on" ? 3600 : 0;
+  long utcOffset = offset < 0 ? (12 + abs(offset)) * 3600 : offset * 3600;
+
+  DBGLN("Getting NTP data from %s", ntpServer.c_str());
+  configTime(dst, utcOffset, ntpServer.c_str());
+
+  tm timeData;
+  AsyncWebServerResponse *response;
+  if(!getLocalTime(&timeData)) {
+    response = request->beginResponse(500);
+  }
+  else {
+    response = request->beginResponse(200, "text/plain", "RTC clock synced with NTP server.");
+  }
+
+  response->addHeader("Connection", "close");
+  request->send(response);
+  request->client()->close();
+
+  #if defined(TARGET_VRX_BACKPACK)
+  sendRTCChangesToVrx = true;
+  #endif
+}
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -554,6 +583,7 @@ static void startServices()
 
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
+  server.on("/setrtc", WebUploadRTCUpdateHandler);
 
   server.on("/log.js", WebUpdateSendContent);
   server.on("/log.html", WebUpdateSendContent);

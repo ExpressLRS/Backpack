@@ -69,6 +69,7 @@ unsigned long rebootTime = 0;
 uint8_t cachedIndex = 0;
 bool sendChannelChangesToVrx = false;
 bool sendHeadTrackingChangesToVrx = false;
+bool sendRTCChangesToVrx = false;
 bool gotInitialPacket = false;
 bool headTrackingEnabled = false;
 uint32_t lastSentRequest = 0;
@@ -445,6 +446,11 @@ void loop()
 
   if (connectionState == wifiUpdate)
   {
+    if (sendRTCChangesToVrx)
+    {
+      sendRTCChangesToVrx = false;
+      vrxModule.SetRTC();
+    }
     return;
   }
 
