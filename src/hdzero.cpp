@@ -111,6 +111,13 @@ HDZero::SendHeadTrackingEnableCmd(bool enable)
 }
 
 void
+HDZero::SetOSD(mspPacket_t *packet)
+{
+    MSP msp;
+    msp.sendPacket(packet, m_port);
+}
+
+void
 HDZero::SetRTC()
 {
     MSP msp;
