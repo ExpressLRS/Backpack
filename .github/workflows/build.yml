@@ -60,6 +60,6 @@ jobs:
     - name: Store Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: ExpressLRS-Backpack-${{ env.GITHUB_REF_SLUG_URL }}-${{ github.run_number }}
+        name: backpack
         path: ~/artifacts/**/*.bin
       continue-on-error: true
