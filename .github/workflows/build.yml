@@ -53,13 +53,16 @@ jobs:
       run: |
         platformio platform update
         platformio platform install native
-        mkdir -p ~/artifacts
+        mkdir -p ~/artifacts/firmware
         pio run -e ${{ matrix.target }}
-        mv .pio/build ~/artifacts/
+        mv .pio/build/${{ matrix.target }} ~/artifacts/firmware/`echo ${{ matrix.target }} | sed s/_via_UART//`
+        cp -r hardware ~/artifacts
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v3
       with:
         name: backpack
-        path: ~/artifacts/**/*.bin
+        path: |
+          ~/artifacts/**/*.bin
+          ~/artifacts/**/*.json
       continue-on-error: true

@@ -1,0 +1,110 @@
+{
+    "txbp": {
+        "esp": {
+            "name": "ESP32 based TX Module backpack",
+            "firmware": "ESP_TX_Backpack"
+        },
+        "stm": {
+            "name": "STM32 based TX Module backpack",
+            "firmware": "STM_TX_Backpack"
+        }
+    },
+    "vrx": {
+        "fusion": {
+            "name": "Fusion VRX built-in backpack",
+            "builtin": {
+                "firmware": "Fusion_Builtin_Backpack"
+            }
+        },
+        "hdzero": {
+            "name": "HDZero RX5.1 Video Receiver",
+            "rx": {
+                "firmware": "HDZero_RX51_ESP_RX_Backpack"
+            },
+            "esp01f": {
+                "firmware": "HDZero_RX51_ESP01F_Backpack"
+            },
+            "esp32": {
+                "firmware": "HDZero_RX51_ESP32_Backpack"
+            },
+            "ep82": {
+                "firmware": "HDZero_RX51_HappyModel_EP82_VRX_Backpack"
+            }
+        },
+        "rapidfire": {
+            "name": "rapidFIRE Module",
+            "rx": {
+                "firmware": "Rapidfire_ESP_RX_Backpack"
+            },
+            "esp01f": {
+                "firmware": "Rapidfire_ESP01F_Backpack"
+            },
+            "esp12f": {
+                "firmware": "Rapidfire_ESP12F_Backpack"
+            },
+            "ep82": {
+                "firmware": "Rapidfire_HappyModel_EP82_VRX_Backpack"
+            }
+        },
+        "rx5808": {
+            "name": "RX5808 Single Module",
+            "rx": {
+                "firmware": "RX5808_ESP_RX_Backpack"
+            },
+            "esp01f": {
+                "firmware": "RX5808_ESP01F_Backpack"
+            },
+            "esp12f": {
+                "firmware": "RX5808_ESP12F_Backpack"
+            },
+            "ep82": {
+                "firmware": "RX5808_HappyModel_EP82_VRX_Backpack"
+            }
+        },
+        "rx5808-diversity": {
+            "name": "RX5808 Diversity Module",
+            "esp01f": {
+                "firmware": "RX5808_Diversity_ESP01F_Backpack"
+            }
+        },
+        "skyzone-elrs": {
+            "name": "Skyzone Steadyview ELRS Module",
+            "esp32": {
+                "firmware": "Skyzone_Onboard_ESP32_Backpack"
+            }
+        },
+        "skyzone-diy": {
+            "name": "Skyzone Steadyview Module (DIY)",
+            "rx": {
+                "firmware": "Skyzone_SteadyView_ESP_RX_Backpack"
+            },
+            "esp01f": {
+                "firmware": "Skyzone_SteadyView_ESP01F_Backpack"
+            },
+            "ep82": {
+                "firmware": "Skyzone_SteadyView_HappyModel_EP82_VRX_Backpack"
+            }
+        }
+    },
+    "goggle": {
+        "hdzero": {
+            "name": "HDZero Goggles built-in backpack",
+            "esp32": {
+                "firmware": "HDZero_Goggle_ESP32_Backpack"
+            }
+        },
+        "orqa": {
+            "name": "Orqa Goggles FPV.Connect backpack",
+            "rx": {
+                "firmware": "Orqa_ESP_RX_Backpack"
+            },
+            "esp01f": {
+                "firmware": "Orqa_ESP01F_Backpack"
+            },
+            "ep82": {
+                "firmware": "Orqa_HappyModel_EP82_VRX_Backpack"
+            }
+        }
+    }
+
+}
