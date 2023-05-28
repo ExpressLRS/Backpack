@@ -14,6 +14,7 @@
 #include "logging.h"
 #include "config.h"
 #include "common.h"
+#include "options.h"
 #include "helpers.h"
 
 #include "device.h"
@@ -23,11 +24,6 @@
 
 /////////// GLOBALS ///////////
 
-#ifdef MY_UID
-uint8_t broadcastAddress[6] = {MY_UID};
-#else
-uint8_t broadcastAddress[6] = {0, 0, 0, 0, 0, 0};
-#endif
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 const uint8_t version[] = {LATEST_VERSION};
@@ -109,12 +105,12 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
     {
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
-      if (broadcastAddress[0] == mac_addr[0] &&
-          broadcastAddress[1] == mac_addr[1] &&
-          broadcastAddress[2] == mac_addr[2] &&
-          broadcastAddress[3] == mac_addr[3] &&
-          broadcastAddress[4] == mac_addr[4] &&
-          broadcastAddress[5] == mac_addr[5])
+      if (firmwareOptions.uid[0] == mac_addr[0] &&
+          firmwareOptions.uid[1] == mac_addr[1] &&
+          firmwareOptions.uid[2] == mac_addr[2] &&
+          firmwareOptions.uid[3] == mac_addr[3] &&
+          firmwareOptions.uid[4] == mac_addr[4] &&
+          firmwareOptions.uid[5] == mac_addr[5])
       {
         ProcessMSPPacketFromPeer(msp.getReceivedPacket());
       }
@@ -209,7 +205,7 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   }
   else
   {
-    esp_now_send(broadcastAddress, (uint8_t *) &nowDataOutput, packetSize);
+    esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
   }
 
   blinkLED();
@@ -239,15 +235,15 @@ void SetSoftMACAddress()
   for (int i = 0; i < 6; i++)
   {
     #ifndef MY_UID
-    memcpy(broadcastAddress, config.GetGroupAddress(), 6);
+    memcpy(firmwareOptions.uid, config.GetGroupAddress(), 6);
     #endif
-    DBG("%x", broadcastAddress[i]); // Debug prints
+    DBG("%x", firmwareOptions.uid[i]); // Debug prints
     DBG(",");
   }
   DBGLN(""); // Extra line for serial output readability
 
   // MAC address can only be set with unicast, so first byte must be even, not odd
-  broadcastAddress[0] = broadcastAddress[0] & ~0x01;
+  firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
 
   WiFi.mode(WIFI_STA);
   WiFi.begin("network-name", "pass-to-network", 1);
@@ -255,9 +251,9 @@ void SetSoftMACAddress()
 
   // Soft-set the MAC address to the passphrase UID for binding
   #if defined(PLATFORM_ESP8266)
-    wifi_set_macaddr(STATION_IF, broadcastAddress);
+    wifi_set_macaddr(STATION_IF, firmwareOptions.uid);
   #elif defined(PLATFORM_ESP32)
-    esp_wifi_set_mac(WIFI_IF_STA, broadcastAddress);
+    esp_wifi_set_mac(WIFI_IF_STA, firmwareOptions.uid);
   #endif
 }
 
@@ -315,9 +311,9 @@ void setup()
 
     #if defined(PLATFORM_ESP8266)
       esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-      esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+      esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     #elif defined(PLATFORM_ESP32)
-      memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+      memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
       peerInfo.channel = 0;
       peerInfo.encrypt = false;
       if (esp_now_add_peer(&peerInfo) != ESP_OK)

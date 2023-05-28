@@ -11,3 +11,13 @@ const char PROGMEM compile_options[] = {
     "-DMY_BINDING_PHRASE=\"" STR(MY_BINDING_PHRASE) "\" "
 #endif
 };
+
+firmware_options_t firmwareOptions = {
+#ifdef MY_UID
+    .uid = {MY_UID},
+    .hasUid = true,
+#else
+    .uid = {0, 0, 0, 0, 0, 0},
+    .hasUid = false,
+#endif
+};
