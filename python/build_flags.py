@@ -114,7 +114,7 @@ build_flags.append("-DLATEST_VERSION=" + get_version())
 build_flags.append("-DTARGET_NAME=" + re.sub("_VIA_.*", "", target_name))
 condense_flags()
 
-json_flags['flash-discriminator'] = randint(1,2147483647)
+json_flags['flash-discriminator'] = randint(1,2**32-1)
 
 env['OPTIONS_JSON'] = json_flags
 env['BUILD_FLAGS'] = build_flags

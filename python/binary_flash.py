@@ -4,7 +4,11 @@ from enum import Enum
 import shutil
 import os
 import argparse
+import hashlib
+from json import JSONEncoder
+from random import randint
 
+import UnifiedConfiguration
 import ETXinitPassthrough
 import serials_find
 import upload_via_esp8266_backpack
@@ -226,8 +230,17 @@ def main():
         mcu = args.target.split('.')[2]
         if mcu == 'esp32': mcu = MCUType.ESP32
         else: mcu = MCUType.ESP8266
-    print (type, mcu)
 
+    json_flags = {}
+    if args.phrase is not None:
+        json_flags['uid'] = bindingPhraseHash = [x for x in hashlib.md5(("-DMY_BINDING_PHRASE=\""+args.phrase+"\"").encode()).digest()[0:6]]
+    if args.ssid is not None:
+        json_flags['wifi-ssid'] = args.ssid
+    if args.password is not None and args.ssid is not None:
+        json_flags['wifi-password'] = args.password
+    json_flags['flash-discriminator'] = randint(1,2**32-1)
+
+    UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
     upload(DeviceType.TXBP if type == 'txbp' else DeviceType.VRX, mcu, args)
 
 if __name__ == '__main__':
