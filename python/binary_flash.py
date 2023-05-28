@@ -72,7 +72,7 @@ def upload_esp8266_etx(args):
         args.port = serials_find.get_serial_port()
     ETXinitPassthrough.etx_passthrough_init(args.port, 460800)
     try:
-        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '460800', '--before', 'no_reset', '--after', 'soft_reset', 'write_flash', '0x0000', args.file.name])
+        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '460800', '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '0x0000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -81,7 +81,7 @@ def upload_esp8266_passthru(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
     try:
-        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '230400', '--before', 'passthru', '--after', 'soft_reset', 'write_flash', '0x0000', args.file.name])
+        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '230400', '--before', 'passthru', '--after', 'hard_reset', 'write_flash', '0x0000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success

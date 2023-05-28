@@ -529,19 +529,13 @@ class ESPLoader(object):
 
             if mode == 'passthru':
                 self._setDTR(False)  # IO0=HIGH
-                # self._setRTS(True)   # EN=LOW, chip in reset
                 time.sleep(0.1)
-                # if esp32r0_delay:
-                #     # Some chips are more likely to trigger the esp32r0
-                #     # watchdog reset silicon bug if they're held with EN=LOW
-                #     # for a longer period
-                #     time.sleep(1.2)
                 self._setRTS(False)  # EN=HIGH, chip out of reset
-                time.sleep(4.0)      # Wait for firmware to start
+                time.sleep(2.0)      # Wait for firmware to start
                 self._setDTR(True)   # IO0=LOW
                 time.sleep(0.2)
                 self._setDTR(False)  # IO0=HIGH, done
-                time.sleep(0.2)
+                time.sleep(0.1)
             elif mode != 'no_reset':
                 self._setDTR(False)  # IO0=HIGH
                 self._setRTS(True)  # EN=LOW, chip in reset
