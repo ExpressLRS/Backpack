@@ -2,19 +2,19 @@
 
 from enum import Enum
 import shutil
+import sys
 import os
 import argparse
 import hashlib
+import json
 from json import JSONEncoder
 from random import randint
+from os.path import dirname
 
 import UnifiedConfiguration
 import ETXinitPassthrough
 import serials_find
 import upload_via_esp8266_backpack
-
-import sys
-from os.path import dirname
 
 sys.path.append(dirname(__file__) + '/external/esptool')
 from external.esptool import esptool
@@ -223,13 +223,32 @@ def main():
 
     args = parser.parse_args()
 
+    if args.dir != None:
+        os.chdir(args.dir)
+
     type = args.target.split('.')[0]
     if type == 'txbp':
+        hardware = args.target.split('.')[1]
         mcu = MCUType.ESP8266
     else:
-        mcu = args.target.split('.')[2]
-        if mcu == 'esp32': mcu = MCUType.ESP32
+        vrx = args.target.split('.')[1]
+        hardware = args.target.split('.')[2]
+        if hardware == 'esp32': mcu = MCUType.ESP32
         else: mcu = MCUType.ESP8266
+
+    if args.file is None:
+        with open('hardware/targets.json') as f:
+            targets = json.load(f)
+        if type == 'txbp':
+            dir = targets[type][hardware]['firmware']
+        else:
+            dir = targets[type][vrx][hardware]['firmware']
+        srcdir = os.path.join('firmware', dir)
+        shutil.copy2(srcdir + '/firmware.bin', '.')
+        if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', '.')
+        if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', '.')
+        if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', '.')
+        args.file = open('firmware.bin', 'r+b')
 
     json_flags = {}
     if args.phrase is not None:
@@ -239,8 +258,8 @@ def main():
     if args.password is not None and args.ssid is not None:
         json_flags['wifi-password'] = args.password
     json_flags['flash-discriminator'] = randint(1,2**32-1)
-
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
+
     upload(DeviceType.TXBP if type == 'txbp' else DeviceType.VRX, mcu, args)
 
 if __name__ == '__main__':
