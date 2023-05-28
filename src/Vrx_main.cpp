@@ -385,6 +385,9 @@ void setup()
     // Otherwise, delay it till the end of setup
     Serial.begin(VRX_UART_BAUD);
   #endif
+
+  options_init();
+
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();

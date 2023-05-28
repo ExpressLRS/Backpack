@@ -6,15 +6,15 @@
 #define TX_BACKPACK_CONFIG_MAGIC    (0b01 << 30)
 #define VRX_BACKPACK_CONFIG_MAGIC   (0b10 << 30)
 
-#define TX_BACKPACK_CONFIG_VERSION      2
-#define VRX_BACKPACK_CONFIG_VERSION     2
+#define TX_BACKPACK_CONFIG_VERSION      3
+#define VRX_BACKPACK_CONFIG_VERSION     3
 
 #if defined(TARGET_TX_BACKPACK)
 typedef struct {
     uint32_t    version;
     bool        startWiFi;
     char        ssid[33];
-    char        password[33];
+    char        password[65];
     uint8_t     address[6];
 } tx_backpack_config_t;
 
@@ -57,7 +57,7 @@ typedef struct {
     uint8_t     bootCount;
     bool        startWiFi;
     char        ssid[33];
-    char        password[33];
+    char        password[65];
     uint8_t     address[6];
 } vrx_backpack_config_t;
 

@@ -1,8 +1,10 @@
 Import("env", "projenv")
+import os
 import shutil
 import upload_via_esp8266_backpack
 import esp_compress
 import ETXinitPassthrough
+import UnifiedConfiguration
 
 platform = env.get('PIOPLATFORM', '')
 
@@ -39,3 +41,10 @@ if "_WIFI" in target_name:
         env.SetDefault(UPLOAD_PORT="elrs_txbp.local")
     else:
         env.SetDefault(UPLOAD_PORT="elrs_vrx.local")
+
+# Remove stale binary so the platform is forced to build a new one and attach options/hardware-layout files
+try:
+    os.remove(env['PROJECT_BUILD_DIR'] + '/' + env['PIOENV'] +'/'+ env['PROGNAME'] + '.bin')
+except FileNotFoundError:
+    None
+env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)

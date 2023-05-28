@@ -6,7 +6,11 @@ extern const char PROGMEM compile_options[];
 
 typedef struct {
     uint8_t uid[6];
-    bool hasUid;
+    bool    hasUID;
+    char    home_wifi_ssid[33];
+    char    home_wifi_password[65];
 } firmware_options_t;
 
 extern firmware_options_t firmwareOptions;
+
+extern bool options_init();

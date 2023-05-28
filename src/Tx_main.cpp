@@ -282,6 +282,8 @@ void setup()
   #endif
   Serial.begin(460800);
 
+  options_init();
+
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();

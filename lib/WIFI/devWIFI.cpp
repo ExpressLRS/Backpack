@@ -38,9 +38,6 @@ extern TxBackpackConfig config;
 #endif
 extern unsigned long rebootTime;
 
-#define QUOTE(arg) #arg
-#define STR(macro) QUOTE(macro)
-
 #if defined(TARGET_VRX_BACKPACK)
 static const char *myHostname = "elrs_vrx";
 static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
@@ -51,17 +48,6 @@ static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
 #error Unknown target
 #endif
 static const char *wifi_ap_password = "expresslrs";
-
-static const char *home_wifi_ssid = ""
-#ifdef HOME_WIFI_SSID
-STR(HOME_WIFI_SSID)
-#endif
-;
-static const char *home_wifi_password = ""
-#ifdef HOME_WIFI_PASSWORD
-STR(HOME_WIFI_PASSWORD)
-#endif
-;
 
 static char station_ssid[33];
 static char station_password[65];
@@ -258,7 +244,7 @@ static void WebUpdateSetHome(AsyncWebServerRequest *request)
   strcpy(station_ssid, ssid.c_str());
   strcpy(station_password, password.c_str());
   // Only save to config if we don't have a flashed wifi network
-  if (home_wifi_ssid[0] == 0) {
+  if (firmwareOptions.home_wifi_ssid[0] == 0) {
     config.SetSSID(ssid.c_str());
     config.SetPassword(password.c_str());
     config.Commit();
@@ -273,9 +259,9 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
   config.SetPassword("");
   config.Commit();
   // If we have a flashed wifi network then let's try reconnecting to that otherwise start an access point
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
     String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
     sendResponse(request, msg, WIFI_STA);
   }
@@ -481,9 +467,9 @@ static void startWiFi(unsigned long now)
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_13dBm);
   #endif
-  if (home_wifi_ssid[0] != 0) {
-    strcpy(station_ssid, home_wifi_ssid);
-    strcpy(station_password, home_wifi_password);
+  if (firmwareOptions.home_wifi_ssid[0] != 0) {
+    strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
+    strcpy(station_password, firmwareOptions.home_wifi_password);
   }
   else {
     strcpy(station_ssid, config.GetSSID());

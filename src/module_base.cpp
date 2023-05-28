@@ -1,6 +1,7 @@
 #include "module_base.h"
 
 #include "common.h"
+#include "options.h"
 #include "device.h"
 #include "msptypes.h"
 #include "logging.h"
@@ -8,7 +9,6 @@
 void RebootIntoWifi();
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
-extern uint8_t broadcastAddress[6];
 extern bool headTrackingEnabled;
 void sendMSPViaEspnow(mspPacket_t *packet);
 
@@ -104,8 +104,8 @@ MSPModuleBase::Loop(uint32_t now)
                 uint8_t response[7] = {0};
                 response[0] |= connectionState == wifiUpdate ? 1 : 0;
                 response[0] |= connectionState == binding ? 2 : 0;
-                response[0] |= memcmp(broadcastAddress, unbound, 6) != 0 ? 4 : 0;
-                memcpy(&response[1], broadcastAddress, 6);
+                response[0] |= memcmp(firmwareOptions.uid, unbound, 6) != 0 ? 4 : 0;
+                memcpy(&response[1], firmwareOptions.uid, 6);
                 sendResponse(MSP_ELRS_BACKPACK_GET_STATUS, response, sizeof(response));
             }
             else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && headTrackingEnabled)
