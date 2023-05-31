@@ -49,18 +49,13 @@ class UploadMethod(Enum):
     def __str__(self):
         return self.value
 
-def upload_wifi(args, mcuType, upload_addr, isstm: bool):
-    wifi_mode = 'upload'
-    if args.force == True:
-        wifi_mode = 'uploadforce'
-    elif args.confirm == True:
-        wifi_mode = 'uploadconfirm'
+def upload_wifi(args, mcuType, upload_addr):
     if args.port:
         upload_addr = [args.port]
     if mcuType == MCUType.ESP8266:
-        return upload_via_esp8266_backpack.do_upload('firmware.bin.gz', wifi_mode, upload_addr, isstm, {})
+        return upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
     else:
-        return upload_via_esp8266_backpack.do_upload(args.file.name, wifi_mode, upload_addr, isstm, {})
+        return upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
 
 def upload_esp8266_uart(args):
     if args.port == None:
@@ -142,12 +137,12 @@ def upload(deviceType: DeviceType, mcuType: MCUType, args):
             if args.flash == UploadMethod.uart:
                 return upload_esp8266_uart(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'], False)
+                return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'])
         elif mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.uart:
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'], False)
+                return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'])
     else:
         if mcuType == MCUType.ESP8266:
             if args.flash == UploadMethod.edgetx:
@@ -157,7 +152,7 @@ def upload(deviceType: DeviceType, mcuType: MCUType, args):
             elif args.flash == UploadMethod.passthru:
                 return upload_esp8266_passthru(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, mcuType, ['elrs_txbp', 'elrs_txbp.local'], False)
+                return upload_wifi(args, mcuType, ['elrs_txbp', 'elrs_txbp.local'])
         if mcuType == MCUType.ESP32:
             if args.flash == UploadMethod.edgetx:
                 return upload_esp32_etx(args)
@@ -166,7 +161,7 @@ def upload(deviceType: DeviceType, mcuType: MCUType, args):
             elif args.flash == UploadMethod.passthru:
                 return upload_esp32_passthru(args)
             elif args.flash == UploadMethod.wifi:
-                return upload_wifi(args, mcuType, ['elrs_txbp', 'elrs_txbp.local'], False)
+                return upload_wifi(args, mcuType, ['elrs_txbp', 'elrs_txbp.local'])
     print("Invalid upload method for firmware")
     return ElrsUploadResult.ErrorGeneral
 
@@ -226,29 +221,22 @@ def main():
     if args.dir != None:
         os.chdir(args.dir)
 
-    type = args.target.split('.')[0]
-    if type == 'txbp':
-        hardware = args.target.split('.')[1]
-        mcu = MCUType.ESP8266
-    else:
-        vrx = args.target.split('.')[1]
-        hardware = args.target.split('.')[2]
-        if hardware == 'esp32': mcu = MCUType.ESP32
-        else: mcu = MCUType.ESP8266
+    vendor = args.target.split('.')[0]
+    hardware = args.target.split('.')[1]
+    target = args.target.split('.')[2]
 
     if args.file is None:
         with open('hardware/targets.json') as f:
             targets = json.load(f)
-        if type == 'txbp':
-            dir = targets[type][hardware]['firmware']
-        else:
-            dir = targets[type][vrx][hardware]['firmware']
+        dir = targets[vendor][hardware][target]['firmware']
         srcdir = os.path.join('firmware', dir)
         shutil.copy2(srcdir + '/firmware.bin', '.')
         if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', '.')
         if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', '.')
         if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', '.')
         args.file = open('firmware.bin', 'r+b')
+
+    mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
 
     json_flags = {}
     if args.phrase is not None:
@@ -260,7 +248,7 @@ def main():
     json_flags['flash-discriminator'] = randint(1,2**32-1)
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
 
-    upload(DeviceType.TXBP if type == 'txbp' else DeviceType.VRX, mcu, args)
+    upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)
 
 if __name__ == '__main__':
     try:

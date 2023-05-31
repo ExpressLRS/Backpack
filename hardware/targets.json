@@ -1,110 +1,382 @@
 {
-    "txbp": {
-        "esp": {
-            "name": "ESP32 based TX Module backpack",
-            "firmware": "ESP_TX_Backpack"
-        },
-        "stm": {
-            "name": "STM32 based TX Module backpack",
-            "firmware": "STM_TX_Backpack"
+    "generic": {
+        "name": "Generic backpack for any TX module",
+        "txbp": {
+            "esp": {
+                "product_name": "Backpack for ESP32-based TX module",
+                "firmware": "ESP_TX_Backpack",
+                "upload_methods": ["uart", "etx", "passthru", "wifi"],
+                "platform": "esp8285"
+            },
+            "stm": {
+                "product_name": "Backpack for STM32-based TX module",
+                "firmware": "STM_TX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
         }
     },
-    "vrx": {
-        "fusion": {
-            "name": "Fusion VRX built-in backpack",
+    "axis": {
+        "name": "Axisflying",
+        "txbp": {
+            "thor": {
+                "product_name": "AXIS Thor 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "betafpv": {
+        "name": "BETAFPV",
+        "txbp": {
+            "micro900": {
+                "product_name": "BETAFPV 900MHz Micro TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "micro2g4": {
+                "product_name": "BETAFPV 2.4GHz Micro TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "micro1w": {
+                "product_name": "BETAFPV 2.4GHz 1W Micro TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "emax": {
+        "name": "EMAX",
+        "txbp": {
+            "plain900": {
+                "product_name": "EMAX OLED 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "nano900": {
+                "product_name": "EMAX Nano 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "plain": {
+                "product_name": "EMAX OLED 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "nano": {
+                "product_name": "EMAX Nano 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            }
+        }
+    },
+    "happymodel": {
+        "name": "Happymodel",
+        "txbp": {
+            "es900": {
+                "product_name": "HappyModel ES900 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "es24": {
+                "product_name": "HappyModel ES24 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "es24pro": {
+                "product_name": "HappyModel ES24 Pro 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "es24slimpro": {
+                "product_name": "HappyModel ES24 Slim Pro 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "namimnorc": {
+        "name": "NamimnoRC",
+        "txbp": {
+            "voyager_stm": {
+                "product_name": "NamimnoRC Voyager 900MHz TX",
+                "platform": "stm8285",
+                "firmware": "STM_TX_Backpack",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "voyager": {
+                "product_name": "NamimnoRC Voyager OLED 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "flash_stm": {
+                "product_name": "NamimnoRC Flash 2.4GHz TX",
+                "platform": "stm8285",
+                "firmware": "STM_TX_Backpack",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "flash": {
+                "product_name": "NamimnoRC Flash OLED 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "quadkopters": {
+        "name": "QuadKopters",
+        "txbp": {
+            "jr": {
+                "product_name": "QuadKopters JR 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "slim": {
+                "product_name": "QuadKopters Slim 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "radiomaster": {
+        "name": "RadioMaster",
+        "txbp": {
+            "zorro": {
+                "product_name": "RadioMaster Zorro 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "tx16s": {
+                "product_name": "RadioMaster TX16S Internal 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "tx12": {
+                "product_name": "RadioMaster TX12 Internal 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "ranger": {
+                "product_name": "RadioMaster Ranger 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "ranger-micro": {
+                "product_name": "RadioMaster Ranger Micro 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "ranger-nano": {
+                "product_name": "RadioMaster Ranger Nano 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+			},
+            "boxer": {
+                "product_name": "RadioMaster Boxer Internal 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
+    "fusion": {
+        "name": "Fusion VRX",
+        "vrx": {
             "builtin": {
-                "firmware": "Fusion_Builtin_Backpack"
-            }
-        },
-        "hdzero": {
-            "name": "HDZero RX5.1 Video Receiver",
-            "rx": {
-                "firmware": "HDZero_RX51_ESP_RX_Backpack"
-            },
-            "esp01f": {
-                "firmware": "HDZero_RX51_ESP01F_Backpack"
-            },
-            "esp32": {
-                "firmware": "HDZero_RX51_ESP32_Backpack"
-            },
-            "ep82": {
-                "firmware": "HDZero_RX51_HappyModel_EP82_VRX_Backpack"
-            }
-        },
-        "rapidfire": {
-            "name": "rapidFIRE Module",
-            "rx": {
-                "firmware": "Rapidfire_ESP_RX_Backpack"
-            },
-            "esp01f": {
-                "firmware": "Rapidfire_ESP01F_Backpack"
-            },
-            "esp12f": {
-                "firmware": "Rapidfire_ESP12F_Backpack"
-            },
-            "ep82": {
-                "firmware": "Rapidfire_HappyModel_EP82_VRX_Backpack"
-            }
-        },
-        "rx5808": {
-            "name": "RX5808 Single Module",
-            "rx": {
-                "firmware": "RX5808_ESP_RX_Backpack"
-            },
-            "esp01f": {
-                "firmware": "RX5808_ESP01F_Backpack"
-            },
-            "esp12f": {
-                "firmware": "RX5808_ESP12F_Backpack"
-            },
-            "ep82": {
-                "firmware": "RX5808_HappyModel_EP82_VRX_Backpack"
-            }
-        },
-        "rx5808-diversity": {
-            "name": "RX5808 Diversity Module",
-            "esp01f": {
-                "firmware": "RX5808_Diversity_ESP01F_Backpack"
-            }
-        },
-        "skyzone-elrs": {
-            "name": "Skyzone Steadyview ELRS Module",
-            "esp32": {
-                "firmware": "Skyzone_Onboard_ESP32_Backpack"
-            }
-        },
-        "skyzone-diy": {
-            "name": "Skyzone Steadyview Module (DIY)",
-            "rx": {
-                "firmware": "Skyzone_SteadyView_ESP_RX_Backpack"
-            },
-            "esp01f": {
-                "firmware": "Skyzone_SteadyView_ESP01F_Backpack"
-            },
-            "ep82": {
-                "firmware": "Skyzone_SteadyView_HappyModel_EP82_VRX_Backpack"
+                "product_name": "Built-in ESP Module",
+                "firmware": "Fusion_Builtin_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
             }
         }
     },
-    "goggle": {
-        "hdzero": {
-            "name": "HDZero Goggles built-in backpack",
-            "esp32": {
-                "firmware": "HDZero_Goggle_ESP32_Backpack"
-            }
-        },
-        "orqa": {
-            "name": "Orqa Goggles FPV.Connect backpack",
+    "hdzero-vrx": {
+        "name": "HDZero RX5.1 Video Receiver",
+        "vrx": {
             "rx": {
-                "firmware": "Orqa_ESP_RX_Backpack"
+                "product_name": "ELRS Receiver",
+                "firmware": "HDZero_RX51_ESP_RX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
             },
             "esp01f": {
-                "firmware": "Orqa_ESP01F_Backpack"
+                "product_name": "ESP01F Module",
+                "firmware": "HDZero_RX51_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp32": {
+                "product_name": "ESP32 Module",
+                "firmware": "HDZero_RX51_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
             },
             "ep82": {
-                "firmware": "Orqa_HappyModel_EP82_VRX_Backpack"
+                "product_name": "Happymodel EP82",
+                "firmware": "HDZero_RX51_HappyModel_EP82_VRX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "hdzero-goggle": {
+        "name": "HDZero Goggles",
+        "vrx": {
+            "esp32": {
+                "product_name": "Built-in ESP32 Backpack",
+                "firmware": "HDZero_RX51_ESP32_Backpack",
+                "upload_methods": ["wifi"],
+                "platform": "esp32"
+            }
+        }
+    },
+
+    "rapidfire": {
+        "name": "rapidFIRE Module",
+        "vrx": {
+            "rx": {
+                "product_name": "ELRS Receiver",
+                "firmware": "Rapidfire_ESP_RX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp01f": {
+                "product_name": "ESP01F Module",
+                "firmware": "Rapidfire_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp12f": {
+                "product_name": "ESP12F Module",
+                "firmware": "Rapidfire_ESP12F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "ep82": {
+                "product_name": "Happymodel EP82",
+                "firmware": "Rapidfire_HappyModel_EP82_VRX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "rx5808": {
+        "name": "RX5808 Single Module",
+        "vrx": {
+            "rx": {
+                "product_name": "ELRS Receiver",
+                "firmware": "RX5808_ESP_RX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp01f": {
+                "product_name": "ESP01F Module",
+                "firmware": "RX5808_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp12f": {
+                "product_name": "ESP12F Module",
+                "firmware": "RX5808_ESP12F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "ep82": {
+                "product_name": "Happymodel EP82",
+                "firmware": "RX5808_HappyModel_EP82_VRX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "rx5808-diversity": {
+        "name": "RX5808 Diversity Module",
+        "vrx": {
+            "esp01f": {
+                "product_name": "ESP01F Module",
+                "firmware": "RX5808_Diversity_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "skyzone-elrs": {
+        "name": "Skyzone Steadyview ELRS Module",
+        "vrx": {
+            "esp32": {
+                "product_name": "ESP01F Module",
+                "firmware": "Skyzone_Onboard_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "skyzone-diy": {
+        "name": "Skyzone Steadyview Module (DIY)",
+        "vrx": {
+            "rx": {
+                "product_name": "ELRS Receiver",
+                "firmware": "Skyzone_SteadyView_ESP_RX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp01f": {
+                "product_name": "ESP01F Module",
+                "firmware": "Skyzone_SteadyView_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "ep82": {
+                "product_name": "Happymodel EP82",
+                "firmware": "Skyzone_SteadyView_HappyModel_EP82_VRX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "orqa": {
+        "name": "Orqa Goggles FPV.Connect backpack",
+        "vrx": {
+            "rx": {
+                "product_name": "ELRS Receiver",
+                "firmware": "Orqa_ESP_RX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp01f": {
+                "product_name": "ESP01F Module",
+                "firmware": "Orqa_ESP01F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "ep82": {
+                "product_name": "Happymodel EP82",
+                "firmware": "Orqa_HappyModel_EP82_VRX_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
             }
         }
     }
-
 }

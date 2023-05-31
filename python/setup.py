@@ -1,6 +1,6 @@
 import setuptools
 setuptools.setup(
-    name="binary_flasher",
+    name="binary_flash",
     version="3.3.0",
     author="ExpressLRS Team",
     author_email="",
@@ -11,7 +11,7 @@ setuptools.setup(
     packages=['.'] + setuptools.find_packages(),
     include_package_data=True,
     entry_points={
-        "console_scripts": ["flash=binary_flasher:main"],
+        "console_scripts": ["flash=binary_flash:main"],
     },
     install_requires=['pyserial'],
     classifiers=[
