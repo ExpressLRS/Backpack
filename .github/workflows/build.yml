@@ -56,12 +56,12 @@ jobs:
         mkdir -p ~/artifacts/firmware
         pio run -e ${{ matrix.target }}
         mv .pio/build/${{ matrix.target }} ~/artifacts/firmware/`echo ${{ matrix.target }} | sed s/_via_UART//`
-        cp -r hardware ~/artifacts
+        cp -r hardware ~/artifacts/firmware
 
     - name: Store Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: backpack
+        name: firmware
         path: |
           ~/artifacts/**/*.bin
           ~/artifacts/**/*.json
@@ -84,25 +84,25 @@ jobs:
       - name: Get firmware artifacts
         uses: actions/download-artifact@v3
         with:
-          name: backpack
+          name: firmware
           path: dist
 
       - name: Build flasher "binary" with shiv
         run: |
           cd python
           pip install shiv
-          shiv -c flash -o ../dist/flasher.pyz pyserial .
+          shiv -c flash -o ../dist/firmware/flasher.pyz pyserial .
 
       - name: Update firmware artifact
         uses: actions/upload-artifact@v3
         with:
-          name: backpack
+          name: firmware
           path: dist/**/*
 
       - name: Create firmware zip bundle
         run: |
           cd dist
-          zip -r -9 ../backpack.zip .
+          zip -r -9 ../firmware.zip .
 
       - name: Upload firmware bundle to ExpressLRS artifactory
         env:
@@ -117,7 +117,7 @@ jobs:
           fi
 
           echo "Uploading firmware to artifactory"
-          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL backpack.zip s3://expresslrs/Backpack/$GITHUB_SHA/backpack.zip
+          aws s3 cp --endpoint-url $AWS_ENDPOINT_URL firmware.zip s3://expresslrs/Backpack/$GITHUB_SHA/firmware.zip
 
           echo "Generating artifact index"
           aws s3 ls --endpoint-url $AWS_ENDPOINT_URL s3://expresslrs/Backpack/ | awk '{print $2}' | sed s/\\/// > /tmp/hashes
