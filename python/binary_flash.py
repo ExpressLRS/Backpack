@@ -43,7 +43,7 @@ class MCUType(Enum):
 class UploadMethod(Enum):
     uart = 'uart'
     passthru = 'passthru'
-    edgetx = 'edgetx'
+    edgetx = 'etx'
     wifi = 'wifi'
     dir = 'dir'
     def __str__(self):
