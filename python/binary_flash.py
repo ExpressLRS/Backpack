@@ -225,9 +225,11 @@ def main():
     hardware = args.target.split('.')[1]
     target = args.target.split('.')[2]
 
+    with open('hardware/targets.json') as f:
+        targets = json.load(f)
+    mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
+
     if args.file is None:
-        with open('hardware/targets.json') as f:
-            targets = json.load(f)
         dir = targets[vendor][hardware][target]['firmware']
         srcdir = os.path.join('firmware', dir)
         shutil.copy2(srcdir + '/firmware.bin', '.')
@@ -235,8 +237,6 @@ def main():
         if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', '.')
         if os.path.exists(srcdir + '/boot_app0.bin'): shutil.copy2(srcdir + '/boot_app0.bin', '.')
         args.file = open('firmware.bin', 'r+b')
-
-    mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
 
     json_flags = {}
     if args.phrase is not None:
