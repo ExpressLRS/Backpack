@@ -230,8 +230,7 @@ def main():
     mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
 
     if args.file is None:
-        dir = targets[vendor][hardware][target]['firmware']
-        srcdir = os.path.join('firmware', dir)
+        srcdir = targets[vendor][hardware][target]['firmware']
         shutil.copy2(srcdir + '/firmware.bin', '.')
         if os.path.exists(srcdir + '/bootloader.bin'): shutil.copy2(srcdir + '/bootloader.bin', '.')
         if os.path.exists(srcdir + '/partitions.bin'): shutil.copy2(srcdir + '/partitions.bin', '.')
