@@ -52,10 +52,14 @@ class UploadMethod(Enum):
 def upload_wifi(args, mcuType, upload_addr):
     if args.port:
         upload_addr = [args.port]
-    if mcuType == MCUType.ESP8266:
-        return upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
-    else:
-        return upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
+    try:
+        if mcuType == MCUType.ESP8266:
+            upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
+        else:
+            upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
+    except:
+        return ElrsUploadResult.ErrorGeneral
+    return ElrsUploadResult.Success
 
 def upload_esp8266_uart(args):
     if args.port == None:
@@ -125,6 +129,7 @@ def upload_dir(mcuType, args):
         shutil.copy2(os.path.join(dir, 'bootloader.bin'), args.out)
         shutil.copy2(os.path.join(dir, 'partitions.bin'), args.out)
         shutil.copy2(os.path.join(dir, 'boot_app0.bin'), args.out)
+    return ElrsUploadResult.Success
 
 def upload(deviceType: DeviceType, mcuType: MCUType, args):
     if args.baud == 0:
@@ -247,7 +252,8 @@ def main():
     json_flags['flash-discriminator'] = randint(1,2**32-1)
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
 
-    upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)
+    ret = upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)
+    sys.exit(ret)
 
 if __name__ == '__main__':
     try:
