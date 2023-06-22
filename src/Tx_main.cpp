@@ -79,19 +79,26 @@ void RebootIntoWifi()
 
 void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 {
-  if (packet->function == MSP_ELRS_REQU_VTX_PKT)
-  {
-    DBGLN("MSP_ELRS_REQU_VTX_PKT...");
-    // request from the vrx-backpack to send cached VTX packet
-    if (cacheFull)
-    {
-      sendCached = true;
+  switch (packet->function) {
+    case MSP_ELRS_REQU_VTX_PKT: {
+      DBGLN("MSP_ELRS_REQU_VTX_PKT...");
+      // request from the vrx-backpack to send cached VTX packet
+      if (cacheFull)
+      {
+        sendCached = true;
+      }
+      break;
     }
-  }
-  else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR)
-  {
-    DBGLN("MSP_ELRS_BACKPACK_SET_PTR...");
-    msp.sendPacket(packet, &Serial);
+    case MSP_ELRS_BACKPACK_SET_PTR: {
+      DBGLN("MSP_ELRS_BACKPACK_SET_PTR...");
+      msp.sendPacket(packet, &Serial);
+      break;
+    }
+    case MSP_SET_VTX_CONFIG: {
+      DBGLN("MSP_SET_VTX_CONFIG...");
+      msp.sendPacket(packet, &Serial);
+      break;
+    }
   }
 }
 
