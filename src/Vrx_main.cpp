@@ -233,6 +233,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
     }
     break;
   case MSP_ELRS_SET_OSD:
+    DBGLN("Processing MSP_ELRS_SET_OSD...");
     vrxModule.SetOSD(packet);
     break;
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
