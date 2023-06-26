@@ -12,7 +12,6 @@ from random import randint
 from os.path import dirname
 
 import UnifiedConfiguration
-import ETXinitPassthrough
 import serials_find
 import upload_via_esp8266_backpack
 
@@ -73,9 +72,8 @@ def upload_esp8266_uart(args):
 def upload_esp8266_etx(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    ETXinitPassthrough.etx_passthrough_init(args.port, 460800)
     try:
-        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '460800', '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '0x0000', args.file.name])
+        esptool.main(['--passthrough', '--chip', 'esp8266', '--port', args.port, '--baud', '460800', '--before', 'etx', '--after', 'hard_reset', 'write_flash', '0x0000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -102,10 +100,9 @@ def upload_esp32_uart(args):
 def upload_esp32_etx(args):
     if args.port == None:
         args.port = serials_find.get_serial_port()
-    ETXinitPassthrough.etx_passthrough_init(args.port, 460800)
     try:
         dir = os.path.dirname(args.file.name)
-        esptool.main(['--passthrough', '--chip', 'esp32', '--port', args.port, '--baud', '460800', '--before', 'no_reset', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
+        esptool.main(['--passthrough', '--chip', 'esp32', '--port', args.port, '--baud', '460800', '--before', 'etx', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
