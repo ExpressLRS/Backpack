@@ -536,6 +536,21 @@ class ESPLoader(object):
                 time.sleep(0.2)
                 self._setDTR(False)  # IO0=HIGH, done
                 time.sleep(0.1)
+            elif mode == 'etx':
+                self._port.flush()
+                self._port.write(b"set rfmod 0 power off\n")
+                time.sleep(0.1)
+                self._port.write(b"set pulses 0\n")
+                time.sleep(0.5)
+                self._port.write(b"set rfmod 0 power on\n")
+                time.sleep(2.5)
+                self._port.write(b"set rfmod 0 bootpin 1\n")
+                time.sleep(0.1)
+                self._port.write(b"set rfmod 0 bootpin 0\n")
+                time.sleep(0.1)
+                cmd = "serialpassthrough rfmod 0 %s" % self._port.baudrate
+                self._port.write(cmd.encode("utf-8"))
+                self._port.write(b'\n')
             elif mode != 'no_reset':
                 self._setDTR(False)  # IO0=HIGH
                 self._setRTS(True)  # EN=LOW, chip in reset

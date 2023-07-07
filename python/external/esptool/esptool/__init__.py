@@ -129,7 +129,7 @@ def main(argv=None, esp=None):
     parser.add_argument(
         "--before",
         help="What to do before connecting to the chip",
-        choices=["default_reset", "usb_reset", "no_reset", "no_reset_no_sync", "passthru"],
+        choices=["default_reset", "usb_reset", "no_reset", "no_reset_no_sync", "passthru", "etx"],
         default=os.environ.get("ESPTOOL_BEFORE", "default_reset"),
     )
 
