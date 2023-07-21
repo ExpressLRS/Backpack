@@ -25,19 +25,19 @@ uint8_t
 HDZero::GetChannelIndex()
 {
     MSP msp;
-    mspPacket_t* packet = new mspPacket_t;
-    packet->reset();
-    packet->makeCommand();
-    packet->function = MSP_ELRS_BACKPACK_GET_CHANNEL_INDEX;
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_GET_CHANNEL_INDEX;
 
     // Send request, then wait for a response back from the VRX
-    bool receivedResponse = msp.awaitPacket(packet, m_port, VRX_RESPONSE_TIMEOUT);
+    bool receivedResponse = msp.awaitPacket(&packet, m_port, VRX_RESPONSE_TIMEOUT);
 
     if (receivedResponse)
     {
-        packet = msp.getReceivedPacket();
+        mspPacket_t *packetResponse = msp.getReceivedPacket();
         msp.markPacketReceived();
-        return packet->readByte();
+        return packetResponse->readByte();
     }
 
     DBGLN("HDZero module: Exceeded timeout while waiting for channel index response");
@@ -61,19 +61,19 @@ uint8_t
 HDZero::GetRecordingState()
 {
     MSP msp;
-    mspPacket_t* packet = new mspPacket_t;
-    packet->reset();
-    packet->makeCommand();
-    packet->function = MSP_ELRS_BACKPACK_GET_RECORDING_STATE;
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_GET_RECORDING_STATE;
 
     // Send request, then wait for a response back from the VRX
-    bool receivedResponse = msp.awaitPacket(packet, m_port, VRX_RESPONSE_TIMEOUT);
+    bool receivedResponse = msp.awaitPacket(&packet, m_port, VRX_RESPONSE_TIMEOUT);
 
     if (receivedResponse)
     {
-        packet = msp.getReceivedPacket();
+        mspPacket_t *packetResponse = msp.getReceivedPacket();
         msp.markPacketReceived();
-        return packet->readByte() ? VRX_DVR_RECORDING_ACTIVE : VRX_DVR_RECORDING_INACTIVE;
+        return packetResponse->readByte() ? VRX_DVR_RECORDING_ACTIVE : VRX_DVR_RECORDING_INACTIVE;
     }
 
     DBGLN("HDZero module: Exceeded timeout while waiting for recording state response");
@@ -136,6 +136,6 @@ HDZero::SetRTC()
     packet.addByte(timeData.tm_hour);
     packet.addByte(timeData.tm_min);
     packet.addByte(timeData.tm_sec);
-    
+
     msp.sendPacket(&packet, m_port);
 }
