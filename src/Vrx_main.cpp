@@ -228,6 +228,29 @@ void ProcessMSPPacket(mspPacket_t *packet)
     headTrackingEnabled = packet->readByte();
     sendHeadTrackingChangesToVrx = true;
     break;
+#if defined(FUSION_BACKPACK)
+  case MSP_ELRS_BACKPACK_CRSF_TLM:
+    DBGV("Processing MSP_ELRS_BACKPACK_CRSF_TLM type %x\n", packet->payload[1]);
+    if (packet->payloadSize < 4) {
+      DBGLN("CRSF_TLM packet too short")
+      break;
+    }
+    for (int i = 0; i < packet->payloadSize; i++)
+    {
+      DBG("%x", packet->payload[i]); // Debug prints
+      DBG(" ");
+    }
+    DBGLN("");
+    switch (packet->payload[2]) {
+    case 0x14:
+      vrxModule.SendLinkTelemetry(packet->payload);
+      break;
+    case 0x08:
+      vrxModule.SendBatteryTelemetry(packet->payload);
+      break;
+    }
+    break;
+#endif
   default:
     DBGLN("Unknown command from ESPNOW");
     break;

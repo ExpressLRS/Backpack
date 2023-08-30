@@ -19,6 +19,7 @@
 #define MSP_ELRS_SET_RX_WIFI_MODE               0x0E
 #define MSP_ELRS_SET_RX_LOAN_MODE               0x0F
 #define MSP_ELRS_GET_BACKPACK_VERSION           0x10
+#define MSP_ELRS_BACKPACK_CRSF_TLM              0x11
 #define MSP_ELRS_SET_OSD                        0x00B6
 
 // CRSF encapsulated msp defines
