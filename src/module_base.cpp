@@ -43,6 +43,16 @@ ModuleBase::SetRTC()
 }
 
 void
+ModuleBase::SendLinkTelemetry(uint8_t *rawCrsfPacket)
+{
+}
+
+void
+ModuleBase::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
+{
+}
+
+void
 ModuleBase::Loop(uint32_t now)
 {
 }
