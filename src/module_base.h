@@ -12,6 +12,8 @@ public:
     void SetOSD(mspPacket_t *packet);
     void SendHeadTrackingEnableCmd(bool enable);
     void SetRTC();
+    void SendLinkTelemetry(uint8_t *rawCrsfPacket);
+    void SendBatteryTelemetry(uint8_t *rawCrsfPacket);
     void Loop(uint32_t now);
 };
 

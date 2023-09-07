@@ -21,4 +21,6 @@ class Fusion : public ModuleBase
 public:
     void Init();
     void SendIndexCmd(uint8_t index);
+    void SendLinkTelemetry(uint8_t *rawCrsfPacket);
+    void SendBatteryTelemetry(uint8_t *rawCrsfPacket);
 };

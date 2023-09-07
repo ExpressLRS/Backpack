@@ -17,6 +17,7 @@
 #include "common.h"
 #include "options.h"
 #include "config.h"
+#include "crsf_protocol.h"
 
 #include "device.h"
 #include "devWIFI.h"
@@ -227,6 +228,21 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
     sendHeadTrackingChangesToVrx = true;
+    break;
+  case MSP_ELRS_BACKPACK_CRSF_TLM:
+    DBGV("Processing MSP_ELRS_BACKPACK_CRSF_TLM type %x\n", packet->payload[1]);
+    if (packet->payloadSize < 4) {
+      DBGLN("CRSF_TLM packet too short")
+      break;
+    }
+    switch (packet->payload[2]) {
+    case CRSF_FRAMETYPE_BATTERY_SENSOR:
+      vrxModule.SendBatteryTelemetry(packet->payload);
+      break;
+    case CRSF_FRAMETYPE_LINK_STATISTICS:
+      vrxModule.SendLinkTelemetry(packet->payload);
+      break;
+    }
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
