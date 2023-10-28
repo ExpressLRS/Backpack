@@ -322,34 +322,29 @@
             }
         }
     },
-    "skyzone-elrs": {
-        "name": "Skyzone Steadyview ELRS Module",
+    "skyzone": {
+        "name": "Skyzone Steadyview",
         "vrx": {
             "esp32": {
-                "product_name": "ESP01F Module",
+                "product_name": "Skyzone Steadyview ELRS Module",
                 "firmware": "Skyzone_Onboard_ESP32_Backpack",
                 "upload_methods": ["uart", "wifi"],
-                "platform": "esp8285"
+                "platform": "esp32"
             }
-        }
-    },
-    "skyzone-diy": {
-        "name": "Skyzone Steadyview Module (DIY)",
-        "vrx": {
             "rx": {
-                "product_name": "ELRS Receiver",
+                "product_name": "ELRS Receiver (DIY)",
                 "firmware": "Skyzone_SteadyView_ESP_RX_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
             },
             "esp01f": {
-                "product_name": "ESP01F Module",
+                "product_name": "ESP01F Module (DIY)",
                 "firmware": "Skyzone_SteadyView_ESP01F_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
             },
             "ep82": {
-                "product_name": "Happymodel EP82",
+                "product_name": "Happymodel EP82 (DIY)",
                 "firmware": "Skyzone_SteadyView_HappyModel_EP82_VRX_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
@@ -357,7 +352,7 @@
         }
     },
     "orqa": {
-        "name": "Orqa Goggles FPV.Connect backpack",
+        "name": "Orqa Goggles FPV.Connect",
         "vrx": {
             "rx": {
                 "product_name": "ELRS Receiver",
