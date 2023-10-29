@@ -35,6 +35,7 @@ def appendToFirmware(firmware_file, defines):
     defines = (defines.encode() + (b'\0' * 512))[0:512]
     firmware_file.write(defines)
     firmware_file.write(b'\0')
+    firmware_file.flush()
     # firmware_file.truncate(firmware_file.tell())  # Stupid Windoze! (Permission denied)
 
 def appendConfiguration(source, target, env):
