@@ -330,7 +330,7 @@
                 "firmware": "Skyzone_Onboard_ESP32_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp32"
-            }
+            },
             "rx": {
                 "product_name": "ELRS Receiver (DIY)",
                 "firmware": "Skyzone_SteadyView_ESP_RX_Backpack",
