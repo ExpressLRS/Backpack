@@ -51,6 +51,7 @@ void saveOptions(Stream &stream, bool customised)
         doc["wifi-ssid"] = firmwareOptions.home_wifi_ssid;
         doc["wifi-password"] = firmwareOptions.home_wifi_password;
     }
+    doc["product-name"] = firmwareOptions.product_name;
     doc["flash-discriminator"] = flash_discriminator;
 
     serializeJson(doc, stream);
@@ -136,6 +137,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
     }
     strlcpy(firmwareOptions.home_wifi_ssid, doc["wifi-ssid"] | "", sizeof(firmwareOptions.home_wifi_ssid));
     strlcpy(firmwareOptions.home_wifi_password, doc["wifi-password"] | "", sizeof(firmwareOptions.home_wifi_password));
+    strlcpy(firmwareOptions.product_name, doc["product-name"] | "", sizeof(firmwareOptions.product_name));
     flash_discriminator = doc["flash-discriminator"] | 0U;
 
     builtinOptions.clear();

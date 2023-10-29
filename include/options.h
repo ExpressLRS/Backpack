@@ -9,6 +9,7 @@ typedef struct {
     bool    hasUID;
     char    home_wifi_ssid[33];
     char    home_wifi_password[65];
+    char    product_name[65];
 } firmware_options_t;
 
 extern firmware_options_t firmwareOptions;
