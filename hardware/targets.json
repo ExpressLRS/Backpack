@@ -157,6 +157,12 @@
     "radiomaster": {
         "name": "RadioMaster",
         "txbp": {
+            "pocket": {
+                "product_name": "RadioMaster Pocket 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
             "zorro": {
                 "product_name": "RadioMaster Zorro 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
