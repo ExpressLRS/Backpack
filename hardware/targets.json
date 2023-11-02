@@ -157,6 +157,12 @@
     "radiomaster": {
         "name": "RadioMaster",
         "txbp": {
+            "mt12": {
+                "product_name": "RadioMaster MT12 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
             "pocket": {
                 "product_name": "RadioMaster Pocket 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
