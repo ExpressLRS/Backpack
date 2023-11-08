@@ -38,6 +38,8 @@
   #include "skyzone_msp.h"
 #elif defined(ORQA_BACKPACK)
   #include "orqa.h"
+#elif defined(AAT_BACKPACK)
+  #include "module_aat.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -108,6 +110,8 @@ VrxBackpackConfig config;
   SkyzoneMSP vrxModule(&Serial);
 #elif defined(ORQA_BACKPACK)
   Orqa vrxModule;
+#elif defined(AAT_BACKPACK)
+  AatModule vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -135,15 +139,15 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
-  DBGLN("ESP NOW DATA:");
+  //DBGLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
   {
-    DBG("%x", data[i]); // Debug prints
-    DBG(",");
+    //DBG("%x", data[i]); // Debug prints
+    //DBG(",");
 
     if (msp.processReceivedByte(data[i]))
     {
-      DBGLN(""); // Extra line for serial output readability
+      //DBGLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
       if (connectionState == binding ||
@@ -236,6 +240,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
       break;
     }
     switch (packet->payload[2]) {
+    case CRSF_FRAMETYPE_GPS:
+      vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
+      break;
     case CRSF_FRAMETYPE_BATTERY_SENSOR:
       vrxModule.SendBatteryTelemetry(packet->payload);
       break;
