@@ -385,5 +385,16 @@
                 "platform": "esp8285"
             }
         }
+    },
+    "timer": {
+        "name": "Generic backpack for any Race Timer",
+        "timer": {
+            "esp32": {
+                "product_name": "RotorHazard ESP32 (DIY)",
+                "firmware": "ESP_TIMER_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            }
+        }
     }
 }
