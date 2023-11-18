@@ -193,7 +193,7 @@ TimerBackpackConfig::Load()
     m_modified = 0;
 
     // Check if version number matches
-    if (m_config.version != (uint32_t)(TX_BACKPACK_CONFIG_VERSION | TX_BACKPACK_CONFIG_MAGIC))
+    if (m_config.version != (uint32_t)(TIMER_BACKPACK_CONFIG_VERSION | TIMER_BACKPACK_CONFIG_MAGIC))
     {
         // If not, revert to defaults for this version
         DBGLN("EEPROM version mismatch! Resetting to defaults...");
@@ -231,7 +231,7 @@ TimerBackpackConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 void
 TimerBackpackConfig::SetDefaults()
 {
-    m_config.version = TX_BACKPACK_CONFIG_VERSION | TX_BACKPACK_CONFIG_MAGIC;
+    m_config.version = TIMER_BACKPACK_CONFIG_VERSION | TIMER_BACKPACK_CONFIG_MAGIC;
     m_config.bootCount = 0;
     m_config.startWiFi = false;
     m_config.ssid[0] = 0;
