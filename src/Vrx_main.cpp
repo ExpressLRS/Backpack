@@ -352,12 +352,15 @@ void checkIfInBindingMode()
   {
     resetBootCounter();
 
-    #ifdef MY_UID
-    RebootIntoWifi();
-    #else
-    connectionState = binding;
-    bindingStart = millis();
-    #endif
+    if (firmwareOptions.hasUID)
+    {
+      RebootIntoWifi();
+    }
+    else
+    {
+      connectionState = binding;
+      bindingStart = millis();
+    }
   }
   else
   {
