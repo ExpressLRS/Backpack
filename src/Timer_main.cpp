@@ -229,7 +229,7 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
     {
       uint8_t function = packet->readByte();
 
-      // Set target Send address
+      // Set target send address
       if (function == 0x0001)
       {
         uint8_t receivedAddress[6];
@@ -240,23 +240,49 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
         receivedAddress[4] = packet->readByte();
         receivedAddress[5] = packet->readByte();
 
+        esp_now_del_peer(sendAddress);
+
         // Register peer address
         memset(&peerInfo, 0, sizeof(peerInfo));
-        memcpy(peerInfo.peer_addr, receivedAddress, 6);
-        peerInfo.channel = 0;
-        peerInfo.encrypt = false;
-        esp_now_add_peer(&peerInfo);
+
+        #if defined(PLATFORM_ESP8266)
+          esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+          esp_now_add_peer(receivedAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+        #elif defined(PLATFORM_ESP32)
+          memcpy(peerInfo.peer_addr, receivedAddress, 6);
+          peerInfo.channel = 0;
+          peerInfo.encrypt = false;
+          if (esp_now_add_peer(&peerInfo) != ESP_OK)
+          {
+            DBGLN("ESP-NOW failed to add peer");
+            return;
+          }
+        #endif
 
         // Set Send address for new target
         memset(&sendAddress, 0, sizeof(sendAddress));
         memcpy(sendAddress, receivedAddress, 6);
       }
 
-      // Return to normal for recieving messages
+      // Return to bound send address
       else
       {
         // Unregister Peer
         esp_now_del_peer(sendAddress);
+
+        #if defined(PLATFORM_ESP8266)
+          esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+          esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+        #elif defined(PLATFORM_ESP32)
+          memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
+          peerInfo.channel = 0;
+          peerInfo.encrypt = false;
+          if (esp_now_add_peer(&peerInfo) != ESP_OK)
+          {
+            DBGLN("ESP-NOW failed to add peer");
+            return;
+          }
+        #endif
 
         // Set Send address for normal target
         memset(&sendAddress, 0, sizeof(sendAddress));
@@ -393,6 +419,22 @@ void setup()
     }
 
     esp_now_register_recv_cb(OnDataRecv);
+
+    #if defined(PLATFORM_ESP8266)
+      esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+      esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+    #elif defined(PLATFORM_ESP32)
+      memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+      if (esp_now_add_peer(&peerInfo) != ESP_OK)
+      {
+        DBGLN("ESP-NOW failed to add peer");
+        return;
+      }
+    #endif
+
+    memcpy(sendAddress, firmwareOptions.uid, 6);
   }
 
   devicesStart();
