@@ -65,6 +65,7 @@ mspPacket_t cachedHTPacket;
 
 int sendMSPViaEspnow(mspPacket_t *packet);
 void resetBootCounter();
+void registerPeer(uint8_t* address);
 
 /////////////////////////////////////
 
@@ -229,8 +230,11 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
     {
       uint8_t function = packet->readByte();
 
+      // Unregister current peer
+      esp_now_del_peer(sendAddress);
+
       // Set target send address
-      if (function == 0x0001)
+      if (function == 0x01)
       {
         uint8_t receivedAddress[6];
         receivedAddress[0] = packet->readByte();
@@ -240,24 +244,8 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
         receivedAddress[4] = packet->readByte();
         receivedAddress[5] = packet->readByte();
 
-        esp_now_del_peer(sendAddress);
-
-        // Register peer address
-        memset(&peerInfo, 0, sizeof(peerInfo));
-
-        #if defined(PLATFORM_ESP8266)
-          esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-          esp_now_add_peer(receivedAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-        #elif defined(PLATFORM_ESP32)
-          memcpy(peerInfo.peer_addr, receivedAddress, 6);
-          peerInfo.channel = 0;
-          peerInfo.encrypt = false;
-          if (esp_now_add_peer(&peerInfo) != ESP_OK)
-          {
-            DBGLN("ESP-NOW failed to add peer");
-            return;
-          }
-        #endif
+        // Register new peer address
+        registerPeer(receivedAddress);
 
         // Set Send address for new target
         memset(&sendAddress, 0, sizeof(sendAddress));
@@ -267,22 +255,8 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
       // Return to bound send address
       else
       {
-        // Unregister Peer
-        esp_now_del_peer(sendAddress);
-
-        #if defined(PLATFORM_ESP8266)
-          esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-          esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-        #elif defined(PLATFORM_ESP32)
-          memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
-          peerInfo.channel = 0;
-          peerInfo.encrypt = false;
-          if (esp_now_add_peer(&peerInfo) != ESP_OK)
-          {
-            DBGLN("ESP-NOW failed to add peer");
-            return;
-          }
-        #endif
+        // Re-register stored address
+        registerPeer(firmwareOptions.uid);
 
         // Set Send address for normal target
         memset(&sendAddress, 0, sizeof(sendAddress));
@@ -359,6 +333,23 @@ void resetBootCounter()
   config.Commit();
 }
 
+void registerPeer(uint8_t* address){
+  #if defined(PLATFORM_ESP8266)
+    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+    esp_now_add_peer(address, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+  #elif defined(PLATFORM_ESP32)
+    memset(&peerInfo, 0, sizeof(peerInfo));
+    memcpy(peerInfo.peer_addr, address, 6);
+    peerInfo.channel = 0;
+    peerInfo.encrypt = false;
+    if (esp_now_add_peer(&peerInfo) != ESP_OK)
+    {
+      DBGLN("ESP-NOW failed to add peer");
+      return;
+    }
+  #endif
+}
+
 bool BindingExpired(uint32_t now)
 {
   return (connectionState == binding) && ((now - bindingStart) > NO_BINDING_TIMEOUT);
@@ -420,19 +411,7 @@ void setup()
 
     esp_now_register_recv_cb(OnDataRecv);
 
-    #if defined(PLATFORM_ESP8266)
-      esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-      esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
-    #elif defined(PLATFORM_ESP32)
-      memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
-      peerInfo.channel = 0;
-      peerInfo.encrypt = false;
-      if (esp_now_add_peer(&peerInfo) != ESP_OK)
-      {
-        DBGLN("ESP-NOW failed to add peer");
-        return;
-      }
-    #endif
+    registerPeer(firmwareOptions.uid);
 
     memcpy(sendAddress, firmwareOptions.uid, 6);
   }

@@ -49,7 +49,7 @@ static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 static const char *myHostname = "elrs_txbp";
 static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
 #elif defined(TARGET_TIMER_BACKPACK)
-static const char *myHostname = "elrs_timerbp";
+static const char *myHostname = "elrs_timer";
 static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
 #else
 #error Unknown target

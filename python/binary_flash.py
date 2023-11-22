@@ -30,6 +30,7 @@ class ElrsUploadResult:
 class DeviceType(Enum):
     VRX = 'vrx'
     TXBP = 'txbp'
+    TIMER = 'timer'
     def __str__(self):
         return self.value
 
@@ -145,6 +146,17 @@ def upload(deviceType: DeviceType, mcuType: MCUType, args):
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
                 return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'])
+    elif deviceType == DeviceType.TIMER:
+        if mcuType == MCUType.ESP8266:
+            if args.flash == UploadMethod.uart:
+                return upload_esp8266_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, mcuType, ['elrs_timer', 'elrs_timer.local'])
+        elif mcuType == MCUType.ESP32:
+            if args.flash == UploadMethod.uart:
+                return upload_esp32_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, mcuType, ['elrs_timer', 'elrs_timer.local'])
     else:
         if mcuType == MCUType.ESP8266:
             if args.flash == UploadMethod.edgetx:
@@ -249,7 +261,14 @@ def main():
     json_flags['flash-discriminator'] = randint(1,2**32-1)
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
 
-    ret = upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)
+    if hardware == 'txbp':
+        devicetype = DeviceType.TXBP
+    elif hardware == 'timer':
+        devicetype = DeviceType.TIMER
+    else:
+        devicetype = DeviceType.VRX
+
+    ret = upload(devicetype, mcu, args)
     sys.exit(ret)
 
 if __name__ == '__main__':
