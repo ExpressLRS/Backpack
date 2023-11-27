@@ -247,6 +247,7 @@ def main():
     if args.password is not None and args.ssid is not None:
         json_flags['wifi-password'] = args.password
     json_flags['flash-discriminator'] = randint(1,2**32-1)
+    json_flags['product-name'] = targets[vendor][hardware][target]['product_name']
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
 
     ret = upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)

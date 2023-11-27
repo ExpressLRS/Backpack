@@ -168,23 +168,15 @@ static void WebUpdateSendMode(AsyncWebServerRequest *request)
 {
   String s;
   if (wifiMode == WIFI_STA) {
-    s = String("{\"mode\":\"STA\",\"ssid\":\"") + station_ssid;
+    s = String(R"({"mode":"STA")");
   } else {
-    s = String("{\"mode\":\"AP\",\"ssid\":\"") + station_ssid;
+    s = String(R"({"mode":"AP")");
   }
+  s = s + R"(,"ssid":")" + station_ssid + R"(")";
   #if defined(STM32_TX_BACKPACK)
-  s += "\",\"stm32\":\"yes";
+  s += R"(,"stm32":"yes)";
   #endif
-  #if defined(TARGET_RX)
-  s += "\",\"modelid\":\"" + String(config.GetModelId());
-  #endif
-  s += "\"}";
-  request->send(200, "application/json", s);
-}
-
-static void WebUpdateGetTarget(AsyncWebServerRequest *request)
-{
-  String s = String("{\"target\":\"") + (const char *)&target_name[4] + "\",\"version\": \"" + VERSION + "\"}";
+  s = s + R"(,"product-name":")" + firmwareOptions.product_name + R"("})";
   request->send(200, "application/json", s);
 }
 
@@ -305,20 +297,20 @@ static void WebUploadResponseHandler(AsyncWebServerRequest *request) {
     updater.printError(p);
     p.trim();
     DBGLN("Failed to upload firmware: %s", p.c_str());
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String("{\"status\": \"error\", \"msg\": \"") + p + "\"}");
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", String(R"({"status": "error", "msg": ")") + p + R"("})");
     response->addHeader("Connection", "close");
     request->send(response);
     request->client()->close();
   } else {
     if (target_seen) {
       DBGLN("Update complete, rebooting");
-      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update complete. Please wait for LED to turn on before disconnecting power.\"}");
+      AsyncWebServerResponse *response = request->beginResponse(200, "application/json", R"({"status": "ok", "msg": "Update complete. Please wait for LED to turn on before disconnecting power."})");
       response->addHeader("Connection", "close");
       request->send(response);
       request->client()->close();
       do_flash = true;
     } else {
-      String message = String("{\"status\": \"mismatch\", \"msg\": \"<b>Current target:</b> ") + (const char *)&target_name[4] + ".<br>";
+      String message = String(R"({"status": "mismatch", "msg": "<b>Current target:</b> )") + (const char *)&target_name[4] + ".<br>";
       if (target_found.length() != 0) {
         message += "<b>Uploaded image:</b> " + target_found + ".<br/>";
       }
@@ -406,7 +398,7 @@ static void WebUploadForceUpdateHandler(AsyncWebServerRequest *request) {
     #if defined(PLATFORM_ESP32)
       updater.abort();
     #endif
-    request->send(200, "application/json", "{\"status\": \"ok\", \"msg\": \"Update cancelled\"}");
+    request->send(200, "application/json", R"({"status": "ok", "msg": "Update cancelled"})");
   }
 }
 
@@ -556,7 +548,6 @@ static void startServices()
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
-  server.on("/target", WebUpdateGetTarget);
 
   server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
