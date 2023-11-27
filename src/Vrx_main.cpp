@@ -278,12 +278,13 @@ void SetupEspNow()
 
 void SetSoftMACAddress()
 {
-  DBGLN("EEPROM MAC = ");
+  if (!firmwareOptions.hasUID)
+  {
+    memcpy(firmwareOptions.uid, config.GetGroupAddress(), 6);
+  }
+  DBG("EEPROM MAC = ");
   for (int i = 0; i < 6; i++)
   {
-    #ifndef MY_UID
-    memcpy(firmwareOptions.uid, config.GetGroupAddress(), 6);
-    #endif
     DBG("%x", firmwareOptions.uid[i]); // Debug prints
     DBG(",");
   }
@@ -351,12 +352,15 @@ void checkIfInBindingMode()
   {
     resetBootCounter();
 
-    #ifdef MY_UID
-    RebootIntoWifi();
-    #else
-    connectionState = binding;
-    bindingStart = millis();
-    #endif
+    if (firmwareOptions.hasUID)
+    {
+      RebootIntoWifi();
+    }
+    else
+    {
+      connectionState = binding;
+      bindingStart = millis();
+    }
   }
   else
   {
