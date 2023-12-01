@@ -497,24 +497,28 @@ class ESPLoader(object):
         # DTR & RTS are active low signals,
         # ie True = pin @ 0V, False = pin @ VCC.
         if usb_jtag_serial:
-            # Custom reset sequence, which is required when the device
-            # is connecting via its USB-JTAG-Serial peripheral
-            self._setRTS(False)
-            self._setDTR(False)  # Idle
-            time.sleep(0.1)
-            self._setDTR(True)  # Set IO0
-            self._setRTS(False)
-            time.sleep(0.1)
-            self._setRTS(
-                True
-            )  # Reset. Note dtr/rts calls inverted to go through (1,1) instead of (0,0)
-            self._setDTR(False)
-            self._setRTS(
-                True
-            )  # Extra RTS set for RTS as Windows only propagates DTR on RTS setting
-            time.sleep(0.1)
-            self._setDTR(False)
-            self._setRTS(False)
+            if mode == 'passthru':
+                # Nothing to do, just sending resync packets is enough to start passthrough mode
+                None
+            else:
+                # Custom reset sequence, which is required when the device
+                # is connecting via its USB-JTAG-Serial peripheral
+                self._setRTS(False)
+                self._setDTR(False)  # Idle
+                time.sleep(0.1)
+                self._setDTR(True)  # Set IO0
+                self._setRTS(False)
+                time.sleep(0.1)
+                self._setRTS(
+                    True
+                )  # Reset. Note dtr/rts calls inverted to go through (1,1) instead of (0,0)
+                self._setDTR(False)
+                self._setRTS(
+                    True
+                )  # Extra RTS set for RTS as Windows only propagates DTR on RTS setting
+                time.sleep(0.1)
+                self._setDTR(False)
+                self._setRTS(False)
         else:
             # This fpga delay is for Espressif internal use
             fpga_delay = (
