@@ -48,6 +48,18 @@
                 "platform": "esp8285",
                 "upload_methods": ["uart", "wifi"]
             },
+            "nano2g4v2": {
+                "product_name": "BETAFPV 2.4GHz Nano TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "nano900v2": {
+                "product_name": "BETAFPV 900MHz Nano TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
             "superg": {
                 "product_name": "BETAFPV SuperG 2.4GHz Gemini TX",
                 "firmware": "ESP_TX_Backpack",
