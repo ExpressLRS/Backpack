@@ -2,6 +2,7 @@
 
 #define MSP_ELRS_FUNC                           0x4578 // ['E','x']
 
+#define MSP_SET_NAME                            11   //in message          Get board name - betaflight
 #define MSP_SET_RX_CONFIG                       45
 #define MSP_VTX_CONFIG                          88   //out message         Get vtx settings - betaflight
 #define MSP_SET_VTX_CONFIG                      89   //in message          Set vtx settings - betaflight

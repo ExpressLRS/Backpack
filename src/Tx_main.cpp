@@ -75,7 +75,21 @@ void RebootIntoWifi()
 
 void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 {
+  if (packet->function == MSP_SET_NAME) {
+    DBGLN("MSP_SET_NAME...");
+    msp.sendPacket(packet, &Serial);
+    return;
+  }
+
   switch (packet->function) {
+    /*
+    // THIS throws a "error: duplicate case value" error for some reason, therefore i used the if statement above
+    case MSP_SET_NAME: {
+      DBGLN("MSP_SET_NAME...");
+      msp.sendPacket(packet, &Serial);
+      break;
+    }
+    */
     case MSP_ELRS_REQU_VTX_PKT: {
       DBGLN("MSP_ELRS_REQU_VTX_PKT...");
       // request from the vrx-backpack to send cached VTX packet
