@@ -2,7 +2,7 @@
 
 #define MSP_ELRS_FUNC                           0x4578 // ['E','x']
 
-#define MSP_SET_NAME                            11   //in message          Get board name - betaflight
+#define MSP_BF_SET_NAME                         11   //in message          Get board name - betaflight
 #define MSP_SET_RX_CONFIG                       45
 #define MSP_VTX_CONFIG                          88   //out message         Get vtx settings - betaflight
 #define MSP_SET_VTX_CONFIG                      89   //in message          Set vtx settings - betaflight
@@ -21,6 +21,7 @@
 #define MSP_ELRS_SET_RX_LOAN_MODE               0x0F
 #define MSP_ELRS_GET_BACKPACK_VERSION           0x10
 #define MSP_ELRS_BACKPACK_CRSF_TLM              0x11
+#define MSP_ELRS_SET_NAME                       0x12
 #define MSP_ELRS_SET_OSD                        0x00B6
 
 // CRSF encapsulated msp defines
