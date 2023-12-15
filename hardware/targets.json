@@ -149,6 +149,29 @@
             }
         }
     },
+    "jumper": {
+        "name": "Jumper",
+        "txbp": {
+            "t12-max": {
+                "product_name": "Jumper T-12 Max Internal TX Modules",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "t15": {
+                "product_name": "Jumper T-15 Internal TX Modules",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "t20": {
+                "product_name": "Jumper T-20 Internal TX Modules with Backpack extension",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
     "namimnorc": {
         "name": "NamimnoRC",
         "txbp": {
