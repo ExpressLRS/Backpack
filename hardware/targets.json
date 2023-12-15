@@ -114,6 +114,17 @@
             }
         }
     },
+    "jumper": {
+        "name": "Jumper",
+        "txbp": {
+            "t20": {
+                "product_name": "Jumper T-20 Internal TX Modules with Backpack extension",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
     "namimnorc": {
         "name": "NamimnoRC",
         "txbp": {
