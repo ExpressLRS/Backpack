@@ -1,6 +1,7 @@
 #pragma once
 
 #define CRSF_CRC_POLY 0xd5
+#define CRSF_SYNC_BYTE 0xc8
 
 #define CRSF_FRAMETYPE_GPS 0x02
 #define CRSF_FRAMETYPE_LINK_STATISTICS 0x14
@@ -13,7 +14,7 @@
  */
 typedef struct crsf_header_s
 {
-    uint8_t device_addr; // from crsf_addr_e
+    uint8_t sync_byte;   // CRSF_SYNC_BYTE
     uint8_t frame_size;  // counts size after this byte, so it must be the payload size + 2 (type and crc)
     uint8_t type;        // from crsf_frame_type_e
 } PACKED crsf_header_t;

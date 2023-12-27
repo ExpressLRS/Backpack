@@ -1,7 +1,12 @@
 #pragma once
 
+#if defined(AAT_BACKPACK)
 #include "module_base.h"
 #include "crsf_protocol.h"
+
+#if defined (AAT_SERIAL_INPUT)
+#include "crc.h"
+#endif
 
 #if defined(PIN_SERVO_AZIM) || defined(PIN_SERVO_ELEV)
 #include <Servo.h>
@@ -31,6 +36,7 @@ private:
     // Minimum number of satellites to lock in the home position
     static constexpr uint8_t HOME_MIN_SATS = 5;
 
+    void checkSerialInput();
     void processGps();
     void servoUpdate(uint32_t now);
 
@@ -51,6 +57,7 @@ private:
         uint32_t speed;   // km/h * 10
         uint32_t heading; // degrees * 10
         int32_t altitude; // meters
+        uint32_t lastUpdateMs; // timestamp of last update
         uint8_t satcnt;   // number of satellites
     } _gpsLast;
     int32_t _homeLat;
@@ -63,4 +70,18 @@ private:
     uint8_t _targetElev; // degrees
     int32_t _currentElev; // degrees * 100
     int32_t _currentAzim; // degrees * 100
+
+#if defined (AAT_SERIAL_INPUT)
+    static constexpr uint8_t CRSF_MAX_PACKET_SIZE = 64U;
+    static constexpr uint8_t CRSF_MAX_PAYLOAD_LEN = (CRSF_MAX_PACKET_SIZE - 4U);
+
+    GENERIC_CRC8 _crc;
+    uint8_t _rxBufPos;
+    uint8_t _rxBuf[CRSF_MAX_PACKET_SIZE];
+
+    void processPacketIn(uint8_t len);
+    void shiftRxBuffer(uint8_t cnt);
+    void handleByteReceived();
+#endif
 };
+#endif /* AAT_BACKPACK */

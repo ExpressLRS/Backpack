@@ -1,3 +1,4 @@
+#if defined(AAT_BACKPACK)
 #include "common.h"
 #include "module_aat.h"
 #include "logging.h"
@@ -15,7 +16,10 @@ AatModule::AatModule() :
     _servo_Elev(),
 #endif
 #if defined(PIN_OLED_SDA)
-    display(SCREEN_WIDTH, SCREEN_HEIGHT)
+    display(SCREEN_WIDTH, SCREEN_HEIGHT),
+#endif
+#if defined (AAT_SERIAL_INPUT)
+    _crc(CRSF_CRC_POLY)
 #endif
 {
   // Init is called manually
@@ -102,11 +106,18 @@ static int32_t calcElevation(uint32_t distance, int32_t altitude)
 
 void AatModule::processGps()
 {
+    // Actually want to track time between _processing_ each GPS update
+    uint32_t now = millis();
+    uint32_t interval = _gpsLast.lastUpdateMs - now;
+    _gpsLast.lastUpdateMs = now;
+
     // Check if need to set home position
+    bool didSetHome = false;
     if (!isHomeSet())
     {
         if (_gpsLast.satcnt >= HOME_MIN_SATS)
         {
+            didSetHome = true;
             _homeLat = _gpsLast.lat;
             _homeLon = _gpsLast.lon;
             _homeAlt = _gpsLast.altitude;
@@ -121,6 +132,14 @@ void AatModule::processGps()
     calcDistAndAzimuth(_homeLat, _homeLon, _gpsLast.lat, _gpsLast.lon, &distance, &azimuth);
     uint8_t elevation = constrain(calcElevation(distance, _gpsLast.altitude - _homeAlt), 0, 90);
     DBGLN("Azimuth: %udeg Elevation: %udeg Distance: %um", azimuth, elevation, distance);
+
+    // Calculate angular velocity to allow dead reckoning projection
+    if (!didSetHome)
+    {
+        int32_t azimDelta = azimuth - _targetAzim;
+        int32_t azimMsPerDelta = interval / azimDelta;
+        DBGLN("%d delta in %ums, %dms/d", azimDelta, interval, azimMsPerDelta);
+    }
 
     _targetDistance = distance;
     _targetElev = elevation;
@@ -178,8 +197,101 @@ void AatModule::servoUpdate(uint32_t now)
 
 }
 
+#if defined(AAT_SERIAL_INPUT)
+void AatModule::processPacketIn(uint8_t len)
+{
+    const crsf_header_t *hdr = (crsf_header_t *)_rxBuf;
+    if (hdr->sync_byte == CRSF_SYNC_BYTE) // || hdr->sync_byte == CRSF_ADDRESS_FLIGHT_CONTROLLER)
+    {
+        switch (hdr->type)
+        {
+        case CRSF_FRAMETYPE_GPS:
+            SendGpsTelemetry((crsf_packet_gps_t *)hdr);
+            break;
+        }
+    }
+}
+
+// Shift the bytes in the RxBuf down by cnt bytes
+void AatModule::shiftRxBuffer(uint8_t cnt)
+{
+    // If removing the whole thing, just set pos to 0
+    if (cnt >= _rxBufPos)
+    {
+        _rxBufPos = 0;
+        return;
+    }
+
+    // Otherwise do the slow shift down
+    uint8_t *src = &_rxBuf[cnt];
+    uint8_t *dst = &_rxBuf[0];
+    _rxBufPos -= cnt;
+    uint8_t left = _rxBufPos;
+    while (left--)
+        *dst++ = *src++;
+}
+
+void AatModule::handleByteReceived()
+{
+    bool reprocess;
+    do
+    {
+        reprocess = false;
+        if (_rxBufPos > 1)
+        {
+            uint8_t len = _rxBuf[1];
+            // Sanity check the declared length isn't outside Type + X{1,CRSF_MAX_PAYLOAD_LEN} + CRC
+            // assumes there never will be a CRSF message that just has a type and no data (X)
+            if (len < 3 || len > (CRSF_MAX_PAYLOAD_LEN + 2))
+            {
+                shiftRxBuffer(1);
+                reprocess = true;
+            }
+
+            else if (_rxBufPos >= (len + 2))
+            {
+                uint8_t inCrc = _rxBuf[2 + len - 1];
+                uint8_t crc = _crc.calc(&_rxBuf[2], len - 1);
+                if (crc == inCrc)
+                {
+                    processPacketIn(len);
+                    shiftRxBuffer(len + 2);
+                    reprocess = true;
+                }
+                else
+                {
+                    shiftRxBuffer(1);
+                    reprocess = true;
+                }
+            }  // if complete packet
+        } // if pos > 1
+    } while (reprocess);
+}
+#endif
+
+void AatModule::checkSerialInput()
+{
+#if defined(AAT_SERIAL_INPUT)
+    while (Serial.available())
+    {
+        uint8_t b = Serial.read();
+        _rxBuf[_rxBufPos++] = b;
+
+        handleByteReceived();
+
+        if (_rxBufPos == (sizeof(_rxBuf)/sizeof(_rxBuf[0])))
+        {
+            // Packet buffer filled and no valid packet found, dump the whole thing
+            _rxBufPos = 0;
+        }
+    }
+#endif
+}
+
 void AatModule::Loop(uint32_t now)
 {
+    checkSerialInput();
+
     if (_gpsUpdated)
     {
         _gpsUpdated = false;
@@ -189,3 +301,4 @@ void AatModule::Loop(uint32_t now)
     servoUpdate(now);
     ModuleBase::Loop(now);
 }
+#endif /* AAT_BACKPACK */
