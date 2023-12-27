@@ -16,7 +16,6 @@ def copy_bootfile(source, target, env):
     shutil.copyfile(FRAMEWORK_DIR + "/tools/partitions/boot_app0.bin", env.subst("$BUILD_DIR") + "/boot_app0.bin")
 
 if platform in ['espressif8266']:
-    env.AddPostAction("buildprog", esp_compress.compressFirmware)
     env.AddPreAction("${BUILD_DIR}/spiffs.bin",
                      [esp_compress.compress_files])
     env.AddPreAction("${BUILD_DIR}/${ESP8266_FS_IMAGE_NAME}.bin",
@@ -45,3 +44,5 @@ try:
 except FileNotFoundError:
     None
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", UnifiedConfiguration.appendConfiguration)
+if platform in ['espressif8266'] and "_WIFI" in target_name:
+    env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", esp_compress.compressFirmware)
