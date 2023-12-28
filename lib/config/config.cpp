@@ -135,12 +135,18 @@ VrxBackpackConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 void
 VrxBackpackConfig::SetDefaults()
 {
+    memset(&m_config, 0, sizeof(m_config));
     m_config.version = VRX_BACKPACK_CONFIG_VERSION | VRX_BACKPACK_CONFIG_MAGIC;
-    m_config.bootCount = 0;
-    m_config.startWiFi = false;
-    m_config.ssid[0] = 0;
-    m_config.password[0] = 0;
-    memset(m_config.address, 0, 6);
+
+#if defined(AAT_BACKPACK)
+    m_config.project = 0xff;
+    m_config.servoSmooth = 9;
+    m_config.servoLowAzim = 700;
+    m_config.servoLowElev = 1100;
+    m_config.servoHighAzim = 2400;
+    m_config.servoHighElev = 1900;
+#endif
+
     m_modified = true;
     Commit();
 }

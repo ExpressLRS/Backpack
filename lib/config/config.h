@@ -59,6 +59,16 @@ typedef struct {
     char        ssid[33];
     char        password[65];
     uint8_t     address[6];
+
+#if defined(AAT_BACKPACK)
+    uint8_t     servoSmooth;
+    uint8_t     project; // 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
+    uint8_t     servoMode; // reserved to declare 2:1 or 180+flip servo
+    uint16_t    servoLowAzim;
+    uint16_t    servoLowElev;
+    uint16_t    servoHighAzim;
+    uint16_t    servoHighElev;
+#endif
 } vrx_backpack_config_t;
 
 class VrxBackpackConfig
@@ -83,6 +93,15 @@ public:
     void SetSSID(const char *ssid);
     void SetPassword(const char *ssid);
     void SetGroupAddress(const uint8_t address[6]);
+
+#if defined(AAT_BACKPACK)
+    uint8_t GetAatServoSmooth() const { return m_config.servoSmooth; }
+    uint8_t GetAatProject() const { return m_config.project; }
+    uint16_t GetAatServoLowAzim() const { return m_config.servoLowAzim; }
+    uint16_t GetAatServoLowElev() const { return m_config.servoLowElev; }
+    uint16_t GetAatServoHighAzim() const { return m_config.servoHighAzim; }
+    uint16_t GetAatServoHighElev() const { return m_config.servoHighElev; }
+#endif
 
 private:
     vrx_backpack_config_t   m_config;

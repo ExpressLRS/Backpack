@@ -111,7 +111,7 @@ VrxBackpackConfig config;
 #elif defined(ORQA_BACKPACK)
   Orqa vrxModule;
 #elif defined(AAT_BACKPACK)
-  AatModule vrxModule;
+  AatModule vrxModule(Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
