@@ -47,6 +47,12 @@
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["uart", "wifi"]
+            },
+            "superg": {
+                "product_name": "BETAFPV SuperG 2.4GHz Gemini TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
@@ -157,6 +163,24 @@
     "radiomaster": {
         "name": "RadioMaster",
         "txbp": {
+            "bandit": {
+                "product_name": "RadioMaster Bandit 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "bandit-micro": {
+                "product_name": "RadioMaster Bandit Micro 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "bandit-nano": {
+                "product_name": "RadioMaster Bandit Nano 900MHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+			},
             "mt12": {
                 "product_name": "RadioMaster MT12 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
