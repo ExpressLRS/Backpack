@@ -15,7 +15,7 @@ public:
     void SetRTC();
     void SendLinkTelemetry(uint8_t *rawCrsfPacket);
     void SendBatteryTelemetry(uint8_t *rawCrsfPacket);
-    void SendGpsTelemetry(crsf_packet_gps_t *packet);
+    void SendGpsTelemetry(crsf_packet_gps_t *packet) {}
     void Loop(uint32_t now);
 };
 
