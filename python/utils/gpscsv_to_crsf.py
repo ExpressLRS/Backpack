@@ -26,17 +26,36 @@ def crsf_crc(data: bytes) -> int:
         crc = _crc_tab[crc ^ i]
     return crc
 
-def idle(duration: float, port: serial.Serial):
-    if port:
+def idle(duration: float, uart: serial.Serial):
+    if uart:
         start = time.monotonic()
         while time.monotonic() - start < duration:
-            b = port.read(128)
+            b = uart.read(128)
             if len(b) > 0:
-                sys.stdout.write(b.decode('utf-8'))
+                sys.stdout.write(b.decode('ascii', 'replace'))
     else:
         time.sleep(duration)
 
-def processFile(fname, interval, port, baud, jitter):
+def output_Crsf(uart: serial.Serial, data):
+    if uart is None:
+        return
+    uart.write(data)
+
+def output_Msp(uart: serial.Serial, data):
+    if uart is None:
+        return
+
+    # MSPv2 header + MSP_COMMAND + flags
+    buf = b'$X<\x00'
+    # Command MSP_ELRS_BACKPACK_CRSF_TLM
+    buf += int.to_bytes(0x0011, length=2, byteorder='little', signed=False)
+    buf += int.to_bytes(len(data), length=2, byteorder='little', signed=False)
+    buf += data
+    buf += int.to_bytes(crsf_crc(buf[3:]), length=1, byteorder='big', signed=False)
+
+    uart.write(buf)
+
+def processFile(fname, interval, port, baud, jitter, output):
     random.seed()
 
     if port is not None:
@@ -67,7 +86,7 @@ def processFile(fname, interval, port, baud, jitter):
             alt = int(row[5]) + 1000
             spd = int(float(row[6]) * 360) # m/s to km/h*10
             hdg = int(float(row[7]) * 100) # deg to centideg
-            #print(f'{timeS:0.6f} GPS: ({lat},{lon}) {alt-1000}m {sats} sats')
+            print(f'{timeS:0.6f} GPS: ({lat},{lon}) {alt-1000}m {sats}sats')
 
             # CRSF_SYNC, len, type (GPS), payload, crc
             buf = bytearray(b'\xc8\x00\x02')
@@ -80,8 +99,7 @@ def processFile(fname, interval, port, baud, jitter):
             buf += b'\x00' # place for the CRC
             buf[-1] = crsf_frame_crc(buf)
             buf[1] = len(buf) - 2
-            if uart:
-                uart.write(buf)
+            output(uart, buf)
 
             lastTime = timeS
 
@@ -103,6 +121,10 @@ parser.add_argument('-J', '--jitter',
                     default=0.0,
                     type=float,
                     help='Adds random jitter to the GPS output to simulate real world telemetry delay (s)')
+parser.add_argument('-m', '--msp',
+                    dest='output',
+                    action='store_const', const=output_Msp, default=output_Crsf,
+                    help='Wrap CRSF with MSP when sending to UART (default: send just CRSF)')
 
 args = parser.parse_args()
-processFile(args.filename, args.interval, args.port, args.baud, args.jitter)
+processFile(args.filename, args.interval, args.port, args.baud, args.jitter, args.output)
