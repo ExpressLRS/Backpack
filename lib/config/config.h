@@ -61,6 +61,7 @@ typedef struct {
     uint8_t     address[6];
 
 #if defined(AAT_BACKPACK)
+    uint8_t     satelliteHomeMin; // minimum number of satellites to establish home
     uint8_t     servoSmooth;
     uint8_t     project; // 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
     uint8_t     servoMode; // reserved to declare 2:1 or 180+flip servo
@@ -95,6 +96,7 @@ public:
     void SetGroupAddress(const uint8_t address[6]);
 
 #if defined(AAT_BACKPACK)
+    uint8_t GetAatSatelliteHomeMin() const { return m_config.satelliteHomeMin; }
     uint8_t GetAatServoSmooth() const { return m_config.servoSmooth; }
     uint8_t GetAatProject() const { return m_config.project; }
     uint16_t GetAatServoLowAzim() const { return m_config.servoLowAzim; }

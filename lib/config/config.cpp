@@ -139,6 +139,7 @@ VrxBackpackConfig::SetDefaults()
     m_config.version = VRX_BACKPACK_CONFIG_VERSION | VRX_BACKPACK_CONFIG_MAGIC;
 
 #if defined(AAT_BACKPACK)
+    m_config.satelliteHomeMin = 5;
     m_config.project = 0xff;
     m_config.servoSmooth = 9;
     m_config.servoLowAzim = 700;

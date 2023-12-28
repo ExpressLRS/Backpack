@@ -30,13 +30,10 @@ public:
 
     void SendGpsTelemetry(crsf_packet_gps_t *packet);
     bool isHomeSet() const { return _home.lat != 0 || _home.lon != 0; }
-    bool isGpsActive() const { return _gpsLast.lat != 0 || _gpsLast.lon != 0; };
+    bool isGpsActive() const { return _gpsLast.lat != 0 || _gpsLast.lon != 0 || _gpsLast.satcnt > 0; };
 protected:
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
-    // Minimum number of satellites to lock in the home position
-    static constexpr uint8_t HOME_MIN_SATS = 5;
-
     void displayInit();
     void updateGpsInterval(uint32_t interval);
     uint8_t calcGpsIntervalPct(uint32_t now);
@@ -68,7 +65,7 @@ private:
     uint32_t _targetDistance; // meters
     uint16_t _targetAzim; // degrees
     uint8_t _targetElev; // degrees
-    int32_t _azimMsPerDelta; // milliseconds per degree
+    int32_t _azimMsPerDegree; // milliseconds per degree
     int32_t _currentElev; // degrees * 100
     int32_t _currentAzim; // degrees * 100
 

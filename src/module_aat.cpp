@@ -56,7 +56,7 @@ static int32_t calcElevation(uint32_t distance, int32_t altitude)
 AatModule::AatModule(Stream &port) :
     CrsfModuleBase(port), _gpsLast{0}, _home{0},
     _gpsAvgUpdateInterval(0), _lastServoUpdateMs(0), _targetDistance(0),
-    _targetAzim(0), _targetElev(0), _azimMsPerDelta(0),
+    _targetAzim(0), _targetElev(0), _azimMsPerDegree(0),
     _currentElev(0), _currentAzim(0)
 #if defined(PIN_SERVO_AZIM)
     , _servo_Azim()
@@ -136,7 +136,7 @@ void AatModule::processGps(uint32_t now)
     bool didSetHome = false;
     if (!isHomeSet())
     {
-        if (_gpsLast.satcnt >= HOME_MIN_SATS)
+        if (_gpsLast.satcnt >= config.GetAatSatelliteHomeMin())
         {
             didSetHome = true;
             _home.lat = _gpsLast.lat;
@@ -160,8 +160,8 @@ void AatModule::processGps(uint32_t now)
         updateGpsInterval(interval);
         // azimDelta is the azimuth change since the last packet, -180 to +180
         int32_t azimDelta = (azimuth - _targetAzim + 540) % 360 - 180;
-        _azimMsPerDelta = (azimDelta == 0) ? 0 : (int32_t)interval / azimDelta;
-        DBGLN("%d delta in %ums, %dms/d %uavg", azimDelta, interval, _azimMsPerDelta, _gpsAvgUpdateInterval);
+        _azimMsPerDegree = (azimDelta == 0) ? 0 : (int32_t)interval / azimDelta;
+        DBGLN("%d delta in %ums, %dms/d %uavg", azimDelta, interval, _azimMsPerDegree, _gpsAvgUpdateInterval);
     }
 
     _targetDistance = distance;
@@ -172,10 +172,22 @@ void AatModule::processGps(uint32_t now)
 int32_t AatModule::calcProjectedAzim(uint32_t now)
 {
     // Attempt to do a linear projection of the last
-    if (config.GetAatProject() && _gpsAvgUpdateInterval && _azimMsPerDelta)
+    // If enabled, we know the GPS update rate, the azimuth has changed, and more than a few meters away
+    if (config.GetAatProject() && _gpsAvgUpdateInterval && _azimMsPerDegree && _targetDistance > 3)
     {
         uint32_t elapsed = constrain(now - _gpsLast.lastUpdateMs, 0U, _gpsAvgUpdateInterval / 100U);
-        int32_t target = (((int32_t)elapsed / _azimMsPerDelta) + _targetAzim + 360) % 360;
+
+        // Prevent excessive rotational velocity (100 degrees per second)
+        int32_t azimMsPDLimited;
+        if (_azimMsPerDegree > -10 && _azimMsPerDegree < 10)
+            if (_azimMsPerDegree > 0)
+                azimMsPDLimited = 10;
+            else
+                azimMsPDLimited = -10;
+        else
+            azimMsPDLimited = _azimMsPerDegree;
+
+        int32_t target = (((int32_t)elapsed / azimMsPDLimited) + _targetAzim + 360) % 360;
         return target;
     }
 
@@ -328,7 +340,9 @@ void AatModule::Loop(uint32_t now)
     processGps(now);
 
     if (isHomeSet() && now > DELAY_FIRST_UPDATE)
+    {
         servoUpdate(now);
+    }
     else
     {
         if (isGpsActive())
