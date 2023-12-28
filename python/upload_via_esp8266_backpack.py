@@ -1,6 +1,6 @@
 import subprocess, os
 
-def do_upload(elrs_bin_target, upload_addr, isstm, env):
+def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
     bootloader_target = None
     app_start = 0 # eka bootloader offset
 
@@ -65,7 +65,9 @@ def on_upload(source, target, env):
     bin_path = os.path.dirname(firmware_path)
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
     if not os.path.exists(elrs_bin_target):
-        elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+        elrs_bin_target = os.path.join(bin_path, 'firmware.bin.gz')
         if not os.path.exists(elrs_bin_target):
-            raise Exception("No valid binary found!")
+            elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
+            if not os.path.exists(elrs_bin_target):
+                raise Exception("No valid binary found!")
     do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)
