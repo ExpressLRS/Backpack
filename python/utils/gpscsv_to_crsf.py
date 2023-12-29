@@ -60,6 +60,8 @@ def processFile(fname, interval, port, baud, jitter, output):
 
     if port is not None:
         uart = serial.Serial(port=port, baudrate=baud, timeout=0.1)
+        # Delay enough time for the MCU to reboot if DTR/RTS hooked to RST
+        idle(1.0, uart)
     else:
         uart = None
 
@@ -77,7 +79,8 @@ def processFile(fname, interval, port, baud, jitter, output):
                 dur = timeS - lastTime
                 if dur < interval:
                     continue
-                idle(dur + (random.randrange(0, int(jitter * 1000.0)) / 1000.0), uart)
+                j = random.randrange(0, int(jitter * 1000.0)) / 1000.0 if jitter > 0 else 0
+                idle(dur + j, uart)
 
             # All values here are immediately loaded into their CRSF representations
             sats = int(row[2])
