@@ -139,13 +139,13 @@ VrxBackpackConfig::SetDefaults()
     m_config.version = VRX_BACKPACK_CONFIG_VERSION | VRX_BACKPACK_CONFIG_MAGIC;
 
 #if defined(AAT_BACKPACK)
-    m_config.satelliteHomeMin = 5;
-    m_config.project = 0xff;
-    m_config.servoSmooth = 9;
-    m_config.servoLowAzim = 700;
-    m_config.servoLowElev = 1100;
-    m_config.servoHighAzim = 2400;
-    m_config.servoHighElev = 1900;
+    m_config.aat.satelliteHomeMin = 5;
+    m_config.aat.project = 0xff;
+    m_config.aat.servoSmooth = 9;
+    m_config.aat.servoEndpoints[0].low = 700; // AZIM
+    m_config.aat.servoEndpoints[0].high = 2400;
+    m_config.aat.servoEndpoints[1].low = 1100; // ELEV
+    m_config.aat.servoEndpoints[1].high = 1900;
 #endif
 
     m_modified = true;

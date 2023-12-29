@@ -9,7 +9,8 @@ class CrsfModuleBase : public ModuleBase
 public:
     CrsfModuleBase() = delete;
     CrsfModuleBase(Stream &port) :
-        _port(port), _crc(CRSF_CRC_POLY)
+        _port(port), _crc(CRSF_CRC_POLY),
+        _rxBufPos(0)
         {};
     void Loop(uint32_t now);
 

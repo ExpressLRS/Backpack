@@ -61,14 +61,16 @@ typedef struct {
     uint8_t     address[6];
 
 #if defined(AAT_BACKPACK)
-    uint8_t     satelliteHomeMin; // minimum number of satellites to establish home
-    uint8_t     servoSmooth;
-    uint8_t     project; // 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
-    uint8_t     servoMode; // reserved to declare 2:1 or 180+flip servo
-    uint16_t    servoLowAzim;
-    uint16_t    servoLowElev;
-    uint16_t    servoHighAzim;
-    uint16_t    servoHighElev;
+    struct __attribute__((packed)) tagAatConfig {
+        uint8_t     satelliteHomeMin; // minimum number of satellites to establish home
+        uint8_t     servoSmooth;  // 0-9 for no smoothing to 1/10th smoothing
+        uint8_t     project; // 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
+        uint8_t     servoMode; // reserved to declare 2:1 or 180+flip servo
+        struct tagServoEndoint {
+            uint16_t low;
+            uint16_t high;
+        } servoEndpoints[2]; // us endpoints for servos
+    } aat;
 #endif
 } vrx_backpack_config_t;
 
@@ -96,13 +98,11 @@ public:
     void SetGroupAddress(const uint8_t address[6]);
 
 #if defined(AAT_BACKPACK)
-    uint8_t GetAatSatelliteHomeMin() const { return m_config.satelliteHomeMin; }
-    uint8_t GetAatServoSmooth() const { return m_config.servoSmooth; }
-    uint8_t GetAatProject() const { return m_config.project; }
-    uint16_t GetAatServoLowAzim() const { return m_config.servoLowAzim; }
-    uint16_t GetAatServoLowElev() const { return m_config.servoLowElev; }
-    uint16_t GetAatServoHighAzim() const { return m_config.servoHighAzim; }
-    uint16_t GetAatServoHighElev() const { return m_config.servoHighElev; }
+    uint8_t GetAatSatelliteHomeMin() const { return m_config.aat.satelliteHomeMin; }
+    uint8_t GetAatServoSmooth() const { return m_config.aat.servoSmooth; }
+    uint8_t GetAatProject() const { return m_config.aat.project; }
+    uint16_t GetAatServoLow(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].low; }
+    uint16_t GetAatServoHigh(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].high; }
 #endif
 
 private:

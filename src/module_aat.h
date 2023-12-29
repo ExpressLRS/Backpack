@@ -30,10 +30,11 @@ public:
 
     void SendGpsTelemetry(crsf_packet_gps_t *packet);
     bool isHomeSet() const { return _home.lat != 0 || _home.lon != 0; }
-    bool isGpsActive() const { return _gpsLast.lat != 0 || _gpsLast.lon != 0 || _gpsLast.satcnt > 0; };
+    bool isGpsActive() const { return _gpsLast.lastUpdateMs != 0; };
 protected:
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
+    enum tagServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
     void displayInit();
     void updateGpsInterval(uint32_t interval);
     uint8_t calcGpsIntervalPct(uint32_t now);
@@ -41,7 +42,7 @@ private:
     void processGps(uint32_t now);
     void servoUpdate(uint32_t now);
     void displayIdle(uint32_t now);
-    void displayActive(uint32_t now, int32_t projectedAzim, int32_t usElev, int32_t usAzim);
+    void displayActive(uint32_t now, int32_t projectedAzim);
     void displayGpsIntervalBar(uint32_t now);
 
     struct {
@@ -66,8 +67,7 @@ private:
     uint16_t _targetAzim; // degrees
     uint8_t _targetElev; // degrees
     int32_t _azimMsPerDegree; // milliseconds per degree
-    int32_t _currentElev; // degrees * 100
-    int32_t _currentAzim; // degrees * 100
+    int32_t _servoUs[IDX_COUNT]; // smoothed azim servo output
 
 #if defined(PIN_SERVO_AZIM)
     Servo _servo_Azim;

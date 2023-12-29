@@ -57,7 +57,7 @@ AatModule::AatModule(Stream &port) :
     CrsfModuleBase(port), _gpsLast{0}, _home{0},
     _gpsAvgUpdateInterval(0), _lastServoUpdateMs(0), _targetDistance(0),
     _targetAzim(0), _targetElev(0), _azimMsPerDegree(0),
-    _currentElev(0), _currentAzim(0)
+    _servoUs{0}
 #if defined(PIN_SERVO_AZIM)
     , _servo_Azim()
 #endif
@@ -73,11 +73,17 @@ AatModule::AatModule(Stream &port) :
 
 void AatModule::Init()
 {
+#if !defined(DEBUG_LOG)
+    // Need to call _port's end but it is a stream reference not the HardwareSerial
+    Serial.end();
+#endif
 #if defined(PIN_SERVO_AZIM)
-    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500);
+    _servoUs[IDX_AZIM] = (config.GetAatServoLow(IDX_AZIM) + config.GetAatServoHigh(IDX_AZIM)) / 2;
+    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500, _servoUs[IDX_AZIM]);
 #endif
 #if defined(PIN_SERVO_ELEV)
-    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500);
+    _servoUs[IDX_ELEV] = (config.GetAatServoLow(IDX_ELEV) + config.GetAatServoHigh(IDX_ELEV)) / 2;
+    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500, _servoUs[IDX_ELEV]);
 #endif
     displayInit();
     ModuleBase::Init();
@@ -177,7 +183,7 @@ int32_t AatModule::calcProjectedAzim(uint32_t now)
     {
         uint32_t elapsed = constrain(now - _gpsLast.lastUpdateMs, 0U, _gpsAvgUpdateInterval / 100U);
 
-        // Prevent excessive rotational velocity (100 degrees per second)
+        // Prevent excessive rotational velocity (100 degrees per second / 10ms per degree)
         int32_t azimMsPDLimited;
         if (_azimMsPerDegree > -10 && _azimMsPerDegree < 10)
             if (_azimMsPerDegree > 0)
@@ -188,6 +194,7 @@ int32_t AatModule::calcProjectedAzim(uint32_t now)
             azimMsPDLimited = _azimMsPerDegree;
 
         int32_t target = (((int32_t)elapsed / azimMsPDLimited) + _targetAzim + 360) % 360;
+        //DBGLN("%u t=%d p=%d", elapsed, _targetAzim, target);
         return target;
     }
 
@@ -233,7 +240,7 @@ void AatModule::displayIdle(uint32_t now)
 #endif
 }
 
-void AatModule::displayActive(uint32_t now, int32_t projectedAzim, int32_t usElev, int32_t usAzim)
+void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
 {
 #if defined(PIN_OLED_SDA)
     // El:[deg] [alt]m
@@ -265,7 +272,7 @@ void AatModule::displayActive(uint32_t now, int32_t projectedAzim, int32_t usEle
         _display.printf("%um\n", _targetDistance); // XXm
     }
 
-    _display.printf("Se:%4dus\nSa:%4dus\n", usElev, usAzim);
+    _display.printf("Se:%4dus\nSa:%4dus\n", _servoUs[IDX_ELEV], _servoUs[IDX_AZIM]);
     displayGpsIntervalBar(now);
     _display.display();
 #endif
@@ -291,39 +298,47 @@ void AatModule::servoUpdate(uint32_t now)
     _lastServoUpdateMs = now;
 
     int32_t projectedAzim = calcProjectedAzim(now);
-
-    // Smooth the updates and scale to degrees * 100
-    const int8_t servoSmoothFactor = config.GetAatServoSmooth();
-    _currentAzim = ((_currentAzim * servoSmoothFactor) + (projectedAzim * (10 - servoSmoothFactor) * 100)) / 10;
-    _currentElev = ((_currentElev * servoSmoothFactor) + (_targetElev * (10 - servoSmoothFactor) * 100)) / 10;
-
-    int32_t transformedAzim = _currentAzim;
-    int32_t transformedElev = _currentElev;
+    int32_t transformedAzim = projectedAzim;
+    int32_t transformedElev = _targetElev;
 
     // 90-270 azim inverts the elevation servo
-    // if (transformedAzim > 18000)
+    // if (transformedAzim > 180)
     // {
-    //     transformedElev = 18000 - transformedElev;
-    //     transformedAzim = transformedAzim - 18000;
+    //     transformedElev = 180 - transformedElev;
+    //     transformedAzim = transformedAzim - 180;
     // }
     // For straight geared servos with 180 degree elev flip
-    // int32_t usAzim = map(transformedAzim, 0, 18000, 500, 2500);
-    // int32_t usElev = map(transformedElev, 0, 18000, 500, 2500);
+    // int32_t usAzim = map(transformedAzim, 0, 180, 500, 2500);
+    // int32_t usElev = map(transformedElev, 0, 180, 500, 2500);
 
     // For 1:2 gearing on the azim servo to allow 360 rotation
     // For Elev servos that only go 0-90 and the azim does 360
-    transformedAzim = (transformedAzim + 18000) % 36000; // convert so 0 maps to 1500us
-    int32_t usAzim = map(transformedAzim, 0, 36000, config.GetAatServoLowAzim(), config.GetAatServoHighAzim());
-    int32_t usElev = map(transformedElev, 0, 9000, config.GetAatServoLowElev(), config.GetAatServoHighElev());
+    transformedAzim = (transformedAzim + 180) % 360; // convert so 0 maps to 1500us
+    int32_t newServoPos[IDX_COUNT];
+    newServoPos[IDX_AZIM] = map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+    newServoPos[IDX_ELEV] = map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+
+    for (uint32_t idx=IDX_AZIM; idx<IDX_COUNT; ++idx)
+    {
+        int32_t range = config.GetAatServoHigh(idx) - config.GetAatServoLow(idx);
+        int32_t diff = newServoPos[idx] - _servoUs[idx];
+        // If the distance the servo needs to go is more than 80% away
+        // jump immediately. otherwise smooth it
+        if (abs(diff) * 100 / range > 80)
+            _servoUs[idx] = newServoPos[idx];
+        else
+            _servoUs[idx] += diff / (config.GetAatServoSmooth() + 1);
+    }
+    //DBGLN("t=%u pro=%d us=%d smoo=%d", _targetAzim, projectedAzim, newServoPos[IDX_AZIM], _servoUs[IDX_AZIM]);
 
 #if defined(PIN_SERVO_AZIM)
-    _servo_Azim.writeMicroseconds(usAzim);
+    _servo_Azim.writeMicroseconds(_servoUs[IDX_AZIM]);
 #endif
 #if defined(PIN_SERVO_ELEV)
-    _servo_Elev.writeMicroseconds(usElev);
+    _servo_Elev.writeMicroseconds(_servoUs[IDX_ELEV]);
 #endif
 
-    displayActive(now, projectedAzim, usElev, usAzim);
+    displayActive(now, projectedAzim);
 }
 
 void AatModule::onCrsfPacketIn(const crsf_header_t *pkt)
