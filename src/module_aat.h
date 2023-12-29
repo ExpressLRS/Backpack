@@ -67,7 +67,7 @@ private:
     uint16_t _targetAzim; // degrees
     uint8_t _targetElev; // degrees
     int32_t _azimMsPerDegree; // milliseconds per degree
-    int32_t _servoUs[IDX_COUNT]; // smoothed azim servo output
+    int32_t _servoPos[IDX_COUNT]; // smoothed azim servo output us * 100
 
 #if defined(PIN_SERVO_AZIM)
     Servo _servo_Azim;

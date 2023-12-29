@@ -57,7 +57,7 @@ AatModule::AatModule(Stream &port) :
     CrsfModuleBase(port), _gpsLast{0}, _home{0},
     _gpsAvgUpdateInterval(0), _lastServoUpdateMs(0), _targetDistance(0),
     _targetAzim(0), _targetElev(0), _azimMsPerDegree(0),
-    _servoUs{0}
+    _servoPos{0}
 #if defined(PIN_SERVO_AZIM)
     , _servo_Azim()
 #endif
@@ -78,12 +78,14 @@ void AatModule::Init()
     Serial.end();
 #endif
 #if defined(PIN_SERVO_AZIM)
-    _servoUs[IDX_AZIM] = (config.GetAatServoLow(IDX_AZIM) + config.GetAatServoHigh(IDX_AZIM)) / 2;
-    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500, _servoUs[IDX_AZIM]);
+    _servoPos[IDX_AZIM] = (config.GetAatServoLow(IDX_AZIM) + config.GetAatServoHigh(IDX_AZIM)) / 2;
+    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500, _servoPos[IDX_AZIM]);
+    _servoPos[IDX_AZIM] *= 100;
 #endif
 #if defined(PIN_SERVO_ELEV)
-    _servoUs[IDX_ELEV] = (config.GetAatServoLow(IDX_ELEV) + config.GetAatServoHigh(IDX_ELEV)) / 2;
-    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500, _servoUs[IDX_ELEV]);
+    _servoPos[IDX_ELEV] = (config.GetAatServoLow(IDX_ELEV) + config.GetAatServoHigh(IDX_ELEV)) / 2;
+    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500, _servoPos[IDX_ELEV]);
+    _servoPos[IDX_ELEV] *= 100;
 #endif
     displayInit();
     ModuleBase::Init();
@@ -272,7 +274,7 @@ void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
         _display.printf("%um\n", _targetDistance); // XXm
     }
 
-    _display.printf("Se:%4dus\nSa:%4dus\n", _servoUs[IDX_ELEV], _servoUs[IDX_AZIM]);
+    _display.printf("Se:%4dus\nSa:%4dus\n", _servoPos[IDX_ELEV]/100, _servoPos[IDX_AZIM]/100);
     displayGpsIntervalBar(now);
     _display.display();
 #endif
@@ -301,41 +303,31 @@ void AatModule::servoUpdate(uint32_t now)
     int32_t transformedAzim = projectedAzim;
     int32_t transformedElev = _targetElev;
 
-    // 90-270 azim inverts the elevation servo
-    // if (transformedAzim > 180)
-    // {
-    //     transformedElev = 180 - transformedElev;
-    //     transformedAzim = transformedAzim - 180;
-    // }
-    // For straight geared servos with 180 degree elev flip
-    // int32_t usAzim = map(transformedAzim, 0, 180, 500, 2500);
-    // int32_t usElev = map(transformedElev, 0, 180, 500, 2500);
-
     // For 1:2 gearing on the azim servo to allow 360 rotation
     // For Elev servos that only go 0-90 and the azim does 360
     transformedAzim = (transformedAzim + 180) % 360; // convert so 0 maps to 1500us
     int32_t newServoPos[IDX_COUNT];
-    newServoPos[IDX_AZIM] = map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
-    newServoPos[IDX_ELEV] = map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+    newServoPos[IDX_AZIM] = 100 * map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+    newServoPos[IDX_ELEV] = 100 * map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
 
     for (uint32_t idx=IDX_AZIM; idx<IDX_COUNT; ++idx)
     {
-        int32_t range = config.GetAatServoHigh(idx) - config.GetAatServoLow(idx);
-        int32_t diff = newServoPos[idx] - _servoUs[idx];
+        int32_t range = 100 * (config.GetAatServoHigh(idx) - config.GetAatServoLow(idx));
+        int32_t diff = newServoPos[idx] - _servoPos[idx];
         // If the distance the servo needs to go is more than 80% away
         // jump immediately. otherwise smooth it
         if (abs(diff) * 100 / range > 80)
-            _servoUs[idx] = newServoPos[idx];
+            _servoPos[idx] = newServoPos[idx];
         else
-            _servoUs[idx] += diff / (config.GetAatServoSmooth() + 1);
+            _servoPos[idx] += diff / (config.GetAatServoSmooth() + 1);
     }
-    //DBGLN("t=%u pro=%d us=%d smoo=%d", _targetAzim, projectedAzim, newServoPos[IDX_AZIM], _servoUs[IDX_AZIM]);
+    //DBGLN("t=%u pro=%d us=%d smoo=%d", _targetAzim, projectedAzim, newServoPos[IDX_AZIM]/100, _servoPos[IDX_AZIM]/100);
 
 #if defined(PIN_SERVO_AZIM)
-    _servo_Azim.writeMicroseconds(_servoUs[IDX_AZIM]);
+    _servo_Azim.writeMicroseconds(_servoPos[IDX_AZIM]/100);
 #endif
 #if defined(PIN_SERVO_ELEV)
-    _servo_Elev.writeMicroseconds(_servoUs[IDX_ELEV]);
+    _servo_Elev.writeMicroseconds(_servoPos[IDX_ELEV]/100);
 #endif
 
     displayActive(now, projectedAzim);
