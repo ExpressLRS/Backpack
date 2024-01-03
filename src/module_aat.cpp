@@ -290,10 +290,10 @@ void AatModule::displayAzimuth(int32_t projectedAzim)
     // S    W    N    E    S under that
     y += 6;
     _display.drawChar(0, y, 'S', SSD1306_WHITE, SSD1306_BLACK, 1);
-    _display.drawChar(SCREEN_WIDTH-FONT_W+1, y, 'S', SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(SCREEN_WIDTH/4-FONT_W/2, y, 'W', SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(SCREEN_WIDTH/2-FONT_W/2+1, y, 'N', SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(3*SCREEN_WIDTH/4-FONT_W/2, y, 'E', SSD1306_WHITE, SSD1306_BLACK, 1);
+    _display.drawChar(SCREEN_WIDTH-FONT_W+1, y, 'S', SSD1306_WHITE, SSD1306_BLACK, 1);
 
     // Projected azim value as 3 digit number on a white background (max 2px each side)
     y -= 2;
@@ -305,34 +305,23 @@ void AatModule::displayAzimuth(int32_t projectedAzim)
     _display.printf("%03u", projectedAzim);
 }
 
-void AatModule::displayTargetDistance(int32_t azimPos, int32_t elevPos)
+void AatModule::displayAltitude(int32_t azimPos, int32_t elevPos)
 {
-    if (_targetDistance == 0)
+    int alt = constrain(_gpsLast.altitude - _home.alt, -99, 999);
+    if (alt == 0)
         return;
 
-    // Target distance over the X: 9m, 99m, 999m, 9.9k, 99.9k, 999k
-    char dist[16];
-    if (_targetDistance > 99999) // > 99.9km = "xxxk" can you believe that?! so far.
-    {
-        snprintf(dist, sizeof(dist), "%3uk", _targetDistance / 1000);
-    }
-    else if (_targetDistance > 999) // >999m = "xx.xk"
-    {
-        snprintf(dist, sizeof(dist), "%u.%uk", _targetDistance / 1000, (_targetDistance % 1000) / 100);
-    }
-    else // "xxxm"
-    {
-        snprintf(dist, sizeof(dist), "%um", _targetDistance);
-    }
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%dm", alt);
 
-    // If elevation is low, put distance over the pip, if elev high put the distance below it
+    // If elevation is low, put alt over the pip, if elev high put the alt below it
     // and allow the units to go off the screen to the right if needed
-    int32_t strWidth = strlen(dist) * FONT_W;
+    int32_t strWidth = strlen(buf) * FONT_W;
     int32_t distX = constrain(azimPos - (strWidth/2) + 1, 0, SCREEN_WIDTH + FONT_W - strWidth);
     int32_t distY = (_targetElev < 50) ? elevPos - FONT_H - 5 : elevPos + 6;
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(distX, distY);
-    _display.write(dist);
+    _display.write(buf);
 }
 
 void AatModule::displayTargetCircle(int32_t projectedAzim)
@@ -366,7 +355,40 @@ void AatModule::displayTargetCircle(int32_t projectedAzim)
     _display.drawFastVLine(servoX-3, servoY-1, 3, SSD1306_WHITE);
     _display.drawFastVLine(servoX+3, servoY-1, 3, SSD1306_WHITE);
 
-    displayTargetDistance(azimPos, elevPos);
+    displayAltitude(azimPos, elevPos);
+}
+
+void AatModule::displayTargetDistance()
+{
+    // Target distance over the X: 9m, 99m, 999m, 9.9k, 99.9k, 999k
+    char dist[16];
+    const char *units;
+    if (_targetDistance > 99999) // >99.99m = "xxx.x" (5 chars)
+    {
+        snprintf(dist, sizeof(dist), "%u.%u", _targetDistance / 1000, (_targetDistance % 1000) / 100);
+        units = "km";
+    }
+    else if (_targetDistance > 999) // >999m = "[x]x.xx" (4-5 chars)
+    {
+        snprintf(dist, sizeof(dist), "%u.%02u", _targetDistance / 1000, (_targetDistance % 1000) / 10);
+        units = "km";
+    }
+    else // "[x]xx" (2-3 chars)
+    {
+        snprintf(dist, sizeof(dist), "%2u", _targetDistance);
+        units = "m";
+    }
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextSize(1);
+    _display.setCursor(0, 0);
+    _display.write("Dst");
+    _display.setTextSize(2);
+    _display.setCursor(3 * FONT_W + 3, 0);
+    _display.printf(dist);
+
+    _display.setTextSize(1);
+    _display.setCursor(_display.getCursorX() + 1, FONT_H);
+    _display.write(units);
 }
 
 void AatModule::displayVBat()
@@ -386,16 +408,6 @@ void AatModule::displayVBat()
     _display.write(buf);
 }
 
-void AatModule::displayAltitude()
-{
-    _display.setTextColor(SSD1306_WHITE);
-    _display.setTextSize(1);
-    _display.setCursor(0, 0);
-    _display.write("Alt ");
-    _display.setTextSize(2);
-    _display.printf("%3dm", constrain(_gpsLast.altitude - _home.alt, -99, 999));
-}
-
 void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
 {
     _display.clearDisplay();
@@ -403,7 +415,7 @@ void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
     displayGpsIntervalBar(now);
     displayAzimuth(projectedAzim);
     displayTargetCircle(projectedAzim);
-    displayAltitude();
+    displayTargetDistance();
     displayVBat();
 
     _display.display();
@@ -427,7 +439,7 @@ void AatModule::displayGpsIntervalBar(uint32_t now)
     {
         // A depleting bar going from screen center to right
         uint8_t gpsIntervalPct = calcGpsIntervalPct(now);
-        uint8_t pxWidth = SCREEN_WIDTH/2 * (100U - gpsIntervalPct) / 100U;
+        uint8_t pxWidth = (SCREEN_WIDTH-1-80) * (100U - gpsIntervalPct) / 100U;
         _display.fillRect(SCREEN_WIDTH-pxWidth, 0, pxWidth, 2, SSD1306_WHITE);
     }
 }

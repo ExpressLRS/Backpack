@@ -64,9 +64,9 @@ private:
     void displayActive(uint32_t now, int32_t projectedAzim);
     void displayGpsIntervalBar(uint32_t now);
     void displayAzimuth(int32_t projectedAzim);
-    void displayTargetDistance(int32_t azimPos, int32_t elevPos);
+    void displayAltitude(int32_t azimPos, int32_t elevPos);
     void displayTargetCircle(int32_t projectedAzim);
-    void displayAltitude();
+    void displayTargetDistance();
     void displayVBat();
 #endif
 
