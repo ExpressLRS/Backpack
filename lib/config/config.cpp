@@ -141,11 +141,14 @@ VrxBackpackConfig::SetDefaults()
 #if defined(AAT_BACKPACK)
     m_config.aat.satelliteHomeMin = 5;
     m_config.aat.project = 0xff;
-    m_config.aat.servoSmooth = 9;
+    m_config.aat.servoSmooth = 5;
     m_config.aat.servoEndpoints[0].low = 700; // AZIM
     m_config.aat.servoEndpoints[0].high = 2400;
     m_config.aat.servoEndpoints[1].low = 1100; // ELEV
     m_config.aat.servoEndpoints[1].high = 1900;
+
+    m_config.vbat.scale = 410;
+    m_config.vbat.offset = 12;
 #endif
 
     m_modified = true;

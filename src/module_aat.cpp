@@ -11,6 +11,8 @@
 #define RAD2DEG(rad) ((rad) * 180.0 / M_PI)
 #define DELAY_IDLE          (20U)   // sleep used when not tracking
 #define DELAY_FIRST_UPDATE  (5000U) // absolute delay before first servo update
+#define FONT_W              (6)     // Actually 5x7 + 1 pixel space
+#define FONT_H              (8)
 
 static void calcDistAndAzimuth(int32_t srcLat, int32_t srcLon, int32_t dstLat, int32_t dstLon,
     uint32_t *out_dist, uint32_t *out_azimuth)
@@ -53,11 +55,40 @@ static int32_t calcElevation(uint32_t distance, int32_t altitude)
     return RAD2DEG(atan2(altitude, distance));
 }
 
+VbatSampler::VbatSampler() :
+    _lastUpdate(0), _value(0), _sum(0), _cnt(0)
+{
+}
+
+void VbatSampler::update(uint32_t now)
+{
+    if (_lastUpdate != 0 && now - _lastUpdate < VBAT_UPDATE_INTERVAL)
+        return;
+    _lastUpdate = now;
+
+    uint32_t adc = analogRead(A0);
+    _sum += adc;
+    ++_cnt;
+
+    if (_cnt == VBAT_UPDATE_COUNT)
+    {
+        adc = _sum / _cnt;
+        // For negative offsets, anything between abs(OFFSET) and 0 is considered 0
+        if (config.GetVBatOffset() < 0 && (int32_t)adc <= -config.GetVBatOffset())
+            _value = 0;
+        else
+            _value = ((int32_t)adc - config.GetVBatOffset()) * 100 / config.GetVbatScale();
+
+        _sum = 0;
+        _cnt = 0;
+    }
+}
+
 AatModule::AatModule(Stream &port) :
     CrsfModuleBase(port), _gpsLast{0}, _home{0},
-    _gpsAvgUpdateInterval(0), _lastServoUpdateMs(0), _targetDistance(0),
+    _gpsAvgUpdateIntervalMs(0), _lastServoUpdateMs(0), _targetDistance(0),
     _targetAzim(0), _targetElev(0), _azimMsPerDegree(0),
-    _servoPos{0}
+    _servoPos{0}, _lastAzimFlipMs(0)
 #if defined(PIN_SERVO_AZIM)
     , _servo_Azim()
 #endif
@@ -77,17 +108,17 @@ void AatModule::Init()
     // Need to call _port's end but it is a stream reference not the HardwareSerial
     Serial.end();
 #endif
-#if defined(PIN_SERVO_AZIM)
     _servoPos[IDX_AZIM] = (config.GetAatServoLow(IDX_AZIM) + config.GetAatServoHigh(IDX_AZIM)) / 2;
+#if defined(PIN_SERVO_AZIM)
     _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500, _servoPos[IDX_AZIM]);
-    _servoPos[IDX_AZIM] *= 100;
 #endif
-#if defined(PIN_SERVO_ELEV)
     _servoPos[IDX_ELEV] = (config.GetAatServoLow(IDX_ELEV) + config.GetAatServoHigh(IDX_ELEV)) / 2;
+#if defined(PIN_SERVO_ELEV)
     _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500, _servoPos[IDX_ELEV]);
-    _servoPos[IDX_ELEV] *= 100;
 #endif
+#if defined(PIN_OLED_SDA)
     displayInit();
+#endif
     ModuleBase::Init();
 }
 
@@ -108,23 +139,21 @@ void AatModule::SendGpsTelemetry(crsf_packet_gps_t *packet)
 
 void AatModule::updateGpsInterval(uint32_t interval)
 {
-    // Avg is in ms * 100
-    interval *= 100;
     // Low pass filter. Note there is no fast init of the average, so it will take some time to grow
     // this prevents overprojection caused by the first update after setting home
-    _gpsAvgUpdateInterval += ((int32_t)interval - (int32_t)_gpsAvgUpdateInterval) / 4;
+    _gpsAvgUpdateIntervalMs += ((int32_t)interval - (int32_t)_gpsAvgUpdateIntervalMs) / 4;
 
     // Limit the maximum interval to provent projecting for too long
-    const uint32_t GPS_UPDATE_INTERVAL_MAX = (10U * 1000U * 100U);
-    if (_gpsAvgUpdateInterval > GPS_UPDATE_INTERVAL_MAX)
-        _gpsAvgUpdateInterval = GPS_UPDATE_INTERVAL_MAX;
+    const uint32_t GPS_UPDATE_INTERVAL_MAX = (10U * 1000U);
+    if (_gpsAvgUpdateIntervalMs > GPS_UPDATE_INTERVAL_MAX)
+        _gpsAvgUpdateIntervalMs = GPS_UPDATE_INTERVAL_MAX;
 }
 
 uint8_t AatModule::calcGpsIntervalPct(uint32_t now)
 {
-    if (_gpsAvgUpdateInterval)
+    if (_gpsAvgUpdateIntervalMs)
     {
-        return constrain((now - _gpsLast.lastUpdateMs) * (100U * 100U) / (uint32_t)_gpsAvgUpdateInterval, 0U, 100U);
+        return constrain((now - _gpsLast.lastUpdateMs) * 100U / (uint32_t)_gpsAvgUpdateIntervalMs, 0U, 100U);
     }
 
     return 0;
@@ -169,7 +198,7 @@ void AatModule::processGps(uint32_t now)
         // azimDelta is the azimuth change since the last packet, -180 to +180
         int32_t azimDelta = (azimuth - _targetAzim + 540) % 360 - 180;
         _azimMsPerDegree = (azimDelta == 0) ? 0 : (int32_t)interval / azimDelta;
-        DBGLN("%d delta in %ums, %dms/d %uavg", azimDelta, interval, _azimMsPerDegree, _gpsAvgUpdateInterval);
+        DBGLN("%d delta in %ums, %dms/d %uavg", azimDelta, interval, _azimMsPerDegree, _gpsAvgUpdateIntervalMs);
     }
 
     _targetDistance = distance;
@@ -181,9 +210,9 @@ int32_t AatModule::calcProjectedAzim(uint32_t now)
 {
     // Attempt to do a linear projection of the last
     // If enabled, we know the GPS update rate, the azimuth has changed, and more than a few meters away
-    if (config.GetAatProject() && _gpsAvgUpdateInterval && _azimMsPerDegree && _targetDistance > 3)
+    if (config.GetAatProject() && _gpsAvgUpdateIntervalMs && _azimMsPerDegree && _targetDistance > 3)
     {
-        uint32_t elapsed = constrain(now - _gpsLast.lastUpdateMs, 0U, _gpsAvgUpdateInterval / 100U);
+        uint32_t elapsed = constrain(now - _gpsLast.lastUpdateMs, 0U, _gpsAvgUpdateIntervalMs);
 
         // Prevent excessive rotational velocity (100 degrees per second / 10ms per degree)
         int32_t azimMsPDLimited;
@@ -203,27 +232,28 @@ int32_t AatModule::calcProjectedAzim(uint32_t now)
     return _targetAzim;
 }
 
+#if defined(PIN_OLED_SDA)
 void AatModule::displayInit()
 {
-#if defined(PIN_OLED_SDA)
     Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL);
     _display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
+    _display.setTextWrap(false);
     _display.setTextSize(2);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
     if (connectionState == binding)
         _display.print("Bind\nmode...\n\n");
+    else if (connectionState == wifiUpdate)
+        _display.print("Wifi\nmode...\n\n");
     else
         _display.print("AAT\nBackpack\n\n");
     _display.setTextSize(1);
     _display.print(VERSION);
     _display.display();
-#endif
 }
 
 void AatModule::displayIdle(uint32_t now)
 {
-#if defined(PIN_OLED_SDA)
     // A screen with just the GPS position, sat count, and interval bar
     _display.clearDisplay();
     _display.setCursor(0, 0);
@@ -239,58 +269,169 @@ void AatModule::displayIdle(uint32_t now)
 
     displayGpsIntervalBar(now);
     _display.display();
-#endif
+}
+
+void AatModule::displayAzimuth(int32_t projectedAzim)
+{
+    int32_t y = SCREEN_HEIGHT - FONT_H + 1 - 6;
+
+    // start with horizon line with arrow and unprojected azimuth
+    // |-----/\---|-|
+    _display.drawFastVLine(0, y, 5, SSD1306_WHITE);
+    _display.drawFastHLine(0, y+2, SCREEN_WIDTH-1, SSD1306_WHITE);
+    _display.drawFastVLine(SCREEN_WIDTH-1, y, 5, SSD1306_WHITE);
+    int32_t azimPos = map((_targetAzim + 180) % 360, 0, 360, 0, SCREEN_WIDTH);
+    _display.drawFastVLine(azimPos, y+1, 3, SSD1306_WHITE);
+    // Projected Azimuth arrow
+    azimPos = map((projectedAzim + 180) % 360, 0, 360, 0, SCREEN_WIDTH);
+    const uint8_t oledim_arrowup[] = { 0x10, 0x38, 0x7c }; // 'arrowup', 7x3px
+    _display.drawBitmap(azimPos-7/2, y+1, oledim_arrowup, 7, 3, SSD1306_WHITE, SSD1306_BLACK);
+
+    // S    W    N    E    S under that
+    y += 6;
+    _display.drawChar(0, y, 'S', SSD1306_WHITE, SSD1306_BLACK, 1);
+    _display.drawChar(SCREEN_WIDTH-FONT_W+1, y, 'S', SSD1306_WHITE, SSD1306_BLACK, 1);
+    _display.drawChar(SCREEN_WIDTH/4-FONT_W/2, y, 'W', SSD1306_WHITE, SSD1306_BLACK, 1);
+    _display.drawChar(SCREEN_WIDTH/2-FONT_W/2+1, y, 'N', SSD1306_WHITE, SSD1306_BLACK, 1);
+    _display.drawChar(3*SCREEN_WIDTH/4-FONT_W/2, y, 'E', SSD1306_WHITE, SSD1306_BLACK, 1);
+
+    // Projected azim value as 3 digit number on a white background (max 2px each side)
+    y -= 2;
+    uint32_t azimStart = constrain(azimPos-((3*FONT_W)/2), -2, SCREEN_WIDTH-(3*FONT_W)-2);
+    _display.fillRoundRect(azimStart, y, 3*FONT_W + 3, FONT_H + 1, 2, SSD1306_WHITE);
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_BLACK);
+    _display.setCursor(azimStart+2, y+1);
+    _display.printf("%03u", projectedAzim);
+}
+
+void AatModule::displayTargetDistance(int32_t azimPos, int32_t elevPos)
+{
+    if (_targetDistance == 0)
+        return;
+
+    // Target distance over the X: 9m, 99m, 999m, 9.9k, 99.9k, 999k
+    char dist[16];
+    if (_targetDistance > 99999) // > 99.9km = "xxxk" can you believe that?! so far.
+    {
+        snprintf(dist, sizeof(dist), "%3uk", _targetDistance / 1000);
+    }
+    else if (_targetDistance > 999) // >999m = "xx.xk"
+    {
+        snprintf(dist, sizeof(dist), "%u.%uk", _targetDistance / 1000, (_targetDistance % 1000) / 100);
+    }
+    else // "xxxm"
+    {
+        snprintf(dist, sizeof(dist), "%um", _targetDistance);
+    }
+
+    // If elevation is low, put distance over the pip, if elev high put the distance below it
+    // and allow the units to go off the screen to the right if needed
+    int32_t strWidth = strlen(dist) * FONT_W;
+    int32_t distX = constrain(azimPos - (strWidth/2) + 1, 0, SCREEN_WIDTH + FONT_W - strWidth);
+    int32_t distY = (_targetElev < 50) ? elevPos - FONT_H - 5 : elevPos + 6;
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(distX, distY);
+    _display.write(dist);
+}
+
+void AatModule::displayTargetCircle(int32_t projectedAzim)
+{
+    const int32_t elevH = 33;
+    const int32_t elevOff = 16;
+    // Dotted line to separate top of screen from tracking area
+    for (int32_t x=0; x<SCREEN_WIDTH; x+=2)
+        _display.drawPixel(x, elevOff, SSD1306_WHITE);
+
+    int32_t elevPos = map(_targetElev, 0, 90, elevH, 0) + elevOff;
+    //elevPos = 0 + elevOff;
+    // X for _projectedAzim
+    int32_t azimPos = map((projectedAzim + 180) % 360, 0, 360, 0, SCREEN_WIDTH);
+    _display.drawPixel(azimPos-1, elevPos-1, SSD1306_WHITE);
+    _display.drawPixel(azimPos+1, elevPos-1, SSD1306_WHITE);
+    _display.drawPixel(azimPos, elevPos, SSD1306_WHITE);
+    _display.drawPixel(azimPos-1, elevPos+1, SSD1306_WHITE);
+    _display.drawPixel(azimPos+1, elevPos+1, SSD1306_WHITE);
+
+    // circle/rectangle cage for _servoPos
+    int32_t servoX = map(_servoPos[IDX_AZIM],
+        config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM),
+        0, SCREEN_WIDTH);
+    int32_t servoY = map(_servoPos[IDX_ELEV],
+        config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV),
+        elevH, 0) + elevOff;
+    //servoY = 0 + elevOff
+    _display.drawFastHLine(servoX-1, servoY-3, 3, SSD1306_WHITE);
+    _display.drawFastHLine(servoX-1, servoY+3, 3, SSD1306_WHITE);
+    _display.drawFastVLine(servoX-3, servoY-1, 3, SSD1306_WHITE);
+    _display.drawFastVLine(servoX+3, servoY-1, 3, SSD1306_WHITE);
+
+    displayTargetDistance(azimPos, elevPos);
+}
+
+void AatModule::displayVBat()
+{
+    if (_vbat.value() == 0)
+        return;
+
+    //_display.setTextColor(SSD1306_WHITE);
+    //_display.setTextSize(1);
+    //_display.setCursor(0, SCREEN_HEIGHT-FONT_H+1); // SCREEN_WIDTH-(5*FONT_W)+1
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%2d.%01dV", _vbat.value() / 100, (_vbat.value() % 100) / 10);
+
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextSize(1);
+    _display.setCursor(SCREEN_WIDTH - strlen(buf)*FONT_W, FONT_H);
+    _display.write(buf);
+}
+
+void AatModule::displayAltitude()
+{
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextSize(1);
+    _display.setCursor(0, 0);
+    _display.write("Alt ");
+    _display.setTextSize(2);
+    _display.printf("%3dm", constrain(_gpsLast.altitude - _home.alt, -99, 999));
 }
 
 void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
 {
-#if defined(PIN_OLED_SDA)
-    // El:[deg] [alt]m
-    // Az:[deg] [dist]
-    // Se:[servo elev]us
-    // Sa:[servo azim]us
-    // With interval bar
     _display.clearDisplay();
-    _display.setTextSize(2);
-    _display.setCursor(0, 0)
-    ;
-    _display.printf("El:%02u %dm\nAz:%03u ", _targetElev,
-        constrain(_gpsLast.altitude - _home.alt, -99, 999),
-        projectedAzim);
 
-    // Target distance has variable width/height but all fits in 3x1 (doublesized) characters
-    if (_targetDistance > 999)
-    {
-        _display.setTextSize(1);
-        _display.printf("%u.%03u\nkm\n", _targetDistance / 1000, (_targetDistance % 1000)); // X.XXX km small font
-        _display.setTextSize(2);
-    }
-    else if (_targetDistance > 99)
-    {
-        _display.printf("%u\n", _targetDistance); // XXX
-    }
-    else
-    {
-        _display.printf("%um\n", _targetDistance); // XXm
-    }
-
-    _display.printf("Se:%4dus\nSa:%4dus\n", _servoPos[IDX_ELEV]/100, _servoPos[IDX_AZIM]/100);
     displayGpsIntervalBar(now);
+    displayAzimuth(projectedAzim);
+    displayTargetCircle(projectedAzim);
+    displayAltitude();
+    displayVBat();
+
     _display.display();
-#endif
 }
 
 void AatModule::displayGpsIntervalBar(uint32_t now)
 {
-#if defined(PIN_OLED_SDA)
-    if (_gpsAvgUpdateInterval)
+    if (_gpsAvgUpdateIntervalMs == 0)
+        return;
+
+    if (now - _gpsLast.lastUpdateMs > (3*_gpsAvgUpdateIntervalMs))
     {
-        uint8_t gpsIntervalPct = calcGpsIntervalPct(now);
-        uint8_t pxHeight = SCREEN_HEIGHT * (100U - gpsIntervalPct) / 100U;
-        _display.fillRect(SCREEN_WIDTH - 3, SCREEN_HEIGHT - pxHeight, 2, pxHeight, SSD1306_WHITE);
+        // Inverse "OLD" in the center of where the update bar would be
+        _display.fillRoundRect(80, 0, SCREEN_WIDTH-1-80, FONT_H-1, 2, SSD1306_WHITE);
+        _display.setTextSize(1);
+        _display.setTextColor(SSD1306_BLACK);
+        _display.setCursor(104 - (3*FONT_W)/2, 0);
+        _display.write("OLD");
     }
-#endif
+    else
+    {
+        // A depleting bar going from screen center to right
+        uint8_t gpsIntervalPct = calcGpsIntervalPct(now);
+        uint8_t pxWidth = SCREEN_WIDTH/2 * (100U - gpsIntervalPct) / 100U;
+        _display.fillRect(SCREEN_WIDTH-pxWidth, 0, pxWidth, 2, SSD1306_WHITE);
+    }
 }
+#endif /* defined(PIN_OLED_SDA) */
 
 void AatModule::servoUpdate(uint32_t now)
 {
@@ -307,30 +448,48 @@ void AatModule::servoUpdate(uint32_t now)
     // For Elev servos that only go 0-90 and the azim does 360
     transformedAzim = (transformedAzim + 180) % 360; // convert so 0 maps to 1500us
     int32_t newServoPos[IDX_COUNT];
-    newServoPos[IDX_AZIM] = 100 * map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
-    newServoPos[IDX_ELEV] = 100 * map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+    newServoPos[IDX_AZIM] = map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+    newServoPos[IDX_ELEV] = map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
 
     for (uint32_t idx=IDX_AZIM; idx<IDX_COUNT; ++idx)
     {
-        int32_t range = 100 * (config.GetAatServoHigh(idx) - config.GetAatServoLow(idx));
+        // Use smoothness to denote the maximum us per 20ms update
+        const int32_t SMOOTHNESS_US_PER_STEP = (config.GetAatServoSmooth() < 3) ? 6 : 4;
+        int32_t range = (config.GetAatServoHigh(idx) - config.GetAatServoLow(idx));
         int32_t diff = newServoPos[idx] - _servoPos[idx];
+        int32_t maxDiff = (10 - config.GetAatServoSmooth()) * SMOOTHNESS_US_PER_STEP;
         // If the distance the servo needs to go is more than 80% away
         // jump immediately. otherwise smooth it
-        if (abs(diff) * 100 / range > 80)
-            _servoPos[idx] = newServoPos[idx];
+        if (idx == IDX_AZIM && (abs(diff) * 100 / range) > 80)
+        {
+            // Prevent the servo from flipping back and forth around the 180 point
+            // by only allowing 1 flip ever Xms. Just keep pushing toward the limit
+            const uint32_t AZIM_FLIP_MIN_DELAY = 2000U;
+            if (now - _lastAzimFlipMs > AZIM_FLIP_MIN_DELAY)
+            {
+                _servoPos[idx] = newServoPos[idx];
+                _lastAzimFlipMs = now;
+            }
+            else if (diff < 0)
+                _servoPos[idx] = constrain(_servoPos[idx] + maxDiff, _servoPos[idx], config.GetAatServoHigh(idx));
+            else
+                _servoPos[idx] = constrain(_servoPos[idx] - maxDiff, config.GetAatServoLow(idx), _servoPos[idx]);
+        }
         else
-            _servoPos[idx] += diff / (config.GetAatServoSmooth() + 1);
+            _servoPos[idx] += constrain(diff, -maxDiff, maxDiff);
     }
-    //DBGLN("t=%u pro=%d us=%d smoo=%d", _targetAzim, projectedAzim, newServoPos[IDX_AZIM]/100, _servoPos[IDX_AZIM]/100);
+    //DBGLN("t=%u pro=%d us=%d smoo=%d", _targetAzim, projectedAzim, newServoPos[IDX_AZIM], _servoPos[IDX_AZIM]);
 
 #if defined(PIN_SERVO_AZIM)
-    _servo_Azim.writeMicroseconds(_servoPos[IDX_AZIM]/100);
+    _servo_Azim.writeMicroseconds(_servoPos[IDX_AZIM]);
 #endif
 #if defined(PIN_SERVO_ELEV)
-    _servo_Elev.writeMicroseconds(_servoPos[IDX_ELEV]/100);
+    _servo_Elev.writeMicroseconds(_servoPos[IDX_ELEV]);
 #endif
 
+#if defined(PIN_OLED_SDA)
     displayActive(now, projectedAzim);
+#endif
 }
 
 void AatModule::onCrsfPacketIn(const crsf_header_t *pkt)
@@ -345,6 +504,7 @@ void AatModule::onCrsfPacketIn(const crsf_header_t *pkt)
 void AatModule::Loop(uint32_t now)
 {
     processGps(now);
+    _vbat.update(now);
 
     if (isHomeSet() && now > DELAY_FIRST_UPDATE)
     {
@@ -352,8 +512,10 @@ void AatModule::Loop(uint32_t now)
     }
     else
     {
+#if defined(PIN_OLED_SDA)
         if (isGpsActive())
             displayIdle(now);
+#endif
         delay(DELAY_IDLE);
     }
 

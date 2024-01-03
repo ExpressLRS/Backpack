@@ -71,6 +71,11 @@ typedef struct {
             uint16_t high;
         } servoEndpoints[2]; // us endpoints for servos
     } aat;
+
+    struct __attribute__((packed)) tagVbatConfig {
+        uint16_t scale;
+        int16_t offset;
+    } vbat;
 #endif
 } vrx_backpack_config_t;
 
@@ -103,6 +108,9 @@ public:
     uint8_t GetAatProject() const { return m_config.aat.project; }
     uint16_t GetAatServoLow(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].low; }
     uint16_t GetAatServoHigh(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].high; }
+
+    uint16_t GetVbatScale() const { return m_config.vbat.scale; }
+    int16_t GetVBatOffset() const { return m_config.vbat.offset; }
 #endif
 
 private:

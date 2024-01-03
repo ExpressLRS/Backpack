@@ -19,6 +19,23 @@
 #define SCREEN_ADDRESS 0x3C
 #endif
 
+class VbatSampler
+{
+public:
+    VbatSampler();
+
+    void update(uint32_t now);
+    uint32_t value() const { return 1250; } //_value; }
+private:
+    const uint32_t VBAT_UPDATE_INTERVAL = 100U;
+    const uint32_t VBAT_UPDATE_COUNT = 5U;
+
+    uint32_t _lastUpdate;
+    uint32_t _value;
+    uint32_t _sum;  // in progress sum/count
+    uint32_t _cnt;
+};
+
 class AatModule : public CrsfModuleBase
 {
 public:
@@ -41,9 +58,17 @@ private:
     int32_t calcProjectedAzim(uint32_t now);
     void processGps(uint32_t now);
     void servoUpdate(uint32_t now);
+
+#if defined(PIN_OLED_SDA)
     void displayIdle(uint32_t now);
     void displayActive(uint32_t now, int32_t projectedAzim);
     void displayGpsIntervalBar(uint32_t now);
+    void displayAzimuth(int32_t projectedAzim);
+    void displayTargetDistance(int32_t azimPos, int32_t elevPos);
+    void displayTargetCircle(int32_t projectedAzim);
+    void displayAltitude();
+    void displayVBat();
+#endif
 
     struct {
         int32_t lat;
@@ -60,14 +85,16 @@ private:
         int32_t lon;
         int32_t alt;
     } _home;
-    uint32_t _gpsAvgUpdateInterval; // ms * 100
+    uint32_t _gpsAvgUpdateIntervalMs;
     // Servo Position
     uint32_t _lastServoUpdateMs;
     uint32_t _targetDistance; // meters
     uint16_t _targetAzim; // degrees
     uint8_t _targetElev; // degrees
     int32_t _azimMsPerDegree; // milliseconds per degree
-    int32_t _servoPos[IDX_COUNT]; // smoothed azim servo output us * 100
+    int32_t _servoPos[IDX_COUNT]; // smoothed azim servo output us
+    uint32_t _lastAzimFlipMs;
+    VbatSampler _vbat;
 
 #if defined(PIN_SERVO_AZIM)
     Servo _servo_Azim;
