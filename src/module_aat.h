@@ -2,6 +2,7 @@
 
 #if defined(AAT_BACKPACK)
 #include "config.h"
+#include "devWifi.h"
 #include "module_crsf.h"
 #include "crsf_protocol.h"
 
@@ -25,7 +26,7 @@ public:
     VbatSampler();
 
     void update(uint32_t now);
-    uint32_t value() const { return 1250; } //_value; }
+    uint32_t value() const { return _value + 1170; }
 private:
     const uint32_t VBAT_UPDATE_INTERVAL = 100U;
     const uint32_t VBAT_UPDATE_COUNT = 5U;
