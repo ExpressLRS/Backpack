@@ -9,7 +9,7 @@
   #include <WiFi.h>
 #endif
 
-
+#include <queue>
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
@@ -81,6 +81,10 @@ device_t *ui_devices[] = {
 };
 
 #if defined(PLATFORM_ESP32)
+std::queue<const uint8_t*> mac_addr_queue;
+std::queue<const uint8_t*> data_queue;
+std::queue<int> data_len_queue;
+
 // This seems to need to be global, as per this page,
 // otherwise we get errors about invalid peer:
 // https://rntlab.com/question/espnow-peer-interface-is-invalid/
@@ -133,6 +137,13 @@ void RebootIntoWifi()
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 #elif defined(PLATFORM_ESP32)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
+{
+  mac_addr_queue.push(mac_addr);
+  data_queue.push(data);
+  data_len_queue.push(data_len);
+}
+
+void ProceessRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
   DBGLN("ESP NOW DATA:");
@@ -302,7 +313,7 @@ void SetSoftMACAddress()
     wifi_set_macaddr(STATION_IF, firmwareOptions.uid);
   #elif defined(PLATFORM_ESP32)
     esp_wifi_set_mac(WIFI_IF_STA, firmwareOptions.uid);
-  #endif
+      #endif
 }
 
 void RequestVTXPacket()
@@ -432,7 +443,7 @@ void setup()
 #endif
     SetSoftMACAddress();
     SetupEspNow();
-  }
+      }
 
   devicesStart();
   if (connectionState == starting)
@@ -509,4 +520,15 @@ void loop()
     resetBootCounter();
   }
 #endif
+
+#if defined(PLATFORM_ESP32)
+  if (!mac_addr_queue.empty() && !data_queue.empty() && !data_len_queue.empty() && Serial.availableForWrite() == 128)
+    {
+      ProceessRecv(mac_addr_queue.front(), data_queue.front(), data_len_queue.front());
+      mac_addr_queue.pop();
+      data_queue.pop();
+      data_len_queue.pop();
+    }
+#endif
+  
 }
