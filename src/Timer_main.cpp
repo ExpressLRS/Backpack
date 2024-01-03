@@ -9,6 +9,7 @@
   #include <WiFi.h>
 #endif
 
+#include <queue>
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
@@ -37,11 +38,16 @@ const uint8_t version[] = {LATEST_VERSION};
 connectionState_e connectionState = starting;
 unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;
+int maxAttempt = 5;
+int sendAttempt = 0;
+uint32_t sendTime = 0;
 
 bool cacheFull = false;
 bool sendCached = false;
 bool tempUID = false;
 bool isBinding = false;
+bool espnowCTS = true;
+bool sendSuccess = false;
 
 device_t *ui_devices[] = {
 #ifdef PIN_LED
@@ -52,6 +58,8 @@ device_t *ui_devices[] = {
 #endif
   &WIFI_device,
 };
+
+std::queue<mspPacket_t> sendQueue;
 
 /////////// CLASS OBJECTS ///////////
 
@@ -117,6 +125,26 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
   }
 }
 
+#if defined(PLATFORM_ESP8266)
+void OnDataSent(uint8_t *mac_addr, uint8_t status)
+{
+  espnowCTS = true;
+  if (status == 0)
+    sendSuccess = true;
+  else
+    sendSuccess = false;
+}
+#elif defined(PLATFORM_ESP32)
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+  espnowCTS = true;
+  if (status == ESP_NOW_SEND_SUCCESS)
+    sendSuccess = true;
+  else
+    sendSuccess = false;
+}
+#endif
+
 // espnow on-receive callback
 #if defined(PLATFORM_ESP8266)
 void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
@@ -155,7 +183,7 @@ void SendVersionResponse()
   mspPacket_t out;
   out.reset();
   out.makeResponse();
-  out.function = MSP_ELRS_BACKPACK_SET_MODE;
+  out.function = MSP_ELRS_GET_BACKPACK_VERSION;
   for (size_t i = 0 ; i < sizeof(version) ; i++)
   {
     out.addByte(version[i]);
@@ -169,7 +197,7 @@ void SendInProgressResponse()
     const uint8_t *response = (const uint8_t *)"P";
     out.reset();
     out.makeResponse();
-    out.function = MSP_ELRS_GET_BACKPACK_VERSION;
+    out.function = MSP_ELRS_BACKPACK_SET_MODE;
     for (uint32_t i = 0 ; i < 1 ; i++)
     {
         out.addByte(response[i]);
@@ -409,6 +437,7 @@ void setup()
       rebootTime = millis();
     }
 
+    esp_now_register_send_cb(OnDataSent);
     esp_now_register_recv_cb(OnDataRecv);
 
     registerPeer(firmwareOptions.uid);
@@ -464,9 +493,41 @@ void loop()
     uint8_t c = Serial.read();
     if (msp.processReceivedByte(c))
     {
-      // Finished processing a complete packet
-      ProcessMSPPacketFromTimer(msp.getReceivedPacket(), now);
+      // Store the recieved packet
+      sendQueue.push(*msp.getReceivedPacket());
       msp.markPacketReceived();
+    }
+  }
+
+  // Process packets in sendQueue
+  if (!sendQueue.empty() && espnowCTS)
+  {
+    mspPacket_t *packet = &sendQueue.front();
+    uint16_t function = packet->function;
+
+    if (function == MSP_ELRS_GET_BACKPACK_VERSION ||
+      function == MSP_ELRS_BACKPACK_SET_MODE ||
+      function == MSP_ELRS_SET_SEND_UID)
+    {
+      ProcessMSPPacketFromTimer(packet, now);
+      sendQueue.pop();
+    }
+    else if (now - sendTime > 5)
+    {
+      if (++sendAttempt > maxAttempt || sendSuccess)
+      {
+        espnowCTS = false;
+        sendAttempt = 0;
+        ProcessMSPPacketFromTimer(packet, now);
+        sendTime = now;
+        sendQueue.pop();
+      }
+      else
+      {
+        espnowCTS = false;
+        ProcessMSPPacketFromTimer(packet, now);
+        sendTime = now;
+      }
     }
   }
 
