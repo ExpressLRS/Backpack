@@ -70,6 +70,7 @@ typedef struct {
             uint16_t low;
             uint16_t high;
         } servoEndpoints[2]; // us endpoints for servos
+        uint8_t     units;  // 0=meters, anything else=also meters :-D
     } aat;
 
     struct __attribute__((packed)) tagVbatConfig {
