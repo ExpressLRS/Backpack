@@ -2,7 +2,6 @@
 #include "common.h"
 #include "module_aat.h"
 #include "logging.h"
-#include "devWifi.h"
 
 #include <math.h>
 #include <Arduino.h>
@@ -248,6 +247,7 @@ void AatModule::displayInit()
     else
         _display.print("AAT\nBackpack\n\n");
     _display.setTextSize(1);
+    extern const char *VERSION; // in devWifi / created during build
     _display.print(VERSION);
     _display.display();
 }
