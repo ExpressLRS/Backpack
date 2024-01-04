@@ -25,7 +25,8 @@ public:
     VbatSampler();
 
     void update(uint32_t now);
-    uint32_t value() const { return _value + 1170; }
+    // Reported in V * 10
+    uint32_t value() const { return _value; }
 private:
     const uint32_t VBAT_UPDATE_INTERVAL = 100U;
     const uint32_t VBAT_UPDATE_COUNT = 5U;

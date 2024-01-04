@@ -396,16 +396,10 @@ void AatModule::displayVBat()
     if (_vbat.value() == 0)
         return;
 
-    //_display.setTextColor(SSD1306_WHITE);
-    //_display.setTextSize(1);
-    //_display.setCursor(0, SCREEN_HEIGHT-FONT_H+1); // SCREEN_WIDTH-(5*FONT_W)+1
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%2d.%01dV", _vbat.value() / 100, (_vbat.value() % 100) / 10);
-
     _display.setTextColor(SSD1306_WHITE);
     _display.setTextSize(1);
-    _display.setCursor(SCREEN_WIDTH - strlen(buf)*FONT_W, FONT_H);
-    _display.write(buf);
+    _display.setCursor(SCREEN_WIDTH - 5*FONT_W, FONT_H);
+    _display.printf("%2d.%1dV", _vbat.value() / 10, _vbat.value() % 10);
 }
 
 void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
