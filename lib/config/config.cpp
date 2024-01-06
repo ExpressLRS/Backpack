@@ -89,6 +89,13 @@ TxBackpackConfig::SetGroupAddress(const uint8_t address[6])
 
 #if defined(TARGET_VRX_BACKPACK)
 
+#define CONFIG_MOD_CHECK(fld, val) {    \
+        if (val == fld)                 \
+            return;                     \
+        fld = val;                      \
+        m_modified = true;              \
+    }
+
 void
 VrxBackpackConfig::Load()
 {
@@ -142,13 +149,16 @@ VrxBackpackConfig::SetDefaults()
     m_config.aat.satelliteHomeMin = 5;
     m_config.aat.project = 0xff;
     m_config.aat.servoSmooth = 5;
-    m_config.aat.servoEndpoints[0].low = 700; // AZIM
-    m_config.aat.servoEndpoints[0].high = 2400;
-    m_config.aat.servoEndpoints[1].low = 1100; // ELEV
-    m_config.aat.servoEndpoints[1].high = 1900;
+    m_config.aat.centerDir = 2; // N
+    m_config.aat.servoEndpoints[0].low = 500; // AZIM
+    m_config.aat.servoEndpoints[0].high = 2500;
+    m_config.aat.servoEndpoints[1].low = 1000; // ELEV
+    m_config.aat.servoEndpoints[1].high = 2000;
 
-    m_config.vbat.scale = 410;
-    m_config.vbat.offset = 12;
+    //m_config.vbat.scale = 410;
+    //m_config.vbat.offset = 12;
+    m_config.vbat.scale = 292;
+    m_config.vbat.offset = -2;
 #endif
 
     m_modified = true;
@@ -190,4 +200,44 @@ VrxBackpackConfig::SetStartWiFiOnBoot(bool startWifi)
     m_modified = true;
 }
 
-#endif
+#if defined(AAT_BACKPACK)
+
+void
+VrxBackpackConfig::SetAatServoSmooth(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoSmooth, val);
+}
+
+void
+VrxBackpackConfig::SetAatServoLow(uint8_t idx, uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoEndpoints[idx].low, val);
+}
+
+void
+VrxBackpackConfig::SetAatServoHigh(uint8_t idx, uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoEndpoints[idx].high, val);
+}
+
+void
+VrxBackpackConfig::SetVbatScale(uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.vbat.scale, val);
+}
+
+void
+VrxBackpackConfig::SetVbatOffset(int16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.vbat.offset, val);
+}
+
+void
+VrxBackpackConfig::SetAatCenterDir(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.centerDir, val);
+}
+
+#endif /* defined(AAT_BACKPACK) */
+
+#endif /* defined(TARGET_VRX_BACKPACK) */

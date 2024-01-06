@@ -62,15 +62,17 @@ typedef struct {
 
 #if defined(AAT_BACKPACK)
     struct __attribute__((packed)) tagAatConfig {
-        uint8_t     satelliteHomeMin; // minimum number of satellites to establish home
-        uint8_t     servoSmooth;  // 0-9 for no smoothing to 1/10th smoothing
-        uint8_t     project; // 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
-        uint8_t     servoMode; // reserved to declare 2:1 or 180+flip servo
+        uint8_t     satelliteHomeMin;   // minimum number of satellites to establish home
+        uint8_t     servoSmooth;    // 0-9 for min smoothing to most smoothing
+        uint8_t     centerDir;      // Direction servo points at center position 2=N 3=E 0=S 1=W
+        uint8_t     project;        // FUTURE: 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
+        uint8_t     units;          // FUTURE: 0=meters, anything else=also meters :-D
+        uint8_t     servoMode;      // FUTURE: reserved to declare 2:1, 180+flip servo, or 180 clipped
+                                    // Also maybe invertAzim / invertElev servo bit or just swap low/high
         struct tagServoEndoint {
             uint16_t low;
             uint16_t high;
-        } servoEndpoints[2]; // us endpoints for servos
-        uint8_t     units;  // 0=meters, anything else=also meters :-D
+        } servoEndpoints[2];        // us endpoints for servos
     } aat;
 
     struct __attribute__((packed)) tagVbatConfig {
@@ -106,12 +108,19 @@ public:
 #if defined(AAT_BACKPACK)
     uint8_t GetAatSatelliteHomeMin() const { return m_config.aat.satelliteHomeMin; }
     uint8_t GetAatServoSmooth() const { return m_config.aat.servoSmooth; }
+    void SetAatServoSmooth(uint8_t val);
     uint8_t GetAatProject() const { return m_config.aat.project; }
+    uint8_t GetAatCenterDir() const { return m_config.aat.centerDir; }
+    void SetAatCenterDir(uint8_t val);
     uint16_t GetAatServoLow(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].low; }
+    void SetAatServoLow(uint8_t idx, uint16_t val);
     uint16_t GetAatServoHigh(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].high; }
+    void SetAatServoHigh(uint8_t idx, uint16_t val);
 
     uint16_t GetVbatScale() const { return m_config.vbat.scale; }
-    int16_t GetVBatOffset() const { return m_config.vbat.offset; }
+    void SetVbatScale(uint16_t val);
+    int16_t GetVbatOffset() const { return m_config.vbat.offset; }
+    void SetVbatOffset(int16_t val);
 #endif
 
 private:

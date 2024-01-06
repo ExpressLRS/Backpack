@@ -10,17 +10,14 @@
 </head>
 
 <body>
-	<div class="mui-appbar mui--z1 mui--text-center elrs-header">
-		<img src="logo.svg" height="250" width="250" style="padding:20px;"></a>
-		<h1>Welcome to your <b>ExpressLRS</b><br /> update page<br />
-		</h1>
-		<p>From here you can update your <b>VRx Backpack</b> module with <b>@PLATFORM@</b> firmware<br />
-		<p>
-			<b>Firmware Rev. </b><var id="FirmVersion">@VERSION@</var>
-		<p>
-	</div>
+	<header class="mui-appbar mui--z1 mui--text-center elrs-header">
+		<img src="logo.svg" height="250" width="250" style="padding:20px;">
+		<h1><b>ExpressLRS</b></h1>
+		<span id="product_name">VRx Backpack</span> @PLATFORM@<br/>
+		<b>Firmware Rev. </b>@VERSION@ <span id="reg_domain"></span>
+	</header>
 
-	<br>
+	<br/>
 	<div class="mui-container-fluid">
 		<div class="mui-panel mui-col-sm-10 mui-col-sm-offset-1">
 
@@ -28,6 +25,7 @@
 				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Update</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Network</a></li>
 				<li id="rtctab" style="display:none;"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">RTC Time</a></li>
+				<li id="aattab" style="display:none;"><a data-mui-toggle="tab" data-mui-controls="pane-justified-4">Antenna Tracking</a></li>
 			</ul>
 
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
@@ -102,6 +100,100 @@
 							</label>
 						</div>
 						<input type="submit" value="Set Time" class="mui-btn mui-btn--primary">
+					</form>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-justified-4">
+				<form action="/aatconfig" id="aatconfig" method="POST" class="mui-form">
+					<div class="mui-panel">
+						<fieldset><legend>Servo maximum speed</legend>
+							Use the slider to limit the maximum rotational speed of the servo. Note that when the azimuth servo
+							must flip from one side to the other, the servo always will move at full speed.
+							<input type="range" id="servosmoo" name="servosmoo" list="servosmoo_markers" value="5" min="0" max="9" step="1" style="width: 100%;"/>
+							<datalist id="servosmoo_markers">
+								<option value="0" label="Fast" title="Lickedy Speed"></option>
+								<option value="1" label=""></option>
+								<option value="2" label=""></option>
+								<option value="3" label=""></option>
+								<option value="4" label=""></option>
+								<option value="5" label="90deg/s"></option>
+								<option value="6" label=""></option>
+								<option value="7" label=""></option>
+								<option value="8" label=""></option>
+								<option value="9" label="Slow"></option>
+							</datalist>
+						</fieldset>
+					</div>
+					<div class="mui-panel">
+						<fieldset><legend>Azimuth servo</legend>
+							Enter the micrsecond (us) values for the min and max position of the horizontal servo, using the slider to test positions.
+							<input type="range" id="azim" name="azim" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="90" style="width: 100%;"/>
+							<datalist id="azim_markers">
+								<option value="-180" label="S"></option>
+								<option value="-90" label="W"></option>
+								<option value="0" label="N"></option>
+								<option value="90" label="E"></option>
+								<option value="180" label="S"></option>
+							</datalist>
+							<div class="mui-textfield mui-col-xs-3">
+								<input id="azim_min" type="number" name="azim_min" min="500" max="2500" value="700" step="10"/>
+								<label for="azim_min">Min</label>
+							</div>
+							<div class="mui-select mui-col-xs-6">
+								<select id="azim_center" name="azim_center">
+									<option value="2">N</option>
+									<option value="3">E</option>
+									<option value="0">S</option>
+									<option value="1">W</option>
+								</select>
+								<label for="azim_center">Servo center direction</label>
+							</div>
+							<div class="mui-textfield mui-col-xs-3">
+								<input id="azim_max" type="number" name="azim_max" min="500" max="2500" value="2400" step="10"/>
+								<label for="azim_max">Max</label>
+							</div>
+						</fieldset>
+						<fieldset><legend>Elevation servo</legend>
+							Enter the micrsecond (us) values for the min and max position of the vertical servo, using the slider to test positions.
+							<input type="range" id="elev" name="elev" class="aatlive" list="elev_markers" value="45" min="0" max="90" step="15" style="width: 100%;"/>
+							<datalist id="elev_markers">
+								<option value="0" label="0"></option>
+								<option value="15" label=""></option>
+								<option value="30" label=""></option>
+								<option value="45" label="45"></option>
+								<option value="60" label=""></option>
+								<option value="75" label=""></option>
+								<option value="90" label="90"></option>
+							</datalist>
+							<div class="mui-textfield mui-col-xs-3">
+								<input id="elev_min" type="number" name="elev_min" min="500" max="2500" value="1100" step="10"/>
+								<label for="elev_min">Min</label>
+							</div>
+							<div class="mui-textfield mui-col-xs-6 mui--text-center">
+								&nbsp;
+							</div>
+							<div class="mui-textfield mui-col-xs-3">
+								<input id="elev_max" type="number" name="elev_max" min="500" max="2500" value="1900" step="10"/>
+								<label for="elev_max">Max</label>
+							</div>
+						</fieldset>
+					</div>
+					<div class="mui-panel">
+						<fieldset><legend>Battery voltage</legend>
+							Battery voltage is calculated using the formula <strong>VBAT = (ADC - offset) / scale</strong>. If voltage is reading too high, increase scale.
+							<div class="mui-textfield mui-col-xs-6">
+								<input id="vbat_scale" type="number" name="vbat_scale" value="410"/>
+								<label for="vbat_scale">Scale</label>
+							</div>
+							<div class="mui-textfield mui-col-xs-6">
+								<input id="vbat_offset" type="number" name="vbat_offset" value="12"/>
+								<label for="vbat_offset">Offset</label>
+							</div>
+						</fieldset>
+					</div>
+					<input type="hidden" name="commit" value="1"/>
+					<input type="submit" id="aatsubmit" value="Save" class="mui-btn mui-btn--primary"/>
 					</form>
 				</div>
 			</div>

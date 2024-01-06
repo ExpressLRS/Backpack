@@ -47,9 +47,14 @@ public:
     void Loop(uint32_t now);
 
     void SendGpsTelemetry(crsf_packet_gps_t *packet);
-    bool isHomeSet() const { return _home.lat != 0 || _home.lon != 0; }
+    bool isHomeSet() const { return _home.lat != 0 || _home.lon != 0 || _isOverrideMode; }
     bool isGpsActive() const { return _gpsLast.lastUpdateMs != 0; };
+
+    void overrideTargetBearing(int32_t bearing);
+    void overrideTargetElev(int32_t elev);
+    uint32_t getVbat();
 protected:
+    void overrideTargetCommon(int32_t azimuth, int32_t elevation);
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
     enum tagServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
@@ -61,7 +66,8 @@ private:
     void servoUpdate(uint32_t now);
 
 #if defined(PIN_OLED_SDA)
-    void displayIdle(uint32_t now);
+    void displayState();
+    void displayGpsIdle(uint32_t now);
     void displayActive(uint32_t now, int32_t projectedAzim);
     void displayGpsIntervalBar(uint32_t now);
     void displayAzimuth(int32_t projectedAzim);
@@ -92,6 +98,7 @@ private:
     uint32_t _targetDistance; // meters
     uint16_t _targetAzim; // degrees
     uint8_t _targetElev; // degrees
+    bool    _isOverrideMode;
     int32_t _azimMsPerDegree; // milliseconds per degree
     int32_t _servoPos[IDX_COUNT]; // smoothed azim servo output us
     uint32_t _lastAzimFlipMs;
@@ -107,4 +114,7 @@ private:
     Adafruit_SSD1306 _display;
 #endif
 };
+
+extern AatModule vrxModule;
+
 #endif /* AAT_BACKPACK */

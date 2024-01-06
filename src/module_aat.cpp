@@ -5,6 +5,11 @@
 
 #include <math.h>
 #include <Arduino.h>
+#if defined(ESP32)
+#include <WiFi.h>
+#else
+#include <ESP8266WiFi.h>
+#endif
 
 #define DEG2RAD(deg) ((deg) * M_PI / 180.0)
 #define RAD2DEG(rad) ((rad) * 180.0 / M_PI)
@@ -69,14 +74,15 @@ void VbatSampler::update(uint32_t now)
     _sum += adc;
     ++_cnt;
 
-    if (_cnt == VBAT_UPDATE_COUNT)
+    if (_cnt >= VBAT_UPDATE_COUNT)
     {
         adc = _sum / _cnt;
         // For negative offsets, anything between abs(OFFSET) and 0 is considered 0
-        if (config.GetVBatOffset() < 0 && (int32_t)adc <= -config.GetVBatOffset())
+        if ((config.GetVbatOffset() < 0 && (int32_t)adc <= -config.GetVbatOffset())
+            || config.GetVbatScale() == 0)
             _value = 0;
         else
-            _value = ((int32_t)adc - config.GetVBatOffset()) * 100 / config.GetVbatScale();
+            _value = ((int32_t)adc - config.GetVbatOffset()) * 100 / config.GetVbatScale();
 
         _sum = 0;
         _cnt = 0;
@@ -98,7 +104,7 @@ AatModule::AatModule(Stream &port) :
     , _display(SCREEN_WIDTH, SCREEN_HEIGHT)
 #endif
 {
-  // Init is called manually
+    // Init is called manually
 }
 
 void AatModule::Init()
@@ -160,7 +166,7 @@ uint8_t AatModule::calcGpsIntervalPct(uint32_t now)
 
 void AatModule::processGps(uint32_t now)
 {
-    if (!_gpsLast.updated)
+    if (!_gpsLast.updated || _isOverrideMode)
         return;
     _gpsLast.updated = false;
 
@@ -237,24 +243,46 @@ void AatModule::displayInit()
     Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL);
     _display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
     _display.setTextWrap(false);
+    displayState();
+}
+
+void AatModule::displayState()
+{
+    // Boot screen with vbat, version, and bind/wifi state
+    _display.clearDisplay();
     _display.setTextSize(2);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
     if (connectionState == binding)
-        _display.print("Bind\nmode...\n\n");
+    {
+        _display.write("Bind\nmode...\n\n");
+    }
     else if (connectionState == wifiUpdate)
-        _display.print("Wifi\nmode...\n\n");
+    {
+        _display.write("Wifi\nmode...\n");
+        _display.setTextSize(1);
+        IPAddress localAddr;
+        if (WiFi.getMode() == WIFI_STA)
+            localAddr = WiFi.localIP();
+        else
+            localAddr = WiFi.softAPIP();
+        _display.print(localAddr.toString());
+        _display.write("\n\n");
+    }
     else
-        _display.print("AAT\nBackpack\n\n");
+        _display.write("AAT\nBackpack\n\n");
+
     _display.setTextSize(1);
     extern const char *VERSION; // in devWifi / created during build
     _display.print(VERSION);
+
+    displayVBat();
     _display.display();
 }
 
-void AatModule::displayIdle(uint32_t now)
+void AatModule::displayGpsIdle(uint32_t now)
 {
-    // A screen with just the GPS position, sat count, and interval bar
+    // A screen with just the GPS position, sat count, vbat, and interval bar
     _display.clearDisplay();
     _display.setCursor(0, 0);
 
@@ -268,6 +296,7 @@ void AatModule::displayIdle(uint32_t now)
     );
 
     displayGpsIntervalBar(now);
+    displayVBat();
     _display.display();
 }
 
@@ -452,7 +481,7 @@ void AatModule::servoUpdate(uint32_t now)
 
     // For 1:2 gearing on the azim servo to allow 360 rotation
     // For Elev servos that only go 0-90 and the azim does 360
-    transformedAzim = (transformedAzim + 180) % 360; // convert so 0 maps to 1500us
+    transformedAzim = (transformedAzim + (90 * config.GetAatCenterDir())) % 360; // convert so centerdir maps to 1500us
     int32_t newServoPos[IDX_COUNT];
     newServoPos[IDX_AZIM] = map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
     newServoPos[IDX_ELEV] = map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
@@ -498,6 +527,36 @@ void AatModule::servoUpdate(uint32_t now)
 #endif
 }
 
+uint32_t AatModule::getVbat()
+{
+    return _vbat.value();
+}
+
+void AatModule::overrideTargetCommon(int32_t azimuth, int32_t elevation)
+{
+    _targetAzim = azimuth;
+    _targetElev = elevation;
+
+    // Clear out other fields to not do projection or process any updates
+    _isOverrideMode = true;
+    _gpsAvgUpdateIntervalMs = 0;
+    _targetDistance = 0;
+    _azimMsPerDegree = 0;
+}
+
+void AatModule::overrideTargetBearing(int32_t bearing)
+{
+    // bearing is -180 to +180, azimuth 0-360, but we want +180 to rotate as
+    // far right as possible, so it becomes 179
+    int32_t azim = (bearing == 180) ? 179 : ((bearing + 360) % 360);
+    overrideTargetCommon(azim, _targetElev);
+}
+
+void AatModule::overrideTargetElev(int32_t elev)
+{
+    overrideTargetCommon(_targetAzim, constrain(elev, 0, 90));
+}
+
 void AatModule::onCrsfPacketIn(const crsf_header_t *pkt)
 {
     if (pkt->sync_byte == CRSF_SYNC_BYTE)
@@ -520,7 +579,9 @@ void AatModule::Loop(uint32_t now)
     {
 #if defined(PIN_OLED_SDA)
         if (isGpsActive())
-            displayIdle(now);
+            displayGpsIdle(now);
+        else
+            displayState();
 #endif
         delay(DELAY_IDLE);
     }
