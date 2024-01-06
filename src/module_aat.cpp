@@ -273,7 +273,6 @@ void AatModule::displayState()
         _display.write("AAT\nBackpack\n\n");
 
     _display.setTextSize(1);
-    extern const char *VERSION; // in devWifi / created during build
     _display.print(VERSION);
 
     displayVBat();

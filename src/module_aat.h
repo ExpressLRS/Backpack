@@ -4,6 +4,7 @@
 #include "config.h"
 #include "module_crsf.h"
 #include "crsf_protocol.h"
+#include "devWIFI.h"
 
 #if defined(PIN_SERVO_AZIM) || defined(PIN_SERVO_ELEV)
 #include <Servo.h>
