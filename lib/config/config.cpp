@@ -155,8 +155,6 @@ VrxBackpackConfig::SetDefaults()
     m_config.aat.servoEndpoints[1].low = 1000; // ELEV
     m_config.aat.servoEndpoints[1].high = 2000;
 
-    //m_config.vbat.scale = 410;
-    //m_config.vbat.offset = 12;
     m_config.vbat.scale = 292;
     m_config.vbat.offset = -2;
 #endif

@@ -324,7 +324,7 @@ void AatModule::displayAzimuth(int32_t projectedAzim)
 
     // S    W    N    E    S under that
     y += 6;
-    const char AZIM_LABELS[] = "SWNESWNESWNESWNESWNE"; // 5 characters for each direction, 3rd character = center
+    const char AZIM_LABELS[] = "SWNES" "WNESW" "NESWN" "ESWNE"; // 5 characters for each direction, 3rd character = center
     const char *labels = &AZIM_LABELS[5*config.GetAatCenterDir()];
     _display.drawChar(0, y, labels[0], SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(SCREEN_WIDTH/4-FONT_W/2, y, labels[1], SSD1306_WHITE, SSD1306_BLACK, 1);

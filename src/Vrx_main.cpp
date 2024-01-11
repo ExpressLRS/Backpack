@@ -139,15 +139,14 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
-  //DBGLN("ESP NOW DATA:");
+  DBGVLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
   {
-    //DBG("%x", data[i]); // Debug prints
-    //DBG(",");
+    DBGV("%x,", data[i]); // Debug prints
 
     if (msp.processReceivedByte(data[i]))
     {
-      //DBGLN(""); // Extra line for serial output readability
+      DBGVLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
       if (connectionState == binding ||

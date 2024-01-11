@@ -69,7 +69,7 @@ typedef struct {
         uint8_t     units;          // FUTURE: 0=meters, anything else=also meters :-D
         uint8_t     servoMode;      // FUTURE: reserved to declare 2:1, 180+flip servo, or 180 clipped
                                     // Also maybe invertAzim / invertElev servo bit or just swap low/high
-        struct tagServoEndoint {
+        struct __attribute__((packed)) tagServoEndoint {
             uint16_t low;
             uint16_t high;
         } servoEndpoints[2];        // us endpoints for servos
