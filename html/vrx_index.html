@@ -128,8 +128,8 @@
 					<div class="mui-panel">
 						<fieldset><legend>Azimuth servo</legend>
 							Enter the micrsecond (us) values for the min and max position of the horizontal servo, using the slider to test positions.
-							<input type="range" id="azim" name="azim" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="90" style="width: 100%;"/>
-							<datalist id="azim_markers">
+							<input type="range" id="bear" name="bear" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="90" style="width: 100%;"/>
+							<datalist id="bear_markers">
 								<option value="-180" label="S"></option>
 								<option value="-90" label="W"></option>
 								<option value="0" label="N"></option>
@@ -137,20 +137,20 @@
 								<option value="180" label="S"></option>
 							</datalist>
 							<div class="mui-textfield mui-col-xs-3">
-								<input id="azim_min" type="number" name="azim_min" min="500" max="2500" value="700" step="10"/>
+								<input id="azim_min" type="number" name="azim_min" min="500" max="2500"/>
 								<label for="azim_min">Min</label>
 							</div>
 							<div class="mui-select mui-col-xs-6">
 								<select id="azim_center" name="azim_center">
-									<option value="2">N</option>
-									<option value="3">E</option>
-									<option value="0">S</option>
-									<option value="1">W</option>
+									<option value="0">N</option>
+									<option value="1">E</option>
+									<option value="2">S</option>
+									<option value="3">W</option>
 								</select>
 								<label for="azim_center">Servo center direction</label>
 							</div>
 							<div class="mui-textfield mui-col-xs-3">
-								<input id="azim_max" type="number" name="azim_max" min="500" max="2500" value="2400" step="10"/>
+								<input id="azim_max" type="number" name="azim_max" min="500" max="2500"/>
 								<label for="azim_max">Max</label>
 							</div>
 						</fieldset>
@@ -167,14 +167,14 @@
 								<option value="90" label="90"></option>
 							</datalist>
 							<div class="mui-textfield mui-col-xs-3">
-								<input id="elev_min" type="number" name="elev_min" min="500" max="2500" value="1100" step="10"/>
+								<input id="elev_min" type="number" name="elev_min" min="500" max="2500"/>
 								<label for="elev_min">Min</label>
 							</div>
 							<div class="mui-textfield mui-col-xs-6 mui--text-center">
 								&nbsp;
 							</div>
 							<div class="mui-textfield mui-col-xs-3">
-								<input id="elev_max" type="number" name="elev_max" min="500" max="2500" value="1900" step="10"/>
+								<input id="elev_max" type="number" name="elev_max" min="500" max="2500"/>
 								<label for="elev_max">Max</label>
 							</div>
 						</fieldset>
@@ -183,11 +183,11 @@
 						<fieldset><legend>Battery voltage</legend>
 							Battery voltage is calculated using the formula <strong>VBAT = (ADC - offset) / scale</strong>. If voltage is reading too high, increase scale.
 							<div class="mui-textfield mui-col-xs-6">
-								<input id="vbat_scale" type="number" name="vbat_scale" value="410"/>
+								<input id="vbat_scale" type="number" name="vbat_scale" min="1" max="1000"/>
 								<label for="vbat_scale">Scale</label>
 							</div>
 							<div class="mui-textfield mui-col-xs-6">
-								<input id="vbat_offset" type="number" name="vbat_offset" value="12"/>
+								<input id="vbat_offset" type="number" name="vbat_offset" min="-1000" max="1000"/>
 								<label for="vbat_offset">Offset</label>
 							</div>
 						</fieldset>

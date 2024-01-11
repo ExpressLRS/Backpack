@@ -24,11 +24,6 @@ void WebAatAppendConfig(ArduinoJson::JsonDocument &json)
 
 void WebAatConfig(AsyncWebServerRequest *request)
 {
-    // Servo Target Override
-    if (request->hasArg("azim"))
-        vrxModule.overrideTargetBearing(request->arg("azim").toInt());
-    if (request->hasArg("elev"))
-        vrxModule.overrideTargetElev(request->arg("elev").toInt());
     // Servos
     if (request->hasArg("servosmoo"))
         config.SetAatServoSmooth(request->arg("servosmoo").toInt());
@@ -47,6 +42,11 @@ void WebAatConfig(AsyncWebServerRequest *request)
         config.SetVbatOffset(request->arg("vbat_offset").toInt());
     if (request->hasArg("vbat_scale"))
         config.SetVbatScale(request->arg("vbat_scale").toInt());
+    // Servo Target Override (must be set after azim_center because bearing relies on center)
+    if (request->hasArg("bear"))
+        vrxModule.overrideTargetBearing(request->arg("bear").toInt());
+    if (request->hasArg("elev"))
+        vrxModule.overrideTargetElev(request->arg("elev").toInt());
 
     const char *response;
     if (request->arg("commit").toInt() == 1)

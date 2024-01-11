@@ -59,12 +59,14 @@ protected:
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
     enum tagServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
+
     void displayInit();
     void updateGpsInterval(uint32_t interval);
     uint8_t calcGpsIntervalPct(uint32_t now);
     int32_t calcProjectedAzim(uint32_t now);
     void processGps(uint32_t now);
     void servoUpdate(uint32_t now);
+    const int32_t azimCenterInverse() const;
 
 #if defined(PIN_OLED_SDA)
     void displayState();

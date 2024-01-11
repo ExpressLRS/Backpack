@@ -149,7 +149,7 @@ VrxBackpackConfig::SetDefaults()
     m_config.aat.satelliteHomeMin = 5;
     m_config.aat.project = 0xff;
     m_config.aat.servoSmooth = 5;
-    m_config.aat.centerDir = 2; // N
+    m_config.aat.centerDir = 0; // N
     m_config.aat.servoEndpoints[0].low = 500; // AZIM
     m_config.aat.servoEndpoints[0].high = 2500;
     m_config.aat.servoEndpoints[1].low = 1000; // ELEV

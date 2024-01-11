@@ -64,7 +64,7 @@ typedef struct {
     struct __attribute__((packed)) tagAatConfig {
         uint8_t     satelliteHomeMin;   // minimum number of satellites to establish home
         uint8_t     servoSmooth;    // 0-9 for min smoothing to most smoothing
-        uint8_t     centerDir;      // Direction servo points at center position 2=N 3=E 0=S 1=W
+        uint8_t     centerDir;      // Direction servo points at center position 0=N 1=E 2=S 3=W
         uint8_t     project;        // FUTURE: 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
         uint8_t     units;          // FUTURE: 0=meters, anything else=also meters :-D
         uint8_t     servoMode;      // FUTURE: reserved to declare 2:1, 180+flip servo, or 180 clipped

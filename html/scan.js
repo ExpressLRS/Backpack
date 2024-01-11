@@ -70,6 +70,7 @@ function updateAatConfig(config)
     _('azim_max').value = config.aat.azim_max;
     _('elev_min').value = config.aat.elev_min;
     _('elev_max').value = config.aat.elev_max;
+    aatAzimCenterChanged();
 
     // VBAT
     _('vbat_offset').value = config.vbat.offset;
@@ -383,7 +384,7 @@ function aatAzimCenterChanged()
 {
     // Update the slider labels to represent the new orientation
     let labels;
-    switch (parseInt(this.selectedIndex))
+    switch (parseInt(_('azim_center').selectedIndex))
     {
         default: /* fallthrough */
         case 0: labels = 'SWNES'; break; // N
@@ -391,7 +392,7 @@ function aatAzimCenterChanged()
         case 2: labels = 'NESWN'; break; // S
         case 3: labels = 'ESWNE'; break; // W
     }
-    let markers = _('azim_markers');
+    let markers = _('bear_markers');
     for (i=0; i<markers.options.length; ++i)
         markers.options[i].label = labels[i];
 }
@@ -404,7 +405,7 @@ function aatLineElementChanged()
             'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-            'azim': _('azim').value,
+            'bear': _('bear').value,
             'elev': _('elev').value,
         })
     });
