@@ -8,6 +8,7 @@ void WebAatAppendConfig(ArduinoJson::JsonDocument &json)
     auto aat = json["config"].createNestedObject("aat");
     aat["satmin"] = config.GetAatSatelliteHomeMin();
     aat["servosmoo"] = config.GetAatServoSmooth();
+    aat["servomode"] = config.GetAatServoMode();
     aat["project"] = config.GetAatProject();
     aat["azim_center"] = config.GetAatCenterDir();
     aat["azim_min"] = config.GetAatServoLow(0);
@@ -27,6 +28,8 @@ void WebAatConfig(AsyncWebServerRequest *request)
     // Servos
     if (request->hasArg("servosmoo"))
         config.SetAatServoSmooth(request->arg("servosmoo").toInt());
+    if (request->hasArg("servomode"))
+        config.SetAatServoMode(request->arg("servomode").toInt());
     if (request->hasArg("azim_center"))
         config.SetAatCenterDir(request->arg("azim_center").toInt());
     if (request->hasArg("azim_min"))

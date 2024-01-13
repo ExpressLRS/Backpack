@@ -58,21 +58,24 @@ protected:
     void overrideTargetCommon(int32_t azimuth, int32_t elevation);
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
-    enum tagServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
+    enum ServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
+    enum ServoMode { TwoToOne, Clip180 };
 
     void displayInit();
     void updateGpsInterval(uint32_t interval);
     uint8_t calcGpsIntervalPct(uint32_t now);
     int32_t calcProjectedAzim(uint32_t now);
+    void servoApplyMode(int32_t azim, int32_t elev, int32_t newServoPos[]);
     void processGps(uint32_t now);
     void servoUpdate(uint32_t now);
-    const int32_t azimCenterInverse() const;
+    const int32_t azimToBearing(int32_t azim) const;
 
 #if defined(PIN_OLED_SDA)
     void displayState();
     void displayGpsIdle(uint32_t now);
     void displayActive(uint32_t now, int32_t projectedAzim);
     void displayGpsIntervalBar(uint32_t now);
+    void displayAzimuthExtent(int32_t y);
     void displayAzimuth(int32_t projectedAzim);
     void displayAltitude(int32_t azimPos, int32_t elevPos);
     void displayTargetCircle(int32_t projectedAzim);

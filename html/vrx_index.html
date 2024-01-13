@@ -126,15 +126,26 @@
 						</fieldset>
 					</div>
 					<div class="mui-panel">
+						<fieldset><legend>Servo mode</legend>
+							<div>Set the mechanical servo mode to match the tracker's design.</div>
+							<div class="mui-select mui-col-xs-12">
+								<select id="servomode" name="servomode">
+									<option value="0">2:1 geared - Servo geared for 360 degree movement</option>
+									<option value="1">Clip 180 - Standard direct driven servo limited to 180 degrees</option>
+								</select>
+							</div>
+						</fieldset>
+					</div>
+					<div class="mui-panel">
 						<fieldset><legend>Azimuth servo</legend>
 							Enter the micrsecond (us) values for the min and max position of the horizontal servo, using the slider to test positions.
-							<input type="range" id="bear" name="bear" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="90" style="width: 100%;"/>
+							<input type="range" id="bear" name="bear" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="45" style="width: 100%;"/>
 							<datalist id="bear_markers">
-								<option value="-180" label="S"></option>
-								<option value="-90" label="W"></option>
-								<option value="0" label="N"></option>
-								<option value="90" label="E"></option>
-								<option value="180" label="S"></option>
+								<option value="-180"></option>
+								<option value="-90"></option>
+								<option value="0"></option>
+								<option value="90"></option>
+								<option value="180"></option>
 							</datalist>
 							<div class="mui-textfield mui-col-xs-3">
 								<input id="azim_min" type="number" name="azim_min" min="500" max="2500"/>
@@ -143,9 +154,9 @@
 							<div class="mui-select mui-col-xs-6">
 								<select id="azim_center" name="azim_center">
 									<option value="0">N</option>
-									<option value="1">E</option>
-									<option value="2">S</option>
-									<option value="3">W</option>
+									<option value="2">E</option>
+									<option value="4">S</option>
+									<option value="6">W</option>
 								</select>
 								<label for="azim_center">Servo center direction</label>
 							</div>

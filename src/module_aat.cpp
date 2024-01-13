@@ -237,10 +237,14 @@ int32_t AatModule::calcProjectedAzim(uint32_t now)
     return _targetAzim;
 }
 
-const int32_t AatModule::azimCenterInverse() const
+/**
+ * @brief: Calculate the bearing from centerdir to azim
+ * @return: -180 to +179 bearing
+*/
+const int32_t AatModule::azimToBearing(int32_t azim) const
 {
-    const int32_t AZIM_CENTER_INVERSE[] = { 180, 90, 0, 270 };
-    return AZIM_CENTER_INVERSE[config.GetAatCenterDir()];
+    int32_t center = 45 * config.GetAatCenterDir();
+    return ((azim - center + 540) % 360) - 180;  // -180 to +179
 }
 
 #if defined(PIN_OLED_SDA)
@@ -305,27 +309,52 @@ void AatModule::displayGpsIdle(uint32_t now)
     _display.display();
 }
 
+void AatModule::displayAzimuthExtent(int32_t y)
+{
+    switch ((ServoMode)config.GetAatServoMode())
+    {
+        // Just a line on the left / right of the azim line
+        default: /* fallthrough */
+        case ServoMode::TwoToOne:
+            _display.drawFastVLine(0, y, 5, SSD1306_WHITE);
+            _display.drawFastVLine(SCREEN_WIDTH-1, y, 5, SSD1306_WHITE);
+            break;
+
+        // 180 mode put the lines at the extent of the servo rotation
+        case ServoMode::Clip180:
+            //_display.drawFastVLine(SCREEN_WIDTH/4, y, 5, SSD1306_WHITE);
+            //_display.drawFastVLine(3*SCREEN_WIDTH/4, y, 5, SSD1306_WHITE);
+            // Dotted line all the way up the elevation field
+            for (int32_t dotY=0; dotY<(33+5); dotY+=2)
+            {
+                _display.drawPixel(SCREEN_WIDTH/4, dotY+16, SSD1306_WHITE);
+                _display.drawPixel(3*SCREEN_WIDTH/4, dotY+16, SSD1306_WHITE);
+            }
+            break;
+    }
+}
+
 void AatModule::displayAzimuth(int32_t projectedAzim)
 {
     int32_t y = SCREEN_HEIGHT - FONT_H + 1 - 6;
 
     // horizon line + arrow + unprojected azim line
     // |-----/\---|-|
-    _display.drawFastVLine(0, y, 5, SSD1306_WHITE);
     _display.drawFastHLine(0, y+2, SCREEN_WIDTH-1, SSD1306_WHITE);
-    _display.drawFastVLine(SCREEN_WIDTH-1, y, 5, SSD1306_WHITE);
+    displayAzimuthExtent(y);
+
     // Unprojected azimuth line
-    int32_t azimPos = map((_targetAzim + azimCenterInverse()) % 360, 0, 360, 0, SCREEN_WIDTH);
+    int32_t azimPos = map(azimToBearing(_targetAzim), -180, 180, 0, SCREEN_WIDTH);
     _display.drawFastVLine(azimPos, y+1, 3, SSD1306_WHITE);
     // Projected Azimuth arrow
-    azimPos = map((projectedAzim + azimCenterInverse()) % 360, 0, 360, 0, SCREEN_WIDTH);
+    azimPos = map(azimToBearing(projectedAzim), -180, 180, 0, SCREEN_WIDTH);
     const uint8_t oledim_arrowup[] = { 0x10, 0x38, 0x7c }; // 'arrowup', 7x3px
     _display.drawBitmap(azimPos-7/2, y+1, oledim_arrowup, 7, 3, SSD1306_WHITE, SSD1306_BLACK);
 
     // S    W    N    E    S under that
     y += 6;
     const char AZIM_LABELS[] = "SWNES" "WNESW" "NESWN" "ESWNE"; // 5 characters for each direction, 3rd character = center
-    const char *labels = &AZIM_LABELS[5*config.GetAatCenterDir()];
+    const char *labels = &AZIM_LABELS[config.GetAatCenterDir()*5/2];
     _display.drawChar(0, y, labels[0], SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(SCREEN_WIDTH/4-FONT_W/2, y, labels[1], SSD1306_WHITE, SSD1306_BLACK, 1);
     _display.drawChar(SCREEN_WIDTH/2-FONT_W/2+1, y, labels[2], SSD1306_WHITE, SSD1306_BLACK, 1);
@@ -367,13 +396,13 @@ void AatModule::displayTargetCircle(int32_t projectedAzim)
     // yellow-blue OLED have 16 pixels of yellow, start below that
     const int32_t elevOff = 16;
     // Dotted line to separate top of screen from tracking area
-    for (int32_t x=0; x<SCREEN_WIDTH; x+=2)
+    for (int32_t x=0; x<SCREEN_WIDTH; x+=3)
         _display.drawPixel(x, elevOff, SSD1306_WHITE);
 
     int32_t elevPos = map(_targetElev, 0, 90, elevH, 0) + elevOff;
     //elevPos = 0 + elevOff;
     // X for projectedAzim
-    int32_t azimPos = map((projectedAzim + azimCenterInverse()) % 360, 0, 360, 0, SCREEN_WIDTH);
+    int32_t azimPos = map(azimToBearing(projectedAzim), -180, 180, 0, SCREEN_WIDTH);
     _display.drawPixel(azimPos-1, elevPos-1, SSD1306_WHITE);
     _display.drawPixel(azimPos+1, elevPos-1, SSD1306_WHITE);
     _display.drawPixel(azimPos, elevPos, SSD1306_WHITE);
@@ -381,9 +410,11 @@ void AatModule::displayTargetCircle(int32_t projectedAzim)
     _display.drawPixel(azimPos+1, elevPos+1, SSD1306_WHITE);
 
     // circle/rectangle cage for _servoPos
+    int32_t servoXMin = ((ServoMode)config.GetAatServoMode() == ServoMode::Clip180) ? (SCREEN_WIDTH/4) : 0;
+    int32_t servoXMax = ((ServoMode)config.GetAatServoMode() == ServoMode::Clip180) ? (3*SCREEN_WIDTH/4) : SCREEN_WIDTH;
     int32_t servoX = map(_servoPos[IDX_AZIM],
         config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM),
-        0, SCREEN_WIDTH);
+        servoXMin, servoXMax);
     int32_t servoY = map(_servoPos[IDX_ELEV],
         config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV),
         elevH, 0) + elevOff;
@@ -477,6 +508,28 @@ void AatModule::displayGpsIntervalBar(uint32_t now)
 }
 #endif /* defined(PIN_OLED_SDA) */
 
+void AatModule::servoApplyMode(int32_t azim, int32_t elev, int32_t newServoPos[])
+{
+    int32_t bearing = azimToBearing(azim);
+
+    // 2-to-1 reduction can do 360 so the input and output is the same
+    if ((ServoMode)config.GetAatServoMode() == ServoMode::TwoToOne)
+    {
+        newServoPos[IDX_AZIM] = map(bearing, -180, 179, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+        newServoPos[IDX_ELEV] = map(elev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+        return;
+    }
+
+    // Clip180 limits azim to 90 degrees left/right from center
+    if ((ServoMode)config.GetAatServoMode() == ServoMode::Clip180)
+    {
+        bearing = constrain(bearing, -90, 90);
+        newServoPos[IDX_AZIM] = map(bearing, -90, 90, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+        newServoPos[IDX_ELEV] = map(elev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+        return;
+    }
+}
+
 void AatModule::servoUpdate(uint32_t now)
 {
     uint32_t interval = now - _lastServoUpdateMs;
@@ -485,15 +538,8 @@ void AatModule::servoUpdate(uint32_t now)
     _lastServoUpdateMs = now;
 
     int32_t projectedAzim = calcProjectedAzim(now);
-    int32_t transformedAzim = projectedAzim;
-    int32_t transformedElev = _targetElev;
-
-    // For 1:2 gearing on the azim servo to allow 360 rotation
-    // For Elev servos that only go 0-90 and the azim does 360
-    transformedAzim = (transformedAzim + azimCenterInverse()) % 360;
     int32_t newServoPos[IDX_COUNT];
-    newServoPos[IDX_AZIM] = map(transformedAzim, 0, 360, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
-    newServoPos[IDX_ELEV] = map(transformedElev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+    servoApplyMode(projectedAzim, _targetElev, newServoPos);
 
     for (uint32_t idx=IDX_AZIM; idx<IDX_COUNT; ++idx)
     {
@@ -556,7 +602,7 @@ void AatModule::overrideTargetCommon(int32_t azimuth, int32_t elevation)
 void AatModule::overrideTargetBearing(int32_t bearing)
 {
     // bearing is -180 to +180, azimuth 0-360
-    int32_t azim = (360 + bearing + (90 * config.GetAatCenterDir())) % 360;
+    int32_t azim = (360 + bearing + (45 * config.GetAatCenterDir())) % 360;
     // The furthest right a servo can go is +179 degrees, +180 goes to the -180 position
     if (bearing == 180)
         azim = (azim == 0) ? 359 : azim - 1;

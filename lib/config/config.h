@@ -64,10 +64,10 @@ typedef struct {
     struct __attribute__((packed)) tagAatConfig {
         uint8_t     satelliteHomeMin;   // minimum number of satellites to establish home
         uint8_t     servoSmooth;    // 0-9 for min smoothing to most smoothing
-        uint8_t     centerDir;      // Direction servo points at center position 0=N 1=E 2=S 3=W
+        uint8_t     centerDir;      // Direction servo points at center position 0=N 2=E 4=S 6=W (can hold 45 degrees but only 90 is supported)
         uint8_t     project;        // FUTURE: 0=none, 1=projectAzim, 2=projectElev, 3=projectBoth
         uint8_t     units;          // FUTURE: 0=meters, anything else=also meters :-D
-        uint8_t     servoMode;      // FUTURE: reserved to declare 2:1, 180+flip servo, or 180 clipped
+        uint8_t     servoMode;      // 0=2:1, 1=clip180, FUTURE: 180+flip servo
                                     // Also maybe invertAzim / invertElev servo bit or just swap low/high
         struct __attribute__((packed)) tagServoEndoint {
             uint16_t low;
@@ -109,6 +109,8 @@ public:
     uint8_t GetAatSatelliteHomeMin() const { return m_config.aat.satelliteHomeMin; }
     uint8_t GetAatServoSmooth() const { return m_config.aat.servoSmooth; }
     void SetAatServoSmooth(uint8_t val);
+    uint8_t GetAatServoMode() const { return m_config.aat.servoMode; }
+    void SetAatServoMode(uint8_t val);
     uint8_t GetAatProject() const { return m_config.aat.project; }
     uint8_t GetAatCenterDir() const { return m_config.aat.centerDir; }
     void SetAatCenterDir(uint8_t val);

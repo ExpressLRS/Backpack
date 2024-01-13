@@ -236,6 +236,11 @@ VrxBackpackConfig::SetAatCenterDir(uint8_t val)
     CONFIG_MOD_CHECK(m_config.aat.centerDir, val);
 }
 
+void VrxBackpackConfig::SetAatServoMode(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoMode, val);
+}
+
 #endif /* defined(AAT_BACKPACK) */
 
 #endif /* defined(TARGET_VRX_BACKPACK) */

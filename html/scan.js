@@ -65,6 +65,7 @@ function updateAatConfig(config)
 
     // AAT
     _('servosmoo').value = config.aat.servosmoo;
+    _('servomode').value = config.aat.servomode;
     _('azim_center').value = config.aat.azim_center;
     _('azim_min').value = config.aat.azim_min;
     _('azim_max').value = config.aat.azim_max;
