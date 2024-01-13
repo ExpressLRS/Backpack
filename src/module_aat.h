@@ -118,6 +118,7 @@ private:
 #endif
 #if defined(PIN_OLED_SDA)
     Adafruit_SSD1306 _display;
+    uint32_t _lastDisplayActiveMs;
 #endif
 };
 

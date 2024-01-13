@@ -236,9 +236,20 @@ VrxBackpackConfig::SetAatCenterDir(uint8_t val)
     CONFIG_MOD_CHECK(m_config.aat.centerDir, val);
 }
 
-void VrxBackpackConfig::SetAatServoMode(uint8_t val)
+void
+VrxBackpackConfig::SetAatServoMode(uint8_t val)
 {
     CONFIG_MOD_CHECK(m_config.aat.servoMode, val);
+}
+
+/**
+ * @brief: Validate that the endpoints have a valid range, i.e. low/high not the same
+*/
+bool
+VrxBackpackConfig::GetAatServoEndpointsValid() const
+{
+    return (m_config.aat.servoEndpoints[0].low != m_config.aat.servoEndpoints[0].high)
+        && (m_config.aat.servoEndpoints[1].low != m_config.aat.servoEndpoints[1].high);
 }
 
 #endif /* defined(AAT_BACKPACK) */

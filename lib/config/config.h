@@ -118,6 +118,7 @@ public:
     void SetAatServoLow(uint8_t idx, uint16_t val);
     uint16_t GetAatServoHigh(uint8_t idx) const { return m_config.aat.servoEndpoints[idx].high; }
     void SetAatServoHigh(uint8_t idx, uint16_t val);
+    bool GetAatServoEndpointsValid() const;
 
     uint16_t GetVbatScale() const { return m_config.vbat.scale; }
     void SetVbatScale(uint16_t val);

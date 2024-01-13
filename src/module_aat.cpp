@@ -101,7 +101,7 @@ AatModule::AatModule(Stream &port) :
     , _servo_Elev()
 #endif
 #if defined(PIN_OLED_SDA)
-    , _display(SCREEN_WIDTH, SCREEN_HEIGHT)
+    , _display(SCREEN_WIDTH, SCREEN_HEIGHT), _lastDisplayActiveMs(0)
 #endif
 {
     // Init is called manually
@@ -473,6 +473,12 @@ void AatModule::displayVBat()
 
 void AatModule::displayActive(uint32_t now, int32_t projectedAzim)
 {
+    // Throttle the dislay update rate to <60Hz as the tracker runs 100Hz
+    const uint32_t DISPLAY_UPDATE_MS = 16;
+    if (now - _lastDisplayActiveMs < DISPLAY_UPDATE_MS)
+        return;
+    _lastDisplayActiveMs = now;
+
     _display.clearDisplay();
 
     displayGpsIntervalBar(now);
@@ -533,9 +539,13 @@ void AatModule::servoApplyMode(int32_t azim, int32_t elev, int32_t newServoPos[]
 void AatModule::servoUpdate(uint32_t now)
 {
     uint32_t interval = now - _lastServoUpdateMs;
-    if (interval < 20U)
+    if (interval < 10U)
         return;
     _lastServoUpdateMs = now;
+
+    // If the servo endpoints aren't valid, all this math will divide by zero all over
+    if (!config.GetAatServoEndpointsValid())
+        return;
 
     int32_t projectedAzim = calcProjectedAzim(now);
     int32_t newServoPos[IDX_COUNT];
@@ -543,7 +553,7 @@ void AatModule::servoUpdate(uint32_t now)
 
     for (uint32_t idx=IDX_AZIM; idx<IDX_COUNT; ++idx)
     {
-        // Use smoothness to denote the maximum us per 20ms update
+        // Use smoothness to denote the maximum us per 10ms update
         const int32_t SMOOTHNESS_US_PER_STEP = (config.GetAatServoSmooth() < 3) ? 6 : 4;
         int32_t range = (config.GetAatServoHigh(idx) - config.GetAatServoLow(idx));
         int32_t diff = newServoPos[idx] - _servoPos[idx];
