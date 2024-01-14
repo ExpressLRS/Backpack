@@ -12,7 +12,11 @@ function init() {
 }
 
 function initAat() {
-    _('aatsubmit').addEventListener('click', callback('Update AAT Parameters', 'An error occurred changing values', '/aatconfig',
+    let aatsubmit = _('aatsubmit');
+    if (!aatsubmit)
+        return;
+
+    aatsubmit.addEventListener('click', callback('Update AAT Parameters', 'An error occurred changing values', '/aatconfig',
         () => { return new URLSearchParams(new FormData(_('aatconfig'))); }
     ));
     _('azim_center').addEventListener('change', aatAzimCenterChanged);
