@@ -315,7 +315,8 @@ void AatModule::displayAzimuthExtent(int32_t y)
     {
         // Just a line on the left / right of the azim line
         default: /* fallthrough */
-        case ServoMode::TwoToOne:
+        case ServoMode::TwoToOne: /* fallthrough */
+        case ServoMode::Flip180:
             _display.drawFastVLine(0, y, 5, SSD1306_WHITE);
             _display.drawFastVLine(SCREEN_WIDTH-1, y, 5, SSD1306_WHITE);
             break;
@@ -325,7 +326,7 @@ void AatModule::displayAzimuthExtent(int32_t y)
             //_display.drawFastVLine(SCREEN_WIDTH/4, y, 5, SSD1306_WHITE);
             //_display.drawFastVLine(3*SCREEN_WIDTH/4, y, 5, SSD1306_WHITE);
             // Dotted line all the way up the elevation field
-            for (int32_t dotY=0; dotY<(33+5); dotY+=2)
+            for (int32_t dotY=0; dotY<(33+5); dotY+=4)
             {
                 _display.drawPixel(SCREEN_WIDTH/4, dotY+16, SSD1306_WHITE);
                 _display.drawPixel(3*SCREEN_WIDTH/4, dotY+16, SSD1306_WHITE);
@@ -532,6 +533,23 @@ void AatModule::servoApplyMode(int32_t azim, int32_t elev, int32_t newServoPos[]
         bearing = constrain(bearing, -90, 90);
         newServoPos[IDX_AZIM] = map(bearing, -90, 90, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
         newServoPos[IDX_ELEV] = map(elev, 0, 90, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
+        return;
+    }
+
+    if ((ServoMode)config.GetAatServoMode() == ServoMode::Flip180)
+    {
+        if (bearing < -90)
+        {
+            bearing = -180 - bearing;
+            elev = 180 - elev;
+        }
+        else if (bearing > 90)
+        {
+            bearing = 180 - bearing;
+            elev = 180 - elev;
+        }
+        newServoPos[IDX_AZIM] = map(bearing, -90, 90, config.GetAatServoLow(IDX_AZIM), config.GetAatServoHigh(IDX_AZIM));
+        newServoPos[IDX_ELEV] = map(elev, 0, 180, config.GetAatServoLow(IDX_ELEV), config.GetAatServoHigh(IDX_ELEV));
         return;
     }
 }

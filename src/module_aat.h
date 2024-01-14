@@ -59,7 +59,7 @@ protected:
     virtual void onCrsfPacketIn(const crsf_header_t *pkt);
 private:
     enum ServoIndex { IDX_AZIM, IDX_ELEV, IDX_COUNT };
-    enum ServoMode { TwoToOne, Clip180 };
+    enum ServoMode { TwoToOne, Clip180, Flip180 };
 
     void displayInit();
     void updateGpsInterval(uint32_t interval);
