@@ -23,6 +23,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devLED.h"
+#include "devHeadTracker.h"
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -78,6 +79,9 @@ device_t *ui_devices[] = {
   &Button_device,
 #endif
   &WIFI_device,
+#ifdef PIN_SCL
+  &HeadTracker_device
+#endif
 };
 
 #if defined(PLATFORM_ESP32)

@@ -1,0 +1,5 @@
+ICM42670P	KEYWORD1
+begin	KEYWORD2
+startAccel	KEYWORD2
+startGyro	KEYWORD2
+getDataFromRegisters	KEYWORD2

@@ -7,13 +7,18 @@ function _(el) {
 
 function get_mode() {
     var json_url = 'mode.json';
+    // putting this on the HTML causes rendering issues!
+    if (_('rtctab')) _('rtctab').style.display = 'none';
+    if (_('httab')) _('httab').style.display = 'none';
+
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
             var data = JSON.parse(this.responseText);
             if (data.mode==="STA") {
                 _('stamode').style.display = 'block';
-                if (_('rtctab')) _('rtctab').style.display = 'block';
+                if (_('rtctab')) _('rtctab').removeAttribute('style');
+                if (_('httab')) _('httab').removeAttribute('style');
                 _('ssid').textContent = data.ssid;
             } else {
                 _('apmode').style.display = 'block';
@@ -28,7 +33,7 @@ function get_mode() {
                 mui.tabs.activate('pane-justified-2');
                 _('tx_tab').style.display = 'none';
             }
-            if(data['product-name']) _('product-name').textContent = data['product-name'];
+            if(data['product-name'] && _('product-name')) _('product-name').textContent = data['product-name'];
         }
     };
     xmlhttp.open("POST", json_url, true);
@@ -459,3 +464,100 @@ function cuteAlert({
       alertFrame.addEventListener("click", stopProp);
     });
   }
+
+//=========================================================
+
+if (_('httab')) _('httab').addEventListener('mui.tabs.showstart', start);
+
+var websock;
+var Euler = {heading: 0.0, pitch: 0.0, roll: 0.0};
+
+const loadScript = (FILE_URL, async = true, type = "text/javascript") => {
+    return new Promise((resolve, reject) => {
+        try {
+            const scriptEle = document.createElement("script");
+            scriptEle.type = type;
+            scriptEle.async = async;
+            scriptEle.src = FILE_URL;
+
+            scriptEle.addEventListener("load", (ev) => {
+                resolve({ status: true });
+            });
+
+            scriptEle.addEventListener("error", (ev) => {
+                reject({
+                    status: false,
+                    message: `Failed to load the script ${FILE_URL}`
+                });
+            });
+
+            document.body.appendChild(scriptEle);
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+let ht_loaded = false;
+function start() {
+    if (!ht_loaded) {
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.12/p5.min.js').then(()=>{
+            ht_loaded = true;
+            websock = new WebSocket('ws://' + window.location.hostname + '/ws');
+            // websock.onopen = function(evt) {
+            //     console.log('websock open');
+            //     var e = document.getElementById('webSockStatus');
+            //     e.style.backgroundColor = 'green';
+            // };
+            // websock.onclose = function(evt) {
+            //     console.log('websock close');
+            //     var e = document.getElementById('webSockStatus');
+            //     e.style.backgroundColor = 'red';
+            // };
+            websock.onerror = function(evt) { console.log(evt); };
+            websock.onmessage = function(evt) {
+                Euler = JSON.parse(evt.data);
+            };
+        })
+    }
+}
+
+let plane;
+let tex;
+
+function preload() {
+    plane = loadModel('airplane.obj', true);
+    tex = loadImage('texture.gif');
+}
+
+function setup() {
+    var canvas = createCanvas(500, 500, WEBGL);
+    canvas.parent('canvas-holder');
+}
+
+function draw() {
+    background(192);
+
+    rotateY(radians(Euler.heading+180));
+    rotateX(radians(Euler.pitch));
+    rotateZ(radians(Euler.roll));
+
+    push();
+    stroke('#CCC');
+    strokeWeight(0.5);
+    for (let x=-width/2; x <= width/2; x +=20) {
+        line(x, 0, -height/2, x, 0, height/2);
+    }
+    for (let z=-height/2; z <= height/2; z +=20) {
+        line(-width/2, 0, z, width/2, 0, z);
+    }
+    pop();
+
+    push();
+    noStroke();
+    scale(2);
+    translate(0,-26,0);
+    texture(tex);
+    model(plane);
+    pop();
+}

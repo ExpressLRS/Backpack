@@ -27,7 +27,8 @@
 			<ul class="mui-tabs__bar mui-tabs__bar--justified">
 				<li class="mui--is-active"><a data-mui-toggle="tab" data-mui-controls="pane-justified-1">Update</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Network</a></li>
-				<li id="rtctab" style="display:none;"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">RTC Time</a></li>
+				<li id="rtctab"><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">RTC Time</a></li>
+				<li id="httab"><a data-mui-toggle="tab" data-mui-controls="pane-ht">Head Tracking</a></li>
 			</ul>
 
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
@@ -101,8 +102,21 @@
 								Daylight Saving
 							</label>
 						</div>
-						<input type="submit" value="Set Time" class="mui-btn mui-btn--primary">
+						<input type="submit" value="Set Time" class="mui-btn mui-btn--primary"/>
 					</form>
+				</div>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-ht">
+				<div>
+					<h2>Head Tracking</h2>
+					<div>
+						<button id='cal-compass' class="mui-btn mui-btn--small mui-btn--primary" disabled>Calibrate Compass</button>
+						<button id='cal-gyro' class="mui-btn mui-btn--small mui-btn--primary" disabled>Calibrate Gyro/Accel</button>
+						<button id='orient-board' class="mui-btn mui-btn--small mui-btn--primary" disabled>Set Board Orientation</button>
+					</div>
+					<div id="canvas-holder"></div>
+
 				</div>
 			</div>
 		</div>

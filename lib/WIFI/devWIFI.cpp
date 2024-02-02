@@ -31,6 +31,9 @@
 
 #include "config.h"
 #if defined(TARGET_VRX_BACKPACK)
+#if defined(PIN_SCL)
+#include "devHeadTracker.h"
+#endif
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
 #else
@@ -67,6 +70,9 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+static AsyncWebSocket ws("/ws");
+#endif
 static bool servicesStarted = false;
 
 static bool target_seen = false;
@@ -134,14 +140,24 @@ static struct {
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/log.js", "text/javascript", (uint8_t *)LOG_JS, sizeof(LOG_JS)},
   {"/log.html", "text/html", (uint8_t *)LOG_HTML, sizeof(LOG_HTML)},
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+  {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
+  {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
+#endif
 };
+
+static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
+{
+}
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
   for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
     if (request->url().equals(files[i].url)) {
       AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
-      response->addHeader("Content-Encoding", "gzip");
+      if (pgm_read_byte(files[i].content) == 0x1F) {
+        response->addHeader("Content-Encoding", "gzip");
+      }
       request->send(response);
       return;
     }
@@ -568,6 +584,13 @@ static void startServices()
 
   server.onNotFound(WebUpdateHandleNotFound);
 
+  #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+  server.on("/airplane.obj", WebUpdateSendContent);
+  server.on("/texture.gif", WebUpdateSendContent);
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+  #endif
+
   server.begin();
 
   dnsServer.start(DNS_PORT, "*", apIP);
@@ -668,6 +691,21 @@ static void HandleWebUpdate()
       }
       rebootTime = millis() + 200;
     }
+
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+    static long lastCall = 0;
+    static const char IMU_JSON[] PROGMEM = R"=====({"heading":%f,"pitch":%f,"roll":%f})=====";
+
+    if (now - lastCall > 10) {
+      // Send JSON over websocket
+      char payload[80];
+      float yaw, pitch, roll;
+      getEuler(&yaw, &pitch, &roll);
+      snprintf_P(payload, sizeof(payload), IMU_JSON, yaw, pitch, roll);
+      ws.textAll(payload, strlen(payload));
+      lastCall = now;
+    }
+#endif
   }
 }
 

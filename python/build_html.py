@@ -39,6 +39,13 @@ def build_html(mainfile, var, out, env):
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
     out.write('\n};\n\n')
 
+def build_binary(mainfile, var, out, env):
+    with open('html/%s' % mainfile, 'rb') as file:
+        data = file.read()
+    out.write('static const char PROGMEM %s[] = {\n' % var)
+    out.write(','.join("0x{:02x}".format(c) for c in data))
+    out.write('\n};\n\n')
+
 def build_common(env, mainfile):
     fd, path = tempfile.mkstemp()
     try:
@@ -52,6 +59,8 @@ def build_common(env, mainfile):
             build_html("logo.svg", "LOGO_SVG", out, env)
             build_html("log.html", "LOG_HTML", out, env)
             build_html("log.js", "LOG_JS", out, env)
+            build_html("airplane.obj", "PLANE_OBJ", out, env)
+            build_binary("texture.gif", "TEXTURE_GIF", out, env)
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")
