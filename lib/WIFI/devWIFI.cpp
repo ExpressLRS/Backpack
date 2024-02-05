@@ -148,6 +148,13 @@ static struct {
 
 static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
+  if (type == WS_EVT_DATA) {
+    if (memcmp(data, "cc", 2) == 0) {
+      startCompassCalibration();
+    } else if (memcmp(data, "ci", 2) == 0) {
+      startIMUCalibration();
+    }
+  }
 }
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
@@ -694,16 +701,36 @@ static void HandleWebUpdate()
 
 #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
     static long lastCall = 0;
-    static const char IMU_JSON[] PROGMEM = R"=====({"heading":%f,"pitch":%f,"roll":%f})=====";
-
+    static HeadTrackerState last_state = STATE_ERROR;
     if (now - lastCall > 10) {
-      // Send JSON over websocket
-      char payload[80];
-      float yaw, pitch, roll;
-      getEuler(&yaw, &pitch, &roll);
-      snprintf_P(payload, sizeof(payload), IMU_JSON, yaw, pitch, roll);
-      ws.textAll(payload, strlen(payload));
+      auto current_state = getHeadTrackerState();
+      switch(current_state)
+      {
+      case STATE_RUNNING:
+        if (last_state == STATE_IMU_CALIBRATING || last_state == STATE_COMPASS_CALIBRATING)
+        {
+          ws.textAll("{\"done\": true}");
+        }
+        else
+        {
+          static const char IMU_JSON[] PROGMEM = R"=====({"heading":%f,"pitch":%f,"roll":%f})=====";
+          // Send JSON over websocket
+          char payload[80];
+          float yaw, pitch, roll;
+          getEuler(&yaw, &pitch, &roll);
+          snprintf_P(payload, sizeof(payload), IMU_JSON, yaw, pitch, roll);
+          ws.textAll(payload, strlen(payload));
+        }
+        break;
+
+      case STATE_COMPASS_CALIBRATING:
+        break;
+
+      case STATE_IMU_CALIBRATING:
+        break;
+      }
       lastCall = now;
+      last_state = current_state;
     }
 #endif
   }

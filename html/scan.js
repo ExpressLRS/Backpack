@@ -351,7 +351,7 @@ _('sethome').addEventListener('submit', callback("Set Home Network", "An error o
 _('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
 _('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
 _('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
-if (_('setrtc')) _('setrtc').addEventListener('submit', callback("Set RTC Time", "An error occured setting the RTC time", "/setrtc", function() {
+if (_('setrtc')) _('setrtc').addEventListener('submit', callback("Set RTC Time", "An error occurred setting the RTC time", "/setrtc", function() {
     return new FormData(_('setrtc'));
 }));
 
@@ -516,7 +516,17 @@ function start() {
             // };
             websock.onerror = function(evt) { console.log(evt); };
             websock.onmessage = function(evt) {
-                Euler = JSON.parse(evt.data);
+                d = JSON.parse(evt.data);
+                if (d['done']) {
+                    calibrationOff();
+                    cuteAlert({
+                        type: 'info',
+                        title: "Calibration",
+                        message: "Calibration successful",
+                        confirmText: "OK",
+                    });
+                }
+                if (d['heading']) Euler = d;
             };
         })
     }
@@ -560,4 +570,52 @@ function draw() {
     texture(tex);
     model(plane);
     pop();
+}
+
+if (_('cal-compass')) _('cal-compass').addEventListener('click', calibrateCompass);
+if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
+if (_('orient-board')) _('orient-board').addEventListener('click', orientBoard);
+
+function calibrateCompass() {
+    cuteAlert({
+        type: 'info',
+        title: "Calibrate Compass",
+        message: "Rotate the board in all directions for 10 seconds until the succeeded popup appears",
+        confirmText: "Calibrate",
+        cancelText: "Cancel"
+    }).then((e)=>{
+        websock.send('cc');
+        calibrationOn();
+    });
+}
+
+function calibrateIMU() {
+    cuteAlert({
+        type: 'info',
+        title: "Calibrate IMU",
+        message: "Place the board flat on the table and wait until the succeeded popup appears",
+        confirmText: "Calibrate",
+        cancelText: "Cancel"
+    }).then((e)=>{
+        websock.send('ci');
+    });
+}
+
+function orientBoard() {
+
+}
+
+function calibrationOn() {
+    _('main').classList.add('loading');
+    _('calibrating').style.display='block';
+    mui.overlay('on', {
+        'keyboard': false,
+        'static': true
+    }, _('calibrating'));
+}
+
+function calibrationOff()
+{
+    _('main').classList.remove('loading');
+    mui.overlay('off');
 }

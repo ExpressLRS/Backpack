@@ -141,6 +141,7 @@ VrxBackpackConfig::SetDefaults()
     m_config.ssid[0] = 0;
     m_config.password[0] = 0;
     memset(m_config.address, 0, 6);
+    memset(m_config.compassCalibration, 0, sizeof(m_config.compassCalibration));
     m_modified = true;
     Commit();
 }
@@ -177,6 +178,13 @@ void
 VrxBackpackConfig::SetStartWiFiOnBoot(bool startWifi)
 {
     m_config.startWiFi = startWifi;
+    m_modified = true;
+}
+
+void
+VrxBackpackConfig::SetCompassCalibration(const int calibrationData[3][2])
+{
+    memcpy(m_config.compassCalibration, calibrationData, sizeof(m_config.compassCalibration));
     m_modified = true;
 }
 
