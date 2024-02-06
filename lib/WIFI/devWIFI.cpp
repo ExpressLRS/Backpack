@@ -153,6 +153,8 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
       startCompassCalibration();
     } else if (memcmp(data, "ci", 2) == 0) {
       startIMUCalibration();
+    } else if (memcmp(data, "sc", 2) == 0) {
+      resetCenter();
     }
   }
 }

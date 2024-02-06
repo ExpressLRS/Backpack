@@ -21,7 +21,6 @@ static FusionAhrs ahrs;
 
 static float aRes;
 static float gRes;
-static float mRes;
 static volatile uint8_t irq_received = 0;
 
 static IRAM_ATTR void irq_handler(void) {
@@ -127,9 +126,6 @@ static uint32_t cal_started;
 
 static int timeout()
 {
-    static boolean running = true;
-    static int counter = 0;
-
     if(!irq_received)
     {
         return DURATION_IMMEDIATELY;
@@ -292,6 +288,7 @@ void resetCenter()
     rollHome = normalize(rollHome, -180.0, 180.0);
     pitchHome = normalize(pitchHome, -180.0, 180.0);
     yawHome = normalize(yawHome, -180.0, 180.0);
+    DBGLN("%f %f %f", rollHome, pitchHome, yawHome);
 }
 
 void getEuler(float *yaw, float *pitch, float *roll)

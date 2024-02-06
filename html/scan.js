@@ -572,6 +572,7 @@ function draw() {
     pop();
 }
 
+if (_('set-center')) _('set-center').addEventListener('click', setCenter);
 if (_('cal-compass')) _('cal-compass').addEventListener('click', calibrateCompass);
 if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
 if (_('orient-board')) _('orient-board').addEventListener('click', orientBoard);
@@ -599,6 +600,10 @@ function calibrateIMU() {
     }).then((e)=>{
         websock.send('ci');
     });
+}
+
+function setCenter() {
+    websock.send('sc');
 }
 
 function orientBoard() {
