@@ -526,7 +526,20 @@ function start() {
                         confirmText: "OK",
                     });
                 }
-                if (d['heading']) Euler = d;
+                if (d['orientation']) {
+                    _('x-angle').value = d.pitch;
+                    _('y-angle').value = d.roll;
+                    _('z-angle').value = d.heading;
+                    _('label-x').textContent = d.pitch;
+                    _('label-y').textContent = d.roll;
+                    _('label-z').textContent = d.heading;
+                                }
+                if (d['heading']) {
+                    Euler = d;
+                    _('angle-x').textContent = Euler.pitch;
+                    _('angle-y').textContent = Euler.roll;
+                    _('angle-z').textContent = Euler.heading;
+                }
             };
         })
     }
@@ -572,10 +585,14 @@ function draw() {
     pop();
 }
 
-if (_('set-center')) _('set-center').addEventListener('click', setCenter);
+if (_('set-center')) _('set-center').addEventListener('click', () => {websock.send('sc');});
 if (_('cal-compass')) _('cal-compass').addEventListener('click', calibrateCompass);
 if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
-if (_('orient-board')) _('orient-board').addEventListener('click', orientBoard);
+if (_('reset-board')) _('reset-board').addEventListener('click', () => {websock.send('ro');});
+if (_('save-orientation')) _('save-orientation').addEventListener('click', saveOrientation);
+if (_('x-angle')) _('x-angle').addEventListener('input', setOrientation);
+if (_('y-angle')) _('y-angle').addEventListener('input', setOrientation);
+if (_('z-angle')) _('z-angle').addEventListener('input', setOrientation);
 
 function calibrateCompass() {
     cuteAlert({
@@ -599,15 +616,25 @@ function calibrateIMU() {
         cancelText: "Cancel"
     }).then((e)=>{
         websock.send('ci');
+        calibrationOn();
     });
 }
 
-function setCenter() {
-    websock.send('sc');
+function setOrientation(e) {
+    _('label-x').textContent = _('x-angle').value;
+    _('label-y').textContent = _('y-angle').value;
+    _('label-z').textContent = _('z-angle').value;
+    websock.send('o:' + _('x-angle').value + ':' + _('y-angle').value + ':' + _('z-angle').value);
 }
 
-function orientBoard() {
-
+function saveOrientation() {
+    websock.send('sv');
+    cuteAlert({
+        type: 'info',
+        title: "Save Board Orientation",
+        message: "Board orientation has been saved to configuration",
+        confirmText: "OK"
+    });
 }
 
 function calibrationOn() {

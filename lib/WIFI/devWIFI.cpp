@@ -148,6 +148,14 @@ static struct {
 
 static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
+  if (type == WS_EVT_CONNECT) {
+    static const char IMU_JSON[] PROGMEM = R"=====({"orientation":true,"heading":%f,"pitch":%f,"roll":%f})=====";
+    // Send JSON over websocket
+    char payload[80];
+    float (*o)[3] = config.GetBoardOrientation();
+    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2], (*o)[1], (*o)[0]);
+    ws.text(client->id(), payload, strlen(payload));
+  }
   if (type == WS_EVT_DATA) {
     if (memcmp(data, "cc", 2) == 0) {
       startCompassCalibration();
@@ -155,6 +163,22 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
       startIMUCalibration();
     } else if (memcmp(data, "sc", 2) == 0) {
       resetCenter();
+    } else if (memcmp(data, "ro", 2) == 0) {
+      resetBoardOrientation();
+    } else if (memcmp(data, "sv", 2) == 0) {
+      saveBoardOrientation();
+    } else if (memcmp(data, "o:", 2) == 0) {
+      char buf[64];
+      memcpy(buf, data+2, len-2);
+      buf[len-2] = 0;
+      char * colon = strchr(buf, ':');
+      *colon = 0;
+      int x = atoi(buf);
+      char *colon2 = strchr(colon+1, ':');
+      *colon2 = 0;
+      int y = atoi(colon+1);
+      int z = atoi(colon2+1);
+      setBoardOrientation(x, y, z);
     }
   }
 }

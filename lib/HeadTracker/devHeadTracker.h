@@ -11,15 +11,11 @@ typedef enum {
     STATE_IMU_CALIBRATING
 } HeadTrackerState;
 
-typedef enum {
-    PHASE_BEGIN,
-    PHASE_VRX_FLAT,
-    PHASE_BOARD_FLAT
-} OrientationPhase;
-
 void startCompassCalibration();
 void startIMUCalibration();
-void setupBoardOrientation(OrientationPhase phase);
+void resetBoardOrientation();
+void saveBoardOrientation();
+void setBoardOrientation(int xAngle, int yAngle, int zAngle);
 HeadTrackerState getHeadTrackerState();
 
 void resetCenter();

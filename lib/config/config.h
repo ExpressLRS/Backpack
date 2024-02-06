@@ -60,6 +60,7 @@ typedef struct {
     char        password[65];
     uint8_t     address[6];
     int         compassCalibration[3][2];
+    float       boardOrientation[3];
 } vrx_backpack_config_t;
 
 class VrxBackpackConfig
@@ -76,6 +77,7 @@ public:
     char    *GetPassword() { return m_config.password; }
     uint8_t *GetGroupAddress() { return m_config.address; }
     int     (*GetCompassCalibration())[3][2] { return &m_config.compassCalibration; };
+    float   (*GetBoardOrientation())[3] { return &m_config.boardOrientation; };
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -86,6 +88,7 @@ public:
     void SetPassword(const char *ssid);
     void SetGroupAddress(const uint8_t address[6]);
     void SetCompassCalibration(const int calibration[3][2]);
+    void SetBoardOrientation(const float orientation[3]);
 
 private:
     vrx_backpack_config_t   m_config;

@@ -23,6 +23,13 @@ static float aRes;
 static float gRes;
 static volatile uint8_t irq_received = 0;
 
+static float orientation[3] = {0.0, 0.0, 0.0};
+static FusionEuler euler;
+static float rollHome = 0, pitchHome = 0, yawHome = 0;
+static int calibrationData[3][2];
+static uint32_t cal_started;
+
+
 static IRAM_ATTR void irq_handler(void) {
   irq_received = 1;
 }
@@ -75,7 +82,7 @@ static int start()
     int (*cal)[3][2] = config.GetCompassCalibration();
     compass.setCalibration((*cal)[0][0],(*cal)[0][1],(*cal)[1][0],(*cal)[1][1],(*cal)[2][0],(*cal)[2][1]);
     //TODO: load gyro/accel calibration from settings
-    //TODO: load orientation from settings
+    memcpy(orientation, *config.GetBoardOrientation(), sizeof(orientation));
     return DURATION_IMMEDIATELY;
 }
 
@@ -117,12 +124,6 @@ static void rotate(float pn[3], const float rot[3]) {
         memcpy(pn, out, sizeof(out[0]) * 3);
     }
 }
-
-static float orientation[3] = {0.0, 0.0, 0.0};
-static FusionEuler euler;
-static float rollHome = 0, pitchHome = 0, yawHome = 0;
-static int calibrationData[3][2];
-static uint32_t cal_started;
 
 static int timeout()
 {
@@ -252,32 +253,30 @@ HeadTrackerState getHeadTrackerState()
     return ht_state;
 }
 
-void setupBoardOrientation(OrientationPhase phase)
+void resetBoardOrientation()
 {
-    static FusionEuler vrx_flat;
+    orientation[0] = 0;
+    orientation[1] = 0;
+    orientation[2] = 0;
+    rollHome = 0;
+    pitchHome = 0;
+    yawHome = 0;
+    FusionAhrsReset(&ahrs);
+}
 
-    switch(phase)
-    {
-        case PHASE_BEGIN:
-            orientation[0] = 0;
-            orientation[1] = 0;
-            orientation[2] = 0;
-            rollHome = 0;
-            pitchHome = 0;
-            yawHome = 0;
-            FusionAhrsReset(&ahrs);
-            break;
-        case PHASE_VRX_FLAT:
-            vrx_flat = euler;
-            break;
-        case PHASE_BOARD_FLAT:
-            orientation[0] = (vrx_flat.angle.roll - euler.angle.roll)*DEG_TO_RAD;
-            orientation[1] = (vrx_flat.angle.pitch - euler.angle.pitch)*DEG_TO_RAD;
-            orientation[2] = (vrx_flat.angle.yaw - euler.angle.yaw)*DEG_TO_RAD;
-            FusionAhrsReset(&ahrs);
-            // TODO: save orientation in settings
-            break;
-    }
+void saveBoardOrientation()
+{
+    config.SetBoardOrientation(orientation);
+    config.Commit();
+}
+
+void setBoardOrientation(int xAngle, int yAngle, int zAngle)
+{
+    orientation[0] = yAngle * DEG_TO_RAD;
+    orientation[1] = xAngle * DEG_TO_RAD;
+    orientation[2] = zAngle * DEG_TO_RAD;
+    ahrs.initialising = true;
+    ahrs.rampedGain = 10.0f;
 }
 
 void resetCenter()
@@ -288,7 +287,6 @@ void resetCenter()
     rollHome = normalize(rollHome, -180.0, 180.0);
     pitchHome = normalize(pitchHome, -180.0, 180.0);
     yawHome = normalize(yawHome, -180.0, 180.0);
-    DBGLN("%f %f %f", rollHome, pitchHome, yawHome);
 }
 
 void getEuler(float *yaw, float *pitch, float *roll)

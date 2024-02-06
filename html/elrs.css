@@ -21,6 +21,10 @@ body, input, select, textarea {
     line-height: 1.65em;
 }
 
+.slider {
+	width: 100%;
+}
+
 /*==========================*/
 
 /* Autocomplete */

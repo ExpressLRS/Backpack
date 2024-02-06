@@ -142,6 +142,9 @@ VrxBackpackConfig::SetDefaults()
     m_config.password[0] = 0;
     memset(m_config.address, 0, 6);
     memset(m_config.compassCalibration, 0, sizeof(m_config.compassCalibration));
+    m_config.boardOrientation[0] = 0;
+    m_config.boardOrientation[1] = 0;
+    m_config.boardOrientation[2] = 0;
     m_modified = true;
     Commit();
 }
@@ -188,4 +191,10 @@ VrxBackpackConfig::SetCompassCalibration(const int calibrationData[3][2])
     m_modified = true;
 }
 
+void
+VrxBackpackConfig::SetBoardOrientation(const float orientation[3])
+{
+    memcpy(m_config.boardOrientation, orientation, sizeof(m_config.boardOrientation));
+    m_modified = true;
+}
 #endif

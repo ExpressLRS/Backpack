@@ -115,13 +115,33 @@
 					<div>
 						<h2>Head Tracking</h2>
 						<div>
-							<a id='set-center' href="#" class="mui-btn mui-btn--small mui-btn--primary">Reset Center</a>
-							<a id='cal-compass' href="#" class="mui-btn mui-btn--small mui-btn--primary">Calibrate Compass</a>
-							<a id='cal-gyro' href="#" class="mui-btn mui-btn--small mui-btn--primary">Calibrate Gyro/Accel</a>
-							<a id='orient-board' href="#" class="mui-btn mui-btn--small mui-btn--primary">Set Board Orientation</a>
+							<button id='set-center' class="mui-btn mui-btn--small mui-btn--primary">Reset Center</button>
+							<button id='cal-compass' class="mui-btn mui-btn--small mui-btn--primary">Calibrate Compass</button>
+							<button id='cal-gyro' class="mui-btn mui-btn--small mui-btn--primary">Calibrate Gyro/Accel</button>
 						</div>
 						<div id="canvas-holder"></div>
-
+						<div>
+							<button id='reset-board' class="mui-btn mui-btn--small mui-btn--primary">Reset Board Orientation</button>
+							<button id='save-orientation' class="mui-btn mui-btn--small mui-btn--primary">Save Board Orientation</button>
+						</div>
+						<div>
+							<label>
+								X Angle <div><span id="label-x"></span>&nbsp;(<span id="angle-x"></span>)</div>
+								<input id="x-angle" type="range" min="-180" max="180" value="0" class="slider">
+							</label>
+						</div>
+						<div>
+							<label>
+								Y Angle <div><span id="label-y"></span>&nbsp;(<span id="angle-y"></span>)</div>
+								<input id="y-angle" type="range" min="-180" max="180" value="0" class="slider">
+							</label>
+						</div>
+						<div>
+							<label>
+								Z Angle <div><span id="label-z"></span>&nbsp;(<span id="angle-z"></span>)</div>
+								<input id="z-angle" type="range" min="-180" max="180" value="0" class="slider">
+							</label>
+						</div>
 					</div>
 				</div>
 			</div>
