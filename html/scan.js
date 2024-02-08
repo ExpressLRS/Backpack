@@ -9,7 +9,6 @@ function get_mode() {
     var json_url = 'mode.json';
     // putting this on the HTML causes rendering issues!
     if (_('rtctab')) _('rtctab').style.display = 'none';
-    if (_('httab')) _('httab').style.display = 'none';
 
     xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function () {
@@ -18,7 +17,6 @@ function get_mode() {
             if (data.mode==="STA") {
                 _('stamode').style.display = 'block';
                 if (_('rtctab')) _('rtctab').removeAttribute('style');
-                if (_('httab')) _('httab').removeAttribute('style');
                 _('ssid').textContent = data.ssid;
             } else {
                 _('apmode').style.display = 'block';
@@ -501,7 +499,7 @@ const loadScript = (FILE_URL, async = true, type = "text/javascript") => {
 let ht_loaded = false;
 function start() {
     if (!ht_loaded) {
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.12/p5.min.js').then(()=>{
+        loadScript('p5.js').then(()=>{
             ht_loaded = true;
             websock = new WebSocket('ws://' + window.location.hostname + '/ws');
             // websock.onopen = function(evt) {

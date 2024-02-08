@@ -143,6 +143,7 @@ static struct {
 #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
   {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
   {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
+  {"/p5.js", "text/javascript", (uint8_t *)P5_JS, sizeof(P5_JS)},
 #endif
 };
 
@@ -586,11 +587,6 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/mui.css", WebUpdateSendContent);
-  server.on("/elrs.css", WebUpdateSendContent);
-  server.on("/mui.js", WebUpdateSendContent);
-  server.on("/scan.js", WebUpdateSendContent);
-  server.on("/logo.svg", WebUpdateSendContent);
   server.on("/mode.json", WebUpdateSendMode);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
@@ -598,7 +594,7 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
 
-  server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
+  server.on("/generate_204", WebUpdateHandleRoot); // handle Android phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
   server.on("/library/test/success.html", WebUpdateHandleRoot);
   server.on("/hotspot-detect.html", WebUpdateHandleRoot);
@@ -611,15 +607,16 @@ static void startServices()
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/setrtc", WebUploadRTCUpdateHandler);
 
-  server.on("/log.js", WebUpdateSendContent);
-  server.on("/log.html", WebUpdateSendContent);
   server.addHandler(&logging);
 
   server.onNotFound(WebUpdateHandleNotFound);
 
+  for (int i=0 ; i<ARRAY_SIZE(files) ; i++)
+  {
+    server.on(files[i].url, WebUpdateSendContent);
+  }
+
   #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
-  server.on("/airplane.obj", WebUpdateSendContent);
-  server.on("/texture.gif", WebUpdateSendContent);
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
   #endif
