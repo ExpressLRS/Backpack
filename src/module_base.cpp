@@ -8,6 +8,7 @@
 
 #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
 #include "devHeadTracker.h"
+#include "crsf_protocol.h"
 #endif
 
 void RebootIntoWifi();
@@ -67,18 +68,19 @@ ModuleBase::Loop(uint32_t now)
         getEuler(&fyaw, &fpitch, &froll);
 
         // convert from degrees to servo positions
-        int yaw = fyaw + 90 * 1000 / 180;
-        int pitch = fpitch + 90 * 1000 / 180;
-        int roll = froll + 90 * 1000 / 180;
+
+        int pan = map((fyaw + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int tilt = map((fpitch + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int roll = map((froll + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
 
         mspPacket_t packet;
         packet.reset();
         packet.makeCommand();
         packet.function = MSP_ELRS_BACKPACK_SET_PTR;
-        packet.addByte(yaw & 0xFF);
-        packet.addByte(yaw >> 8);
-        packet.addByte(pitch & 0xFF);
-        packet.addByte(pitch >> 8);
+        packet.addByte(pan & 0xFF);
+        packet.addByte(pan >> 8);
+        packet.addByte(tilt & 0xFF);
+        packet.addByte(tilt >> 8);
         packet.addByte(roll & 0xFF);
         packet.addByte(roll >> 8);
         sendMSPViaEspnow(&packet);
