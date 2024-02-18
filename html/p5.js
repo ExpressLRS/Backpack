@@ -17772,12 +17772,14 @@ p5.RendererGL.prototype._bindImmediateBuffers = function(vertices, colors){
 
   shaderProgram.vertexColorAttribute =
     gl.getAttribLocation(shaderProgram, 'aVertexColor');
-  gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
-  gl.bindBuffer(gl.ARRAY_BUFFER, this.immediateMode.colorBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER,
-    new Float32Array(colors),gl.DYNAMIC_DRAW);
-  gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,
-    4, gl.FLOAT, false, 0, 0);
+  if (shaderProgram.vertexColorAttribute != -1) {
+    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.immediateMode.colorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER,
+      new Float32Array(colors),gl.DYNAMIC_DRAW);
+    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,
+      4, gl.FLOAT, false, 0, 0);
+  }
   //matrix
   this._setMatrixUniforms(shaderKey);
   //@todo implement in all shaders (not just immediateVert)
