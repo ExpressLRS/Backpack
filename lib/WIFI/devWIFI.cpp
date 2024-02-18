@@ -147,6 +147,7 @@ static struct {
 #endif
 };
 
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
 static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
   if (type == WS_EVT_CONNECT) {
@@ -183,6 +184,7 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
     }
   }
 }
+#endif
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {

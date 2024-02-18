@@ -6,6 +6,10 @@
 #include "msptypes.h"
 #include "logging.h"
 
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#include "devHeadTracker.h"
+#endif
+
 void RebootIntoWifi();
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
@@ -55,6 +59,32 @@ ModuleBase::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
 void
 ModuleBase::Loop(uint32_t now)
 {
+#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+    static uint32_t lastSend = 0;
+    if (headTrackingEnabled && now - lastSend > 20)
+    {
+        float fyaw, fpitch, froll;
+        getEuler(&fyaw, &fpitch, &froll);
+
+        // convert from degrees to servo positions
+        int yaw = fyaw + 90 * 1000 / 180;
+        int pitch = fpitch + 90 * 1000 / 180;
+        int roll = froll + 90 * 1000 / 180;
+
+        mspPacket_t packet;
+        packet.reset();
+        packet.makeCommand();
+        packet.function = MSP_ELRS_BACKPACK_SET_PTR;
+        packet.addByte(yaw & 0xFF);
+        packet.addByte(yaw >> 8);
+        packet.addByte(pitch & 0xFF);
+        packet.addByte(pitch >> 8);
+        packet.addByte(roll & 0xFF);
+        packet.addByte(roll >> 8);
+        sendMSPViaEspnow(&packet);
+        lastSend = now;
+    }
+#endif
 }
 
 void
@@ -120,7 +150,7 @@ MSPModuleBase::Loop(uint32_t now)
             }
             else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && headTrackingEnabled)
             {
-                  sendMSPViaEspnow(packet);
+                sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();
         }
