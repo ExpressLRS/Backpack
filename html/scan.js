@@ -559,8 +559,8 @@ function setup() {
 function draw() {
     background(192);
 
-    rotateY(radians(Euler.heading+180));
-    rotateX(radians(Euler.pitch));
+    rotateY(radians(-Euler.heading+180));
+    rotateX(radians(-Euler.pitch));
     rotateZ(radians(Euler.roll));
 
     push();

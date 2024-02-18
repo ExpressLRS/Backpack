@@ -291,8 +291,8 @@ void resetCenter()
 
 void getEuler(float *yaw, float *pitch, float *roll)
 {
-    *yaw = euler.angle.yaw;
-    *pitch = -euler.angle.pitch;
+    *yaw = -euler.angle.yaw;
+    *pitch = euler.angle.pitch;
     *roll = -euler.angle.roll;
 }
 
