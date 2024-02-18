@@ -79,7 +79,7 @@ device_t *ui_devices[] = {
   &Button_device,
 #endif
   &WIFI_device,
-#ifdef PIN_SCL
+#ifdef HAS_HEADTRACKING
   &HeadTracker_device
 #endif
 };
@@ -231,7 +231,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
+    #if defined(HAS_HEADTRACKING)
+    resetCenter();
+    #else
     sendHeadTrackingChangesToVrx = true;
+    #endif
     break;
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGV("Processing MSP_ELRS_BACKPACK_CRSF_TLM type %x\n", packet->payload[1]);

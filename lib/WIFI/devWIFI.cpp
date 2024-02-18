@@ -31,7 +31,7 @@
 
 #include "config.h"
 #if defined(TARGET_VRX_BACKPACK)
-#if defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
 #include "devHeadTracker.h"
 #endif
 extern VrxBackpackConfig config;
@@ -70,7 +70,7 @@ static IPAddress netMsk(255, 255, 255, 0);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
 static AsyncWebSocket ws("/ws");
 #endif
 static bool servicesStarted = false;
@@ -140,14 +140,14 @@ static struct {
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
   {"/log.js", "text/javascript", (uint8_t *)LOG_JS, sizeof(LOG_JS)},
   {"/log.html", "text/html", (uint8_t *)LOG_HTML, sizeof(LOG_HTML)},
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
   {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
   {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
   {"/p5.js", "text/javascript", (uint8_t *)P5_JS, sizeof(P5_JS)},
 #endif
 };
 
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
 static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
   if (type == WS_EVT_CONNECT) {
@@ -618,7 +618,7 @@ static void startServices()
     server.on(files[i].url, WebUpdateSendContent);
   }
 
-  #if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+  #if defined(HAS_HEADTRACKING)
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
   #endif
@@ -724,7 +724,7 @@ static void HandleWebUpdate()
       rebootTime = millis() + 200;
     }
 
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
     static long lastCall = 0;
     static HeadTrackerState last_state = STATE_ERROR;
     if (now - lastCall > 10) {

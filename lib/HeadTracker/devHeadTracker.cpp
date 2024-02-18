@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "common.h"
 
-#if defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
 #include <Wire.h>
 
 #include "devHeadTracker.h"

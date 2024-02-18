@@ -6,7 +6,7 @@
 #include "msptypes.h"
 #include "logging.h"
 
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
 #include "devHeadTracker.h"
 #include "crsf_protocol.h"
 #endif
@@ -60,7 +60,7 @@ ModuleBase::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
 void
 ModuleBase::Loop(uint32_t now)
 {
-#if defined(TARGET_VRX_BACKPACK) && defined(PIN_SCL)
+#if defined(HAS_HEADTRACKING)
     static uint32_t lastSend = 0;
     if (headTrackingEnabled && now - lastSend > 20)
     {
