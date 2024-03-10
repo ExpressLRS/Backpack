@@ -126,6 +126,23 @@
             }
         }
     },
+    "iflight": {
+        "name": "iFlight",
+        "txbp": {
+            "iflight-2400": {
+                "product_name": "iFlight 2.4GHz TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "iflight-900": {
+                "product_name": "iFlight 900MHz TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
     "namimnorc": {
         "name": "NamimnoRC",
         "txbp": {
