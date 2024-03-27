@@ -438,5 +438,51 @@
                 "platform": "esp8285"
             }
         }
+    },
+    "timer": {
+        "name": "Generic backpack for any Race Timer",
+        "timer": {
+            "esp32": {
+                "product_name": "Backpack for Race Timer with ESP32",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp82": {
+                "product_name": "Backpack for Race Timer with ESP82",
+                "firmware": "TIMER_ESP82_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp12f": {
+                "product_name": "Backpack for Race Timer with ESP12F",
+                "firmware": "TIMER_ESP12F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "rotorhazard": {
+        "name": "RotorHazard",
+        "timer": {
+            "esp32": {
+                "product_name": "ESP32 Module (DIY)",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp82": {
+                "product_name": "EP82 Module (DIY)",
+                "firmware": "TIMER_ESP82_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "NuclearHazard": {
+                "product_name": "NuclearHazard",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["wifi"],
+                "platform": "esp32"
+            }
+        }
     }
 }
