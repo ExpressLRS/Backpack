@@ -454,10 +454,10 @@ static void startWiFi(unsigned long now)
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
   #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(13);
+    WiFi.setOutputPower(20.5);
     WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_13dBm);
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
   #endif
   if (firmwareOptions.home_wifi_ssid[0] != 0) {
     strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
