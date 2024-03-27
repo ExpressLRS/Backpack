@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include "device.h"
+#include "devWIFI.h"
+#include "devwifi_proxies.h"
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
@@ -18,6 +20,7 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 
 #include "common.h"
 #include "logging.h"
@@ -164,20 +167,28 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-static void WebUpdateSendMode(AsyncWebServerRequest *request)
+static void GetConfiguration(AsyncWebServerRequest *request)
 {
-  String s;
-  if (wifiMode == WIFI_STA) {
-    s = String(R"({"mode":"STA")");
-  } else {
-    s = String(R"({"mode":"AP")");
-  }
-  s = s + R"(,"ssid":")" + station_ssid + R"(")";
-  #if defined(STM32_TX_BACKPACK)
-  s += R"(,"stm32":"yes)";
-  #endif
-  s = s + R"(,"product-name":")" + firmwareOptions.product_name + R"("})";
-  request->send(200, "application/json", s);
+#if defined(PLATFORM_ESP32)
+  DynamicJsonDocument json(32768);
+#else
+  DynamicJsonDocument json(2048);
+#endif
+
+  json["config"]["ssid"] = station_ssid;
+  json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+  json["config"]["product_name"] = firmwareOptions.product_name;
+
+#if defined(STM32_TX_BACKPACK)
+  json["stm32"] = "yes";
+#endif
+#if defined(AAT_BACKPACK)
+  WebAatAppendConfig(json);
+#endif
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
 
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
@@ -542,7 +553,7 @@ static void startServices()
   server.on("/mui.js", WebUpdateSendContent);
   server.on("/scan.js", WebUpdateSendContent);
   server.on("/logo.svg", WebUpdateSendContent);
-  server.on("/mode.json", WebUpdateSendMode);
+  server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
@@ -561,6 +572,9 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/setrtc", WebUploadRTCUpdateHandler);
+#if defined(AAT_BACKPACK)
+  WebAatInit(server);
+#endif
 
   server.on("/log.js", WebUpdateSendContent);
   server.on("/log.html", WebUpdateSendContent);
