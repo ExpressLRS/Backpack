@@ -9,7 +9,6 @@
   #include <WiFi.h>
 #endif
 
-#include <queue>
 #include "msp.h"
 #include "msptypes.h"
 #include "logging.h"
@@ -38,9 +37,6 @@ const uint8_t version[] = {LATEST_VERSION};
 connectionState_e connectionState = starting;
 unsigned long bindingStart = 0;
 unsigned long rebootTime = 0;
-int maxAttempt = 5;
-int sendAttempt = 0;
-uint32_t sendTime = 0;
 
 bool cacheFull = false;
 bool sendCached = false;
@@ -59,7 +55,13 @@ device_t *ui_devices[] = {
   &WIFI_device,
 };
 
-std::queue<mspPacket_t> sendQueue;
+#if defined(PLATFORM_ESP32)
+  int maxAttempt = 5;
+  int sendAttempt = 0;
+  QueueHandle_t rxqueue = xQueueCreate(10, sizeof(mspPacket_t));
+  QueueHandle_t txqueue = xQueueCreate(500, sizeof(mspPacket_t));
+  SemaphoreHandle_t semaphore = xSemaphoreCreateBinary();
+#endif
 
 /////////// CLASS OBJECTS ///////////
 
@@ -125,24 +127,17 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
   }
 }
 
-#if defined(PLATFORM_ESP8266)
-void OnDataSent(uint8_t *mac_addr, uint8_t status)
-{
-  espnowCTS = true;
-  if (status == 0)
-    sendSuccess = true;
-  else
-    sendSuccess = false;
-}
-#elif defined(PLATFORM_ESP32)
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
-{
-  espnowCTS = true;
-  if (status == ESP_NOW_SEND_SUCCESS)
-    sendSuccess = true;
-  else
-    sendSuccess = false;
-}
+#if defined(PLATFORM_ESP32)
+  void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+  {
+    xSemaphoreTake(semaphore, (TickType_t)512);
+    espnowCTS = true;
+    if (status == ESP_NOW_SEND_SUCCESS)
+      sendSuccess = true;
+    else
+      sendSuccess = false;
+    xSemaphoreGive(semaphore);
+  }
 #endif
 
 // espnow on-receive callback
@@ -170,7 +165,11 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
             )
           )
       {
-        ProcessMSPPacketFromPeer(msp.getReceivedPacket());
+        #if defined(PLATFORM_ESP8266)
+          ProcessMSPPacket(msp.getReceivedPacket());
+        #elif defined(PLATFORM_ESP32)
+          xQueueSend(rxqueue, msp.getReceivedPacket(), (TickType_t)1024);
+        #endif
       }
       msp.markPacketReceived();
     }
@@ -437,9 +436,13 @@ void setup()
       rebootTime = millis();
     }
 
-    esp_now_register_send_cb(OnDataSent);
     esp_now_register_recv_cb(OnDataRecv);
-
+    
+    #if defined(PLATFORM_ESP32)
+      esp_now_register_send_cb(OnDataSent);
+      xSemaphoreGive(semaphore);
+    #endif
+    
     registerPeer(firmwareOptions.uid);
 
     memcpy(sendAddress, firmwareOptions.uid, 6);
@@ -471,13 +474,6 @@ void loop()
       isBinding = false;
   }
 
-  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    // If the reboot time is set and the current time is past the reboot time then reboot.
-    if (rebootTime != 0 && now > rebootTime) {
-      ESP.restart();
-    }
-  #endif
-
   if (connectionState == wifiUpdate)
   {
     return;
@@ -488,47 +484,75 @@ void loop()
     connectionState = running;
   }
 
-  if (Serial.available())
+  while (Serial.available())
   {
     uint8_t c = Serial.read();
     if (msp.processReceivedByte(c))
     {
-      // Store the recieved packet
-      sendQueue.push(*msp.getReceivedPacket());
+      #if defined(PLATFORM_ESP8266)
+        ProcessMSPPacketFromTimer(msp.getReceivedPacket(), now);
+      #elif defined(PLATFORM_ESP32)
+        xQueueSend(txqueue, msp.getReceivedPacket(), (TickType_t)1024);
+      #endif
       msp.markPacketReceived();
     }
   }
 
-  // Process packets in sendQueue
-  if (!sendQueue.empty() && espnowCTS)
-  {
-    mspPacket_t *packet = &sendQueue.front();
-    uint16_t function = packet->function;
+  // If the reboot time is set and the current time is past the reboot time then reboot.
+  #if defined(PLATFORM_ESP8266)
+    if (rebootTime != 0 && now > rebootTime)
+      ESP.restart();
+  #elif defined(PLATFORM_ESP32)
+    if (rebootTime != 0 && now > rebootTime && uxQueueMessagesWaiting(txqueue) == 0 && uxQueueMessagesWaiting(rxqueue) == 0)
+      ESP.restart();
+  #endif
 
-    if (function == MSP_ELRS_GET_BACKPACK_VERSION ||
-      function == MSP_ELRS_BACKPACK_SET_MODE ||
-      function == MSP_ELRS_SET_SEND_UID)
+  #if defined(PLATFORM_ESP32)
+    // Process packets in sendQueue
+    xSemaphoreTake(semaphore, (TickType_t)512);
+    if (uxQueueMessagesWaiting(txqueue) > 0 && espnowCTS)
     {
-      ProcessMSPPacketFromTimer(packet, now);
-      sendQueue.pop();
-    }
-    else if (now - sendTime > 5)
-    {
-      if (++sendAttempt > maxAttempt || sendSuccess)
+      mspPacket_t packet;
+      xQueuePeek(txqueue, &packet, (TickType_t)512);
+      uint16_t function = packet.function;
+
+      if (function == MSP_ELRS_GET_BACKPACK_VERSION ||
+        function == MSP_ELRS_BACKPACK_SET_MODE ||
+        function == MSP_ELRS_SET_SEND_UID)
       {
-        espnowCTS = false;
-        sendAttempt = 0;
-        ProcessMSPPacketFromTimer(packet, now);
-        sendTime = now;
-        sendQueue.pop();
+        xSemaphoreGive(semaphore);
+        ProcessMSPPacketFromTimer(&packet, now);
+        xQueueReceive(txqueue, &packet, (TickType_t)512);
       }
       else
       {
-        espnowCTS = false;
-        ProcessMSPPacketFromTimer(packet, now);
-        sendTime = now;
+        if (++sendAttempt >= maxAttempt || sendSuccess)
+        {
+          espnowCTS = false;
+          xSemaphoreGive(semaphore);
+          sendAttempt = 0;
+          ProcessMSPPacketFromTimer(&packet, now);
+          xQueueReceive(txqueue, &packet, (TickType_t)512);
+        }
+        else
+        {
+          espnowCTS = false;
+          xSemaphoreGive(semaphore);
+          ProcessMSPPacketFromTimer(&packet, now);
+        }
       }
     }
-  }
+    else
+    {
+      xSemaphoreGive(semaphore);
+    }
 
+    if (uxQueueMessagesWaiting(rxqueue) > 0 && Serial.availableForWrite() == 128)
+    {
+      mspPacket_t rxPacket;
+      if (xQueueReceive(rxqueue, &rxPacket, (TickType_t)512) == pdTRUE)
+        ProcessMSPPacketFromPeer(&rxPacket);
+    }
+
+  #endif
 }
