@@ -76,6 +76,12 @@ void RebootIntoWifi()
 void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 {
   switch (packet->function) {
+    case MSP_ELRS_SET_NAME: {
+      DBGLN("MSP_SET_NAME...");
+      packet->function = MSP_BF_SET_NAME;
+      msp.sendPacket(packet, &Serial);
+      break;
+    }
     case MSP_ELRS_REQU_VTX_PKT: {
       DBGLN("MSP_ELRS_REQU_VTX_PKT...");
       // request from the vrx-backpack to send cached VTX packet
