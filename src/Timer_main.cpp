@@ -111,7 +111,6 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
       DBG(""); // Extra line for serial output readability
       resetBootCounter();
       connectionState = running;
-      rebootTime = millis() + 200; // Add 200ms to allow for any response message(s) to be sent back to device
     }
     return;
   }
@@ -221,7 +220,6 @@ void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now)
       DBG(""); // Extra line for serial output readability
       resetBootCounter();
       connectionState = running;
-      rebootTime = millis() + 200; // Add 200ms to allow for any response message(s) to be sent back to device
     }
     return;
   }
