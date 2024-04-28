@@ -73,6 +73,7 @@ mspPacket_t cachedHTPacket;
 
 /////////// FUNCTION DEFS ///////////
 
+void ProcessMSPPacketFromTimer(mspPacket_t *packet, uint32_t now);
 int sendMSPViaEspnow(mspPacket_t *packet);
 void resetBootCounter();
 void registerPeer(uint8_t* address);
@@ -165,7 +166,7 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
           )
       {
         #if defined(PLATFORM_ESP8266)
-          ProcessMSPPacket(msp.getReceivedPacket());
+          ProcessMSPPacketFromTimer(msp.getReceivedPacket(), millis());
         #elif defined(PLATFORM_ESP32)
           xQueueSend(rxqueue, msp.getReceivedPacket(), (TickType_t)1024);
         #endif
