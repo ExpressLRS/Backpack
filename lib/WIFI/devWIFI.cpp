@@ -33,8 +33,12 @@
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
-#else
+#elif defined(TARGET_TX_BACKPACK)
 extern TxBackpackConfig config;
+#elif defined(TARGET_TIMER_BACKPACK)
+extern TimerBackpackConfig config;
+#else
+#error Unknown target
 #endif
 extern unsigned long rebootTime;
 
@@ -44,6 +48,9 @@ static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
 static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
+#elif defined(TARGET_TIMER_BACKPACK)
+static const char *myHostname = "elrs_timer";
+static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
 #else
 #error Unknown target
 #endif
@@ -501,6 +508,8 @@ static void startMDNS()
       MDNS.addServiceTxt(service, "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
       MDNS.addServiceTxt(service, "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "timer");
     #endif
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
@@ -522,6 +531,8 @@ static void startMDNS()
        MDNS.addServiceTxt("http", "tcp", "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
        MDNS.addServiceTxt("http", "tcp", "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "timer");
     #endif
   #endif
 }
