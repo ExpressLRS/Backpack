@@ -254,6 +254,11 @@ void SetSoftMACAddress()
   firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
 
   WiFi.mode(WIFI_STA);
+  #if defined(PLATFORM_ESP8266)
+    WiFi.setOutputPower(20.5);
+  #elif defined(PLATFORM_ESP32)
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  #endif
   WiFi.begin("network-name", "pass-to-network", 1);
   WiFi.disconnect();
 

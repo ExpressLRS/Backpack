@@ -30,6 +30,7 @@ class ElrsUploadResult:
 class DeviceType(Enum):
     VRX = 'vrx'
     TXBP = 'txbp'
+    TIMER = 'timer'
     def __str__(self):
         return self.value
 
@@ -92,7 +93,8 @@ def upload_esp32_uart(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        esptool.main(['--chip', 'esp32', '--port', args.port, '--baud', str(args.baud), '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
+        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        esptool.main(['--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', str(args.baud), '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -102,7 +104,8 @@ def upload_esp32_etx(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        esptool.main(['--passthrough', '--chip', 'esp32', '--port', args.port, '--baud', '460800', '--before', 'etx', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
+        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        esptool.main(['--passthrough', '--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', '460800', '--before', 'etx', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -112,7 +115,8 @@ def upload_esp32_passthru(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        esptool.main(['--passthrough', '--chip', 'esp32', '--port', args.port, '--baud', '230400', '--before', 'passthru', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', '0x1000', os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
+        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        esptool.main(['--passthrough', '--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', '230400', '--before', 'passthru', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
@@ -145,6 +149,17 @@ def upload(deviceType: DeviceType, mcuType: MCUType, args):
                 return upload_esp32_uart(args)
             elif args.flash == UploadMethod.wifi:
                 return upload_wifi(args, mcuType, ['elrs_vrx', 'elrs_vrx.local'])
+    elif deviceType == DeviceType.TIMER:
+        if mcuType == MCUType.ESP8266:
+            if args.flash == UploadMethod.uart:
+                return upload_esp8266_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, mcuType, ['elrs_timer', 'elrs_timer.local'])
+        elif mcuType == MCUType.ESP32:
+            if args.flash == UploadMethod.uart:
+                return upload_esp32_uart(args)
+            elif args.flash == UploadMethod.wifi:
+                return upload_wifi(args, mcuType, ['elrs_timer', 'elrs_timer.local'])
     else:
         if mcuType == MCUType.ESP8266:
             if args.flash == UploadMethod.edgetx:
@@ -250,7 +265,14 @@ def main():
     json_flags['product-name'] = targets[vendor][hardware][target]['product_name']
     UnifiedConfiguration.appendToFirmware(args.file, JSONEncoder().encode(json_flags))
 
-    ret = upload(DeviceType.TXBP if hardware == 'txbp' else DeviceType.VRX, mcu, args)
+    if hardware == 'txbp':
+        devicetype = DeviceType.TXBP
+    elif hardware == 'timer':
+        devicetype = DeviceType.TIMER
+    else:
+        devicetype = DeviceType.VRX
+
+    ret = upload(devicetype, mcu, args)
     sys.exit(ret)
 
 if __name__ == '__main__':

@@ -36,8 +36,12 @@
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
-#else
+#elif defined(TARGET_TX_BACKPACK)
 extern TxBackpackConfig config;
+#elif defined(TARGET_TIMER_BACKPACK)
+extern TimerBackpackConfig config;
+#else
+#error Unknown target
 #endif
 extern unsigned long rebootTime;
 
@@ -47,6 +51,9 @@ static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
 static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
+#elif defined(TARGET_TIMER_BACKPACK)
+static const char *myHostname = "elrs_timer";
+static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
 #else
 #error Unknown target
 #endif
@@ -465,10 +472,10 @@ static void startWiFi(unsigned long now)
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);
   #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(13);
+    WiFi.setOutputPower(20.5);
     WiFi.setPhyMode(WIFI_PHY_MODE_11N);
   #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_13dBm);
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
   #endif
   if (firmwareOptions.home_wifi_ssid[0] != 0) {
     strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
@@ -512,6 +519,8 @@ static void startMDNS()
       MDNS.addServiceTxt(service, "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
       MDNS.addServiceTxt(service, "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "timer");
     #endif
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
@@ -533,6 +542,8 @@ static void startMDNS()
        MDNS.addServiceTxt("http", "tcp", "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
        MDNS.addServiceTxt("http", "tcp", "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "timer");
     #endif
   #endif
 }

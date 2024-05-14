@@ -48,6 +48,18 @@
                 "platform": "esp8285",
                 "upload_methods": ["uart", "wifi"]
             },
+            "nano2g4v2": {
+                "product_name": "BETAFPV 2.4GHz Nano TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "nano900v2": {
+                "product_name": "BETAFPV 900MHz Nano TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
             "superg": {
                 "product_name": "BETAFPV SuperG 2.4GHz Gemini TX",
                 "firmware": "ESP_TX_Backpack",
@@ -108,6 +120,23 @@
             },
             "es24slimpro": {
                 "product_name": "HappyModel ES24 Slim Pro 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "iflight": {
+        "name": "iFlight",
+        "txbp": {
+            "iflight-2400": {
+                "product_name": "iFlight 2.4GHz TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "iflight-900": {
+                "product_name": "iFlight 900MHz TX V2",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["uart", "wifi"]
@@ -407,6 +436,52 @@
                 "firmware": "Orqa_HappyModel_EP82_VRX_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
+            }
+        }
+    },
+    "timer": {
+        "name": "Generic backpack for any Race Timer",
+        "timer": {
+            "esp32": {
+                "product_name": "Backpack for Race Timer with ESP32",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp82": {
+                "product_name": "Backpack for Race Timer with ESP82",
+                "firmware": "TIMER_ESP82_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp12f": {
+                "product_name": "Backpack for Race Timer with ESP12F",
+                "firmware": "TIMER_ESP12F_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "rotorhazard": {
+        "name": "RotorHazard",
+        "timer": {
+            "esp32": {
+                "product_name": "ESP32 Module (DIY)",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp82": {
+                "product_name": "EP82 Module (DIY)",
+                "firmware": "TIMER_ESP82_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "NuclearHazard": {
+                "product_name": "NuclearHazard",
+                "firmware": "TIMER_ESP32_Backpack",
+                "upload_methods": ["wifi"],
+                "platform": "esp32"
             }
         }
     }
