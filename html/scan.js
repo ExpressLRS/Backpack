@@ -1,39 +1,85 @@
-document.addEventListener("DOMContentLoaded", get_mode, false);
-var scanTimer = undefined;
+document.addEventListener("DOMContentLoaded", init, false);
 
 function _(el) {
     return document.getElementById(el);
 }
 
-function get_mode() {
-    var json_url = 'mode.json';
-    xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-            var data = JSON.parse(this.responseText);
-            if (data.mode==="STA") {
-                _('stamode').style.display = 'block';
-                if (_('rtctab')) _('rtctab').style.display = 'block';
-                _('ssid').textContent = data.ssid;
-            } else {
-                _('apmode').style.display = 'block';
-                if (data.ssid) {
-                    _('homenet').textContent = data.ssid;
-                } else {
-                    _('connect').style.display = 'none';
-                }
-                scanTimer = setInterval(get_networks, 2000);
-            }
-            if((!data.stm32 || data.stm32==="no") && _('tx_tab')) {
-                mui.tabs.activate('pane-justified-2');
-                _('tx_tab').style.display = 'none';
-            }
-            if(data['product-name']) _('product-name').textContent = data['product-name'];
-        }
+function init() {
+    initAat();
+
+    // sends XMLHttpRequest, so do it last
+    initOptions();
+}
+
+function initAat() {
+    let aatsubmit = _('aatsubmit');
+    if (!aatsubmit)
+        return;
+
+    aatsubmit.addEventListener('click', callback('Update AAT Parameters', 'An error occurred changing values', '/aatconfig',
+        () => { return new URLSearchParams(new FormData(_('aatconfig'))); }
+    ));
+    _('azim_center').addEventListener('change', aatAzimCenterChanged);
+    document.querySelectorAll('.aatlive').forEach(
+        el => el.addEventListener('change', aatLineElementChanged)
+    );
+}
+
+function initOptions() {
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        updateConfig(data);
+        setTimeout(get_networks, 2000);
+      }
     };
-    xmlhttp.open("POST", json_url, true);
-    xmlhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlhttp.open('GET', '/config', true);
     xmlhttp.send();
+}
+
+function updateConfig(data) {
+    let config = data.config;
+    if (config.mode==="STA") {
+        _('stamode').style.display = 'block';
+        if (_('rtctab')) _('rtctab').style.display = 'table-cell';
+        _('ssid').textContent = config.ssid;
+    } else {
+        _('apmode').style.display = 'block';
+        if (config.ssid) {
+            _('homenet').textContent = config.ssid;
+        } else {
+            _('connect').style.display = 'none';
+        }
+    }
+    if((!data.stm32 || data.stm32==="no") && _('tx_tab')) {
+        mui.tabs.activate('pane-justified-2');
+        _('tx_tab').style.display = 'none';
+    }
+    if(config['product_name']) _('product_name').textContent = config['product_name'];
+
+    updateAatConfig(config);
+}
+
+function updateAatConfig(config)
+{
+    if (!config.hasOwnProperty('aat'))
+        return;
+    _('aattab').style.display = 'table-cell';
+
+    // AAT
+    _('servosmoo').value = config.aat.servosmoo;
+    _('servomode').value = config.aat.servomode;
+    _('azim_center').value = config.aat.azim_center;
+    _('azim_min').value = config.aat.azim_min;
+    _('azim_max').value = config.aat.azim_max;
+    _('elev_min').value = config.aat.elev_min;
+    _('elev_max').value = config.aat.elev_max;
+    aatAzimCenterChanged();
+
+    // VBAT
+    _('vbat_offset').value = config.vbat.offset;
+    _('vbat_scale').value = config.vbat.scale;
 }
 
 function get_networks() {
@@ -44,7 +90,6 @@ function get_networks() {
             var data = JSON.parse(this.responseText);
             _('loader').style.display = 'none';
             autocomplete(_('network'), data);
-            clearInterval(scanTimer);
         }
     };
     xmlhttp.open("POST", json_url, true);
@@ -339,6 +384,37 @@ function callback(title, msg, url, getdata) {
         xmlhttp.send(data);
     }
 }
+
+function aatAzimCenterChanged()
+{
+    // Update the slider labels to represent the new orientation
+    let labels;
+    switch (parseInt(_('azim_center').selectedIndex))
+    {
+        default: /* fallthrough */
+        case 0: labels = 'SWNES'; break; // N
+        case 1: labels = 'WNESW'; break; // E
+        case 2: labels = 'NESWN'; break; // S
+        case 3: labels = 'ESWNE'; break; // W
+    }
+    let markers = _('bear_markers');
+    for (i=0; i<markers.options.length; ++i)
+        markers.options[i].label = labels[i];
+}
+
+function aatLineElementChanged()
+{
+    fetch("/aatconfig", {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'bear': _('bear').value,
+            'elev': _('elev').value,
+        })
+    });
+  }
 
 _('sethome').addEventListener('submit', callback("Set Home Network", "An error occurred setting the home network", "/sethome", function() {
     return new FormData(_('sethome'));

@@ -289,4 +289,11 @@ body, input, select, textarea {
 	background: #88cef7;
   }
 
+  datalist {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	writing-mode: horizontal-tb;
+	width: 100%;
+}
   /*==========================*/
