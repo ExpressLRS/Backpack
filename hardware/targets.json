@@ -479,7 +479,7 @@
             },
             "NuclearHazard": {
                 "product_name": "NuclearHazard",
-                "firmware": "TIMER_ESP32_Backpack",
+                "firmware": "NuclearHazard_Backpack",
                 "upload_methods": ["wifi"],
                 "platform": "esp32"
             }
