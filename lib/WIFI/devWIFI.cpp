@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include "device.h"
+#include "devWIFI.h"
+#include "devwifi_proxies.h"
 
 #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
 
@@ -18,6 +20,7 @@
 #include <StreamString.h>
 
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 
 #include "common.h"
 #include "logging.h"
@@ -36,8 +39,12 @@
 #endif
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
-#else
+#elif defined(TARGET_TX_BACKPACK)
 extern TxBackpackConfig config;
+#elif defined(TARGET_TIMER_BACKPACK)
+extern TimerBackpackConfig config;
+#else
+#error Unknown target
 #endif
 extern unsigned long rebootTime;
 
@@ -47,6 +54,9 @@ static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
 static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
+#elif defined(TARGET_TIMER_BACKPACK)
+static const char *myHostname = "elrs_timer";
+static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
 #else
 #error Unknown target
 #endif
@@ -216,20 +226,28 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
   request->send(response);
 }
 
-static void WebUpdateSendMode(AsyncWebServerRequest *request)
+static void GetConfiguration(AsyncWebServerRequest *request)
 {
-  String s;
-  if (wifiMode == WIFI_STA) {
-    s = String(R"({"mode":"STA")");
-  } else {
-    s = String(R"({"mode":"AP")");
-  }
-  s = s + R"(,"ssid":")" + station_ssid + R"(")";
-  #if defined(STM32_TX_BACKPACK)
-  s += R"(,"stm32":"yes)";
-  #endif
-  s = s + R"(,"product-name":")" + firmwareOptions.product_name + R"("})";
-  request->send(200, "application/json", s);
+#if defined(PLATFORM_ESP32)
+  DynamicJsonDocument json(32768);
+#else
+  DynamicJsonDocument json(2048);
+#endif
+
+  json["config"]["ssid"] = station_ssid;
+  json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
+  json["config"]["product_name"] = firmwareOptions.product_name;
+
+#if defined(STM32_TX_BACKPACK)
+  json["stm32"] = "yes";
+#endif
+#if defined(AAT_BACKPACK)
+  WebAatAppendConfig(json);
+#endif
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
 }
 
 static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
@@ -553,6 +571,8 @@ static void startMDNS()
       MDNS.addServiceTxt(service, "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
       MDNS.addServiceTxt(service, "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+      MDNS.addServiceTxt(service, "type", "timer");
     #endif
     // If the probe result fails because there is another device on the network with the same name
     // use our unique instance name as the hostname. A better way to do this would be to use
@@ -574,6 +594,8 @@ static void startMDNS()
        MDNS.addServiceTxt("http", "tcp", "type", "vrx");
     #elif defined(TARGET_TX_BACKPACK)
        MDNS.addServiceTxt("http", "tcp", "type", "txbp");
+    #elif defined(TARGET_TIMER_BACKPACK)
+       MDNS.addServiceTxt("http", "tcp", "type", "timer");
     #endif
   #endif
 }
@@ -589,7 +611,12 @@ static void startServices()
   }
 
   server.on("/", WebUpdateHandleRoot);
-  server.on("/mode.json", WebUpdateSendMode);
+  server.on("/mui.css", WebUpdateSendContent);
+  server.on("/elrs.css", WebUpdateSendContent);
+  server.on("/mui.js", WebUpdateSendContent);
+  server.on("/scan.js", WebUpdateSendContent);
+  server.on("/logo.svg", WebUpdateSendContent);
+  server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
   server.on("/forget", WebUpdateForget);
@@ -608,6 +635,9 @@ static void startServices()
   server.on("/update", HTTP_POST, WebUploadResponseHandler, WebUploadDataHandler);
   server.on("/forceupdate", WebUploadForceUpdateHandler);
   server.on("/setrtc", WebUploadRTCUpdateHandler);
+#if defined(AAT_BACKPACK)
+  WebAatInit(server);
+#endif
 
   server.addHandler(&logging);
 

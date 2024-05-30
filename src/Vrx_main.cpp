@@ -39,6 +39,8 @@
   #include "skyzone_msp.h"
 #elif defined(ORQA_BACKPACK)
   #include "orqa.h"
+#elif defined(AAT_BACKPACK)
+  #include "module_aat.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -89,6 +91,10 @@ device_t *ui_devices[] = {
 // otherwise we get errors about invalid peer:
 // https://rntlab.com/question/espnow-peer-interface-is-invalid/
 esp_now_peer_info_t peerInfo;
+
+// Add FreeRTOS queue for recieving espnow messages
+QueueHandle_t rxqueue = xQueueCreate(20, sizeof(mspPacket_t));
+
 #endif
 
 /////////// CLASS OBJECTS ///////////
@@ -112,6 +118,8 @@ VrxBackpackConfig config;
   SkyzoneMSP vrxModule(&Serial);
 #elif defined(ORQA_BACKPACK)
   Orqa vrxModule;
+#elif defined(AAT_BACKPACK)
+  AatModule vrxModule(Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -139,15 +147,14 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
-  DBGLN("ESP NOW DATA:");
+  DBGVLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
   {
-    DBG("%x", data[i]); // Debug prints
-    DBG(",");
+    DBGV("%x,", data[i]); // Debug prints
 
     if (msp.processReceivedByte(data[i]))
     {
-      DBGLN(""); // Extra line for serial output readability
+      DBGVLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
       if (connectionState == binding ||
@@ -162,7 +169,11 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
           )
       {
         gotInitialPacket = true;
-        ProcessMSPPacket(msp.getReceivedPacket());
+        #if defined(PLATFORM_ESP8266)
+          ProcessMSPPacket(msp.getReceivedPacket());
+        #elif defined(PLATFORM_ESP32)
+          xQueueSend(rxqueue, msp.getReceivedPacket(), (TickType_t)1024);
+        #endif
       }
       else
       {
@@ -244,6 +255,9 @@ void ProcessMSPPacket(mspPacket_t *packet)
       break;
     }
     switch (packet->payload[2]) {
+    case CRSF_FRAMETYPE_GPS:
+      vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
+      break;
     case CRSF_FRAMETYPE_BATTERY_SENSOR:
       vrxModule.SendBatteryTelemetry(packet->payload);
       break;
@@ -467,13 +481,19 @@ void loop()
   devicesUpdate(now);
   vrxModule.Loop(now);
 
-  #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
-    // If the reboot time is set and the current time is past the reboot time then reboot.
-    if (rebootTime != 0 && now > rebootTime) {
-      turnOffLED();
-      ESP.restart();
-    }
-  #endif
+  #if defined(PLATFORM_ESP8266)
+    if (rebootTime != 0 && now > rebootTime)
+      {
+        turnOffLED();
+        ESP.restart();
+      }
+  #elif defined(PLATFORM_ESP32)
+    if (rebootTime != 0 && now > rebootTime && uxQueueMessagesWaiting(rxqueue) == 0)
+      {
+        turnOffLED();
+        ESP.restart();
+      }
+  #endif 
 
   if (connectionState == wifiUpdate)
   {
@@ -522,4 +542,14 @@ void loop()
     resetBootCounter();
   }
 #endif
+
+#if defined(PLATFORM_ESP32)
+  if (uxQueueMessagesWaiting(rxqueue) > 0 && Serial.availableForWrite() == 128)
+    {
+      mspPacket_t rxPacket;
+      if (xQueueReceive(rxqueue, &rxPacket, (TickType_t)512) == pdTRUE)
+        ProcessMSPPacket(&rxPacket);
+    }
+#endif
+
 }

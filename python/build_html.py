@@ -73,3 +73,5 @@ if fnmatch.filter(env['BUILD_FLAGS'], '*TARGET_VRX_BACKPACK*'):
     build_common(env, "vrx_index.html")
 elif fnmatch.filter(env['BUILD_FLAGS'], '*TARGET_TX_BACKPACK*'):
     build_common(env, "txbp_index.html")
+elif fnmatch.filter(env['BUILD_FLAGS'], '*TARGET_TIMER_BACKPACK*'):
+    build_common(env, "timer_index.html")
