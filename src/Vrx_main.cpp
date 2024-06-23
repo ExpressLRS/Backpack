@@ -246,17 +246,24 @@ void ProcessMSPPacket(mspPacket_t *packet)
       DBGLN("CRSF_TLM packet too short")
       break;
     }
-    switch (packet->payload[2]) {
-    case CRSF_FRAMETYPE_GPS:
-      vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
-      break;
-    case CRSF_FRAMETYPE_BATTERY_SENSOR:
-      vrxModule.SendBatteryTelemetry(packet->payload);
-      break;
-    case CRSF_FRAMETYPE_LINK_STATISTICS:
-      vrxModule.SendLinkTelemetry(packet->payload);
-      break;
+    // switch (packet->payload[2]) {
+    // case CRSF_FRAMETYPE_GPS:
+    //   vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
+    //   break;
+    // case CRSF_FRAMETYPE_BATTERY_SENSOR:
+    //   vrxModule.SendBatteryTelemetry(packet->payload);
+    //   break;
+    // case CRSF_FRAMETYPE_LINK_STATISTICS:
+    //   vrxModule.SendLinkTelemetry(packet->payload);
+    //   break;
+    // }
+    DBGLN("*** DUMP CRSF TO UART ***");
+    for(int i = 0; i < packet->payloadSize; i++)
+    {
+      DBGV("%x,", packet->payload[i]); // Debug prints
     }
+    DBGLN(""); // Extra line for serial output readability
+    Serial.write(packet->payload, packet->payloadSize);
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
@@ -522,7 +529,7 @@ void loop()
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
     DBGLN("RequestVTXPacket...");
-    RequestVTXPacket();
+    // RequestVTXPacket();
     lastSentRequest = now;
   }
 

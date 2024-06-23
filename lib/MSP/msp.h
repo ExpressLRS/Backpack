@@ -6,7 +6,7 @@
 // dynamically allocate array length based on the payload size
 // Hardcoding payload size to 64 bytes for now, to allow enough space
 // for custom OSD text.
-#define MSP_PORT_INBUF_SIZE 64
+#define MSP_PORT_INBUF_SIZE 128
 
 #define CHECK_PACKET_PARSING() \
   if (packet->readError) {\
