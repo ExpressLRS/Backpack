@@ -269,8 +269,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
     }
     DBGLN(""); // Extra line for serial output readability
     Serial.write(packet->payload, packet->payloadSize);
-    memcpy(cachedGPS, packet->payload, packet->payloadSize);
-    cachedLen = packet->payloadSize;
+    if (packet->payload[2] == CRSF_FRAMETYPE_GPS)
+    {
+      memcpy(cachedGPS, packet->payload, packet->payloadSize);
+      cachedLen = packet->payloadSize;
+    }
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
@@ -546,6 +549,12 @@ void loop()
     DBGLN("Send cached GPS...");
     Serial.write(cachedGPS, cachedLen);
     lastSentGPS = now;
+    DBGLN("*** GPS CACHE ***");
+    for(int i = 0; i < cachedLen; i++)
+    {
+      DBG("%x,", cachedGPS[i]); // Debug prints
+    }
+    DBGLN(""); // Extra line for serial output readability
   }
 
 #if !defined(NO_AUTOBIND)
