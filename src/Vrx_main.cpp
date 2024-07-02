@@ -72,6 +72,8 @@ bool gotInitialPacket = false;
 bool headTrackingEnabled = false;
 uint32_t lastSentRequest = 0;
 
+uint32_t lastSentGPS = 0;
+
 device_t *ui_devices[] = {
 #ifdef PIN_LED
   &LED_device,
@@ -99,6 +101,9 @@ MSP msp;
 
 ELRS_EEPROM eeprom;
 VrxBackpackConfig config;
+
+uint8_t cachedGPS[64];
+uint8_t cachedLen = 0;
 
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
@@ -264,6 +269,8 @@ void ProcessMSPPacket(mspPacket_t *packet)
     }
     DBGLN(""); // Extra line for serial output readability
     Serial.write(packet->payload, packet->payloadSize);
+    memcpy(cachedGPS, packet->payload, packet->payloadSize);
+    cachedLen = packet->payloadSize;
     break;
   default:
     DBGLN("Unknown command from ESPNOW");
@@ -531,6 +538,14 @@ void loop()
     DBGLN("RequestVTXPacket...");
     // RequestVTXPacket();
     lastSentRequest = now;
+  }
+
+  // spam out GPS msgs
+  if (cachedLen > 0 && now - lastSentGPS > 100 && connectionState != binding)
+  {
+    DBGLN("Send cached GPS...");
+    Serial.write(cachedGPS, cachedLen);
+    lastSentGPS = now;
   }
 
 #if !defined(NO_AUTOBIND)
