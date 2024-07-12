@@ -40,6 +40,8 @@
   #include "orqa.h"
 #elif defined(AAT_BACKPACK)
   #include "module_aat.h"
+#elif defined(CROSSBOW_BACKPACK)
+  #include "mfd_crossbow.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -121,6 +123,8 @@ uint8_t cachedLen = 0;
   Orqa vrxModule;
 #elif defined(AAT_BACKPACK)
   AatModule vrxModule(Serial);
+#elif defined(CROSSBOW_BACKPACK)
+  MFDCrossbow vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -251,28 +255,16 @@ void ProcessMSPPacket(mspPacket_t *packet)
       DBGLN("CRSF_TLM packet too short")
       break;
     }
-    // switch (packet->payload[2]) {
-    // case CRSF_FRAMETYPE_GPS:
-    //   vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
-    //   break;
-    // case CRSF_FRAMETYPE_BATTERY_SENSOR:
-    //   vrxModule.SendBatteryTelemetry(packet->payload);
-    //   break;
-    // case CRSF_FRAMETYPE_LINK_STATISTICS:
-    //   vrxModule.SendLinkTelemetry(packet->payload);
-    //   break;
-    // }
-    DBGLN("*** DUMP CRSF TO UART ***");
-    for(int i = 0; i < packet->payloadSize; i++)
-    {
-      DBGV("%x,", packet->payload[i]); // Debug prints
-    }
-    DBGLN(""); // Extra line for serial output readability
-    Serial.write(packet->payload, packet->payloadSize);
-    if (packet->payload[2] == CRSF_FRAMETYPE_GPS)
-    {
-      memcpy(cachedGPS, packet->payload, packet->payloadSize);
-      cachedLen = packet->payloadSize;
+    switch (packet->payload[2]) {
+    case CRSF_FRAMETYPE_GPS:
+      vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
+      break;
+    case CRSF_FRAMETYPE_BATTERY_SENSOR:
+      vrxModule.SendBatteryTelemetry(packet->payload);
+      break;
+    case CRSF_FRAMETYPE_LINK_STATISTICS:
+      vrxModule.SendLinkTelemetry(packet->payload);
+      break;
     }
     break;
   default:
@@ -343,6 +335,7 @@ void SetSoftMACAddress()
 
 void RequestVTXPacket()
 {
+#if !defined(AAT_BACKPACK) and !defined(CROSSBOW_BACKPACK)
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
@@ -351,6 +344,7 @@ void RequestVTXPacket()
 
   blinkLED();
   sendMSPViaEspnow(&packet);
+#endif
 }
 
 void sendMSPViaEspnow(mspPacket_t *packet)
