@@ -22,6 +22,11 @@
 #include "devButton.h"
 #include "devLED.h"
 
+#if defined(MAVLINK_ENABLED)
+#include "common/mavlink.h"
+
+#endif
+
 /////////// GLOBALS ///////////
 
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -29,6 +34,8 @@ uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 const uint8_t version[] = {LATEST_VERSION};
 
 connectionState_e connectionState = starting;
+// Assume we are in wifi update mode until we know otherwise
+wifi_service_t wifiService = WIFI_SERVICE_UPDATE;
 unsigned long rebootTime = 0;
 
 bool cacheFull = false;
@@ -65,10 +72,14 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 esp_now_peer_info_t peerInfo;
 #endif
 
-void RebootIntoWifi()
+void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
 {
   DBGLN("Rebooting into wifi update mode...");
   config.SetStartWiFiOnBoot(true);
+#if defined(TARGET_TX_BACKPACK)
+  // TODO it might be better to add wifi service to each type of backpack
+  config.SetWiFiService(service);
+#endif
   config.Commit();
   rebootTime = millis();
 }
@@ -236,6 +247,25 @@ void SendCachedMSP()
   }
 }
 
+void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_t *mavlink_status)
+{
+    switch (mavlink_rx_message->msgid)
+    {
+      case MAVLINK_MSG_ID_HEARTBEAT:
+      {
+        mavlink_heartbeat_t heartbeat;
+        mavlink_msg_heartbeat_decode(mavlink_rx_message, &heartbeat);
+        if (mavlink_rx_message->compid == MAV_COMP_ID_AUTOPILOT1)
+        {
+          if (connectionState != wifiUpdate) {
+            RebootIntoWifi(WIFI_SERVICE_MAVLINK_TX);
+          }
+        }
+        break;
+      }
+    }
+}
+
 void SetSoftMACAddress()
 {
   if (!firmwareOptions.hasUID)
@@ -310,6 +340,12 @@ void setup()
   if (config.GetStartWiFiOnBoot())
   {
     config.SetStartWiFiOnBoot(false);
+    if (config.GetWiFiService() != WIFI_SERVICE_UPDATE)
+    {
+      // Store the intended service mode before writing default back to persistent flash
+      wifiService = config.GetWiFiService();
+      config.SetWiFiService(WIFI_SERVICE_UPDATE);
+    }
     config.Commit();
     connectionState = wifiUpdate;
     devicesTriggerEvent();
@@ -376,6 +412,13 @@ void loop()
       // Finished processing a complete packet
       ProcessMSPPacketFromTX(msp.getReceivedPacket());
       msp.markPacketReceived();
+    }
+    // Process MAVLink messages to switch to wifi update mode
+    mavlink_message_t mavlink_rx_message;
+    mavlink_status_t mavlink_status;
+    if (mavlink_parse_char(MAVLINK_COMM_0, c, &mavlink_rx_message, &mavlink_status))
+    {
+      ProcessMAVLinkFromTX(&mavlink_rx_message, &mavlink_status);
     }
   }
 

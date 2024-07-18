@@ -33,11 +33,16 @@
 #include "WebContent.h"
 
 #include "config.h"
+
+#if defined(MAVLINK_ENABLED)
+#include "common/mavlink.h"
+#endif
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
 #elif defined(TARGET_TX_BACKPACK)
 extern TxBackpackConfig config;
+extern wifi_service_t wifiService;
 #elif defined(TARGET_TIMER_BACKPACK)
 extern TimerBackpackConfig config;
 #else
@@ -50,7 +55,8 @@ static const char *myHostname = "elrs_vrx";
 static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
-static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
+static char wifi_ap_ssid[33]; // will be set depending on wifiService
+
 #elif defined(TARGET_TIMER_BACKPACK)
 static const char *myHostname = "elrs_timer";
 static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
@@ -74,6 +80,7 @@ static volatile unsigned long changeTime = 0;
 static const byte DNS_PORT = 53;
 static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
+static IPAddress apBroadcast(10, 0, 0, 255);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
@@ -91,6 +98,16 @@ static UpdateWrapper updater = UpdateWrapper();
 static AsyncEventSource logging("/logging");
 static char logBuffer[256];
 static int logPos = 0;
+
+#if defined(MAVLINK_ENABLED)
+// This is the port that we will listen for mavlink packets on
+static constexpr uint16_t MAVLINK_PORT_LISTEN = 14555;
+// This is the port that we will send mavlink packets to
+static constexpr uint16_t MAVLINK_PORT_SEND = 14550;
+WiFiUDP mavlinkUDP;
+uint32_t mavlink_from_uart_counter = 0;
+uint32_t mavlink_to_uart_counter = 0;
+#endif
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -447,6 +464,29 @@ static void WebUploadRTCUpdateHandler(AsyncWebServerRequest *request) {
   #endif
 }
 
+static void WebMAVLinkHandler(AsyncWebServerRequest *request)
+{
+#if defined(PLATFORM_ESP32)
+  DynamicJsonDocument json(32768);
+#else
+  DynamicJsonDocument json(2048);
+#endif
+
+  json["counters"]["from_uart"] = mavlink_from_uart_counter;
+  json["counters"]["to_uart"] = mavlink_to_uart_counter;
+
+#if defined(STM32_TX_BACKPACK)
+  json["stm32"] = "yes";
+#endif
+#if defined(AAT_BACKPACK)
+  WebAatAppendConfig(json);
+#endif
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
+}
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -586,6 +626,7 @@ static void startServices()
 #if defined(AAT_BACKPACK)
   WebAatInit(server);
 #endif
+  server.on("/mavlink", HTTP_GET, WebMAVLinkHandler);
 
   server.on("/log.js", WebUpdateSendContent);
   server.on("/log.html", WebUpdateSendContent);
@@ -599,6 +640,8 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
+
+  mavlinkUDP.begin(MAVLINK_PORT_LISTEN);
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
@@ -643,6 +686,18 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
+#if defined(TARGET_TX_BACKPACK)
+        if (wifiService == WIFI_SERVICE_UPDATE) {
+          strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
+        } else if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
+          // Generate a unique SSID using config.address as hex
+          sprintf(wifi_ap_ssid, "ExpressLRS TX %02X%02X%02X",
+            config.GetGroupAddress()[3],
+            config.GetGroupAddress()[4],
+            config.GetGroupAddress()[5]
+          );
+        }
+#endif
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
         startServices();
@@ -667,12 +722,40 @@ static void HandleWebUpdate()
   if (servicesStarted)
   {
     while (Serial.available()) {
-      int val = Serial.read();
-      logBuffer[logPos++] = val;
-      logBuffer[logPos] = 0;
-      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
-        logging.send(logBuffer);
-        logPos = 0;
+      if (wifiService == WIFI_SERVICE_UPDATE) {
+        int val = Serial.read();
+        logBuffer[logPos++] = val;
+        logBuffer[logPos] = 0;
+        if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+          logging.send(logBuffer);
+          logPos = 0;
+        }
+      } else if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
+        mavlink_message_t msg;
+        mavlink_status_t status;
+        char val = Serial.read();
+        if (mavlink_parse_char(MAVLINK_COMM_0, val, &msg, &status)) {
+          mavlink_from_uart_counter++;
+          uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+          uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+          
+          // Determine the broadcast address
+          IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
+          mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+          mavlinkUDP.write(buf, len);
+          mavlinkUDP.endPacket();
+        }
+      }
+    }
+
+    // Check if we have MAVLink UDP data to send over UART
+    if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
+      int packetSize = mavlinkUDP.parsePacket();
+      if (packetSize) {
+        uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+        mavlinkUDP.read(buf, packetSize);
+        Serial.write(buf, packetSize);
+        mavlink_to_uart_counter++;
       }
     }
 
