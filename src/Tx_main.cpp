@@ -247,23 +247,39 @@ void SendCachedMSP()
   }
 }
 
+// This function is only used when we're not yet in WiFi MAVLink mode - its main purpose is to detect
+// heartbeat packets and switch to WiFi MAVLink mode if we receive 3 heartbeats in 5 seconds.
 void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_t *mavlink_status)
 {
-    switch (mavlink_rx_message->msgid)
+  static unsigned long heartbeatTimestamps[3] = {0, 0, 0};
+  switch (mavlink_rx_message->msgid)
+  {
+  case MAVLINK_MSG_ID_HEARTBEAT:
+  {
+    mavlink_heartbeat_t heartbeat;
+    mavlink_msg_heartbeat_decode(mavlink_rx_message, &heartbeat);
+    if (mavlink_rx_message->compid == MAV_COMP_ID_AUTOPILOT1)
     {
-      case MAVLINK_MSG_ID_HEARTBEAT:
+      // If we hit this line we shouldn't be in WiFi update mode but let's be certain.
+      if (connectionState != wifiUpdate)
       {
-        mavlink_heartbeat_t heartbeat;
-        mavlink_msg_heartbeat_decode(mavlink_rx_message, &heartbeat);
-        if (mavlink_rx_message->compid == MAV_COMP_ID_AUTOPILOT1)
+        unsigned long now = millis();
+        // Push the timestamp we received the heartbeat back into the array
+        for (int i = 0; i < 2; i++)
         {
-          if (connectionState != wifiUpdate) {
-            RebootIntoWifi(WIFI_SERVICE_MAVLINK_TX);
-          }
+          heartbeatTimestamps[i] = heartbeatTimestamps[i + 1];
         }
-        break;
+        heartbeatTimestamps[2] = now;
+        // If we have received 3 heartbeats in the last 5 seconds, switch to WiFi update mode
+        if (now - heartbeatTimestamps[0] < 5000)
+        {
+          RebootIntoWifi(WIFI_SERVICE_MAVLINK_TX);
+        }
       }
     }
+    break;
+  }
+  }
 }
 
 void SetSoftMACAddress()
