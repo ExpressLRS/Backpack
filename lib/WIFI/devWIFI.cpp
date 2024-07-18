@@ -692,9 +692,9 @@ static void HandleWebUpdate()
         } else if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
           // Generate a unique SSID using config.address as hex
           sprintf(wifi_ap_ssid, "ExpressLRS TX %02X%02X%02X",
-            config.GetGroupAddress()[3],
-            config.GetGroupAddress()[4],
-            config.GetGroupAddress()[5]
+            firmwareOptions.uid[3],
+            firmwareOptions.uid[4],
+            firmwareOptions.uid[5]
           );
         }
 #endif
