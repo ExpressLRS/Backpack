@@ -464,28 +464,21 @@ static void WebUploadRTCUpdateHandler(AsyncWebServerRequest *request) {
   #endif
 }
 
+#if defined(MAVLINK_ENABLED)
 static void WebMAVLinkHandler(AsyncWebServerRequest *request)
 {
-#if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(32768);
-#else
-  DynamicJsonDocument json(2048);
-#endif
-
-  json["counters"]["from_uart"] = mavlink_from_uart_counter;
-  json["counters"]["to_uart"] = mavlink_to_uart_counter;
-
-#if defined(STM32_TX_BACKPACK)
-  json["stm32"] = "yes";
-#endif
-#if defined(AAT_BACKPACK)
-  WebAatAppendConfig(json);
-#endif
+  DynamicJsonDocument json(1024);
+  json["enabled"] = wifiService == WIFI_SERVICE_MAVLINK_TX;
+  json["counters"]["to_gcs"] = mavlink_from_uart_counter;
+  json["counters"]["to_aircraft"] = mavlink_to_uart_counter;
+  json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
+  json["ports"]["send"] = MAVLINK_PORT_SEND;
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);
 }
+#endif
 
 static void wifiOff()
 {
@@ -626,7 +619,9 @@ static void startServices()
 #if defined(AAT_BACKPACK)
   WebAatInit(server);
 #endif
+#if defined(MAVLINK_ENABLED)
   server.on("/mavlink", HTTP_GET, WebMAVLinkHandler);
+#endif
 
   server.on("/log.js", WebUpdateSendContent);
   server.on("/log.html", WebUpdateSendContent);
@@ -640,8 +635,9 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
-
+#if defined(MAVLINK_ENABLED)
   mavlinkUDP.begin(MAVLINK_PORT_LISTEN);
+#endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
@@ -722,6 +718,7 @@ static void HandleWebUpdate()
   if (servicesStarted)
   {
     while (Serial.available()) {
+#if defined(MAVLINK_ENABLED)
       if (wifiService == WIFI_SERVICE_UPDATE) {
         int val = Serial.read();
         logBuffer[logPos++] = val;
@@ -746,8 +743,18 @@ static void HandleWebUpdate()
           mavlinkUDP.endPacket();
         }
       }
+#else
+      int val = Serial.read();
+      logBuffer[logPos++] = val;
+      logBuffer[logPos] = 0;
+      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+        logging.send(logBuffer);
+        logPos = 0;
+      }
+#endif
     }
 
+#if defined(MAVLINK_ENABLED)
     // Check if we have MAVLink UDP data to send over UART
     if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
       int packetSize = mavlinkUDP.parsePacket();
@@ -758,7 +765,7 @@ static void HandleWebUpdate()
         mavlink_to_uart_counter++;
       }
     }
-
+#endif
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
       MDNS.update();
