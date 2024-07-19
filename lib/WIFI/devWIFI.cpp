@@ -687,7 +687,7 @@ static void HandleWebUpdate()
           strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
         } else if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
           // Generate a unique SSID using config.address as hex
-          sprintf(wifi_ap_ssid, "ExpressLRS TX %02X%02X%02X",
+          sprintf(wifi_ap_ssid, "ExpressLRS TX Backpack %02X%02X%02X",
             firmwareOptions.uid[3],
             firmwareOptions.uid[4],
             firmwareOptions.uid[5]
