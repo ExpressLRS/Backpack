@@ -84,7 +84,6 @@ void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
   rebootTime = millis();
 }
 
-#if defined(MAVLINK_ENABLED)
 void ProcessMSPPacketFromPeer(mspPacket_t *packet)
 {
   switch (packet->function) {
@@ -109,7 +108,6 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
     }
   }
 }
-#endif
 
 // espnow on-receive callback
 #if defined(PLATFORM_ESP8266)
@@ -249,6 +247,7 @@ void SendCachedMSP()
   }
 }
 
+#if defined(MAVLINK_ENABLED)
 // This function is only used when we're not yet in WiFi MAVLink mode - its main purpose is to detect
 // heartbeat packets and switch to WiFi MAVLink mode if we receive 3 heartbeats in 5 seconds.
 void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_t *mavlink_status)
@@ -283,6 +282,7 @@ void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_
   }
   }
 }
+#endif
 
 void SetSoftMACAddress()
 {
