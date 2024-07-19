@@ -5,8 +5,9 @@
 #include "device.h"
 #include "msptypes.h"
 #include "logging.h"
+#include <config.h>
 
-void RebootIntoWifi();
+void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE);
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
 extern bool headTrackingEnabled;
