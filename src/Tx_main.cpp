@@ -439,8 +439,8 @@ void loop()
     {
       ProcessMAVLinkFromTX(&mavlink_rx_message, &mavlink_status);
     }
-  }
 #endif
+  }
 
   if (cacheFull && sendCached)
   {
