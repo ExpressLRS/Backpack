@@ -176,12 +176,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-#if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(32768);
-#else
-  DynamicJsonDocument json(2048);
-#endif
-
+  JsonDocument json;
   json["config"]["ssid"] = station_ssid;
   json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
   json["config"]["product_name"] = firmwareOptions.product_name;
