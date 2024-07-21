@@ -342,18 +342,21 @@ void SetSoftMACAddress()
   firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
 
   WiFi.mode(WIFI_STA);
+  #if defined(PLATFORM_ESP8266)
+    WiFi.setOutputPower(20.5);
+  #elif defined(PLATFORM_ESP32)
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  #endif
+  WiFi.begin("network-name", "pass-to-network", 1);
+  WiFi.disconnect();
 
   // Soft-set the MAC address to the passphrase UID for binding
   #if defined(PLATFORM_ESP8266)
     wifi_set_macaddr(STATION_IF, firmwareOptions.uid);
-    WiFi.setOutputPower(20.5);
   #elif defined(PLATFORM_ESP32)
     esp_wifi_set_mac(WIFI_IF_STA, firmwareOptions.uid);
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    esp_wifi_set_protocol(WIFI_IF_STA , WIFI_PROTOCOL_LR);
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #endif
-  WiFi.begin("network-name", "pass-to-network", 1);
-  WiFi.disconnect();
 }
 
 void resetBootCounter()
@@ -439,12 +442,12 @@ void setup()
     }
 
     esp_now_register_recv_cb(OnDataRecv);
-    
+
     #if defined(PLATFORM_ESP32)
       esp_now_register_send_cb(OnDataSent);
       xSemaphoreGive(semaphore);
     #endif
-    
+
     registerPeer(firmwareOptions.uid);
 
     memcpy(sendAddress, firmwareOptions.uid, 6);

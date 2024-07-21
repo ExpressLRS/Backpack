@@ -28,7 +28,7 @@ function get_mode() {
                 mui.tabs.activate('pane-justified-2');
                 _('tx_tab').style.display = 'none';
             }
-            if(data['product-name']) _('product-name').textContent = data['product-name'];
+            if(data['product-name'] && _('product-name')) _('product-name').textContent = data['product-name'];
         }
     };
     xmlhttp.open("POST", json_url, true);
