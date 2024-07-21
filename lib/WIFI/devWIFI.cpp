@@ -647,7 +647,9 @@ static void HandleWebUpdate()
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
         startServices();
+        #if defined(PLATFORM_ESP32)
         esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+        #endif
         break;
       case WIFI_STA:
         DBGLN("Connecting to home network '%s' '%s'", station_ssid, station_password);
