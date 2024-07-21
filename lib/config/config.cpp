@@ -89,6 +89,13 @@ TxBackpackConfig::SetGroupAddress(const uint8_t address[6])
 
 #if defined(TARGET_VRX_BACKPACK)
 
+#define CONFIG_MOD_CHECK(fld, val) {    \
+        if (val == fld)                 \
+            return;                     \
+        fld = val;                      \
+        m_modified = true;              \
+    }
+
 void
 VrxBackpackConfig::Load()
 {
@@ -135,12 +142,23 @@ VrxBackpackConfig::SetStorageProvider(ELRS_EEPROM *eeprom)
 void
 VrxBackpackConfig::SetDefaults()
 {
+    memset(&m_config, 0, sizeof(m_config));
     m_config.version = VRX_BACKPACK_CONFIG_VERSION | VRX_BACKPACK_CONFIG_MAGIC;
-    m_config.bootCount = 0;
-    m_config.startWiFi = false;
-    m_config.ssid[0] = 0;
-    m_config.password[0] = 0;
-    memset(m_config.address, 0, 6);
+
+#if defined(AAT_BACKPACK)
+    m_config.aat.satelliteHomeMin = 5;
+    m_config.aat.project = 0xff;
+    m_config.aat.servoSmooth = 5;
+    m_config.aat.centerDir = 0; // N
+    m_config.aat.servoEndpoints[0].low = 500; // AZIM
+    m_config.aat.servoEndpoints[0].high = 2500;
+    m_config.aat.servoEndpoints[1].low = 1000; // ELEV
+    m_config.aat.servoEndpoints[1].high = 2000;
+
+    m_config.vbat.scale = 292;
+    m_config.vbat.offset = -2;
+#endif
+
     m_modified = true;
     Commit();
 }
@@ -180,7 +198,63 @@ VrxBackpackConfig::SetStartWiFiOnBoot(bool startWifi)
     m_modified = true;
 }
 
-#endif
+#if defined(AAT_BACKPACK)
+
+void
+VrxBackpackConfig::SetAatServoSmooth(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoSmooth, val);
+}
+
+void
+VrxBackpackConfig::SetAatServoLow(uint8_t idx, uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoEndpoints[idx].low, val);
+}
+
+void
+VrxBackpackConfig::SetAatServoHigh(uint8_t idx, uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoEndpoints[idx].high, val);
+}
+
+void
+VrxBackpackConfig::SetVbatScale(uint16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.vbat.scale, val);
+}
+
+void
+VrxBackpackConfig::SetVbatOffset(int16_t val)
+{
+    CONFIG_MOD_CHECK(m_config.vbat.offset, val);
+}
+
+void
+VrxBackpackConfig::SetAatCenterDir(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.centerDir, val);
+}
+
+void
+VrxBackpackConfig::SetAatServoMode(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.servoMode, val);
+}
+
+/**
+ * @brief: Validate that the endpoints have a valid range, i.e. low/high not the same
+*/
+bool
+VrxBackpackConfig::GetAatServoEndpointsValid() const
+{
+    return (m_config.aat.servoEndpoints[0].low != m_config.aat.servoEndpoints[0].high)
+        && (m_config.aat.servoEndpoints[1].low != m_config.aat.servoEndpoints[1].high);
+}
+
+#endif /* defined(AAT_BACKPACK) */
+
+#endif /* TARGET_VRX_BACKPACK */
 
 /////////////////////////////////////////////////////
 
