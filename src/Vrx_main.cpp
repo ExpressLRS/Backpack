@@ -32,7 +32,7 @@
 #elif defined(STEADYVIEW_BACKPACK)
   #include "steadyview.h"
 #elif defined(FUSION_BACKPACK)
-  #include "fusion.h"
+  #include "tbs_fusion.h"
 #elif defined(HDZERO_BACKPACK)
   #include "hdzero.h"
 #elif defined(SKYZONE_MSP_BACKPACK)
@@ -493,7 +493,7 @@ void loop()
         turnOffLED();
         ESP.restart();
       }
-  #endif 
+  #endif
 
   if (connectionState == wifiUpdate)
   {
