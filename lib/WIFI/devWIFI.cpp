@@ -105,8 +105,15 @@ static constexpr uint16_t MAVLINK_PORT_LISTEN = 14555;
 // This is the port that we will send mavlink packets to
 static constexpr uint16_t MAVLINK_PORT_SEND = 14550;
 WiFiUDP mavlinkUDP;
-uint32_t mavlink_from_uart_counter = 0;
-uint32_t mavlink_to_uart_counter = 0;
+uint32_t mavlink_from_uart_packets = 0;
+uint32_t mavlink_to_uart_packets = 0;
+uint32_t mavlink_from_uart_drops = 0;
+uint32_t mavlink_to_uart_drops = 0;
+constexpr size_t mavlink_to_uart_buf_size = 16;
+constexpr size_t mavlink_to_uart_buf_threshold = mavlink_to_uart_buf_size / 4;
+constexpr size_t mavlink_to_uart_buf_timeout = 5; // 5ms
+mavlink_message_t mavlink_to_gcs_buf[mavlink_to_uart_buf_size];
+uint8_t mavlink_to_gcs_buf_count = 0;
 #endif
 
 /** Is this an IP? */
@@ -469,8 +476,10 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
 {
   DynamicJsonDocument json(1024);
   json["enabled"] = wifiService == WIFI_SERVICE_MAVLINK_TX;
-  json["counters"]["to_gcs"] = mavlink_from_uart_counter;
-  json["counters"]["to_aircraft"] = mavlink_to_uart_counter;
+  json["counters"]["packets_to_gcs"] = mavlink_from_uart_packets;
+  json["counters"]["packets_to_aircraft"] = mavlink_to_uart_packets;
+  json["counters"]["drops_to_gcs"] = mavlink_from_uart_drops;
+  json["counters"]["drops_to_aircraft"] = mavlink_to_uart_drops;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
 
@@ -731,16 +740,18 @@ static void HandleWebUpdate()
         mavlink_message_t msg;
         mavlink_status_t status;
         char val = Serial.read();
+        static uint8_t seq = 0;
         if (mavlink_parse_char(MAVLINK_COMM_0, val, &msg, &status)) {
-          mavlink_from_uart_counter++;
-          uint8_t buf[MAVLINK_MAX_PACKET_LEN];
-          uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-          
-          // Determine the broadcast address
-          IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
-          mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
-          mavlinkUDP.write(buf, len);
-          mavlinkUDP.endPacket();
+          // Track gaps in the sequence number, add to a dropped counter
+          if (seq != 0 && msg.seq != seq + 1) {
+            mavlink_from_uart_drops += msg.seq - seq - 1;
+          }
+          seq = msg.seq;
+          if (mavlink_to_gcs_buf_count < mavlink_to_uart_buf_size) {
+            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count++] = msg;
+          } else {
+            // TODO: log buffer overflow
+          }
         }
       }
 #else
@@ -755,6 +766,38 @@ static void HandleWebUpdate()
     }
 
 #if defined(MAVLINK_ENABLED)
+    // Dump the mavlink_to_gcs_buf to the GCS
+    static unsigned long last_mavlink_to_gcs_dump = 0;
+    if (
+      mavlink_to_gcs_buf_count > mavlink_to_uart_buf_threshold ||
+      (mavlink_to_gcs_buf_count > 0 && (millis() - last_mavlink_to_gcs_dump) > mavlink_to_uart_buf_timeout)
+    )
+    {
+      IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
+      mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+      for (uint8_t i = 0; i < mavlink_to_gcs_buf_count; i++)
+      {
+        mavlink_from_uart_packets++;
+        uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+        uint16_t len = mavlink_msg_to_send_buffer(buf, &mavlink_to_gcs_buf[i]);
+        size_t sent = mavlinkUDP.write(buf, len);
+        if (sent < len)
+        {
+          break;
+          mavlinkUDP.endPacket();
+          delay(2);
+          mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+          sent = mavlinkUDP.write(buf + sent, len - sent);
+          mavlinkUDP.endPacket();
+        }
+      }
+      mavlinkUDP.endPacket();
+      mavlink_to_gcs_buf_count = 0; 
+      last_mavlink_to_gcs_dump = millis();
+    }
+#endif
+
+#if defined(MAVLINK_ENABLED)
     // Check if we have MAVLink UDP data to send over UART
     if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
       int packetSize = mavlinkUDP.parsePacket();
@@ -762,7 +805,7 @@ static void HandleWebUpdate()
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
         mavlinkUDP.read(buf, packetSize);
         Serial.write(buf, packetSize);
-        mavlink_to_uart_counter++;
+        mavlink_to_uart_packets++;
       }
     }
 #endif

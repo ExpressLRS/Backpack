@@ -342,6 +342,7 @@ void setup()
     Serial1.setDebugOutput(true);
   #endif
   Serial.begin(460800);
+  Serial.setRxBufferSize(1024);
 
   options_init();
 
