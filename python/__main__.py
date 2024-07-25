@@ -1,4 +1,4 @@
-import binary_flash
+import binary_configurator
 
 if __name__ == '__main__':
-    binary_flash.main()
+    binary_configurator.main()
