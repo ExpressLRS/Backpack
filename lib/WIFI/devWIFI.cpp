@@ -109,9 +109,10 @@ uint32_t mavlink_from_uart_packets = 0;
 uint32_t mavlink_to_uart_packets = 0;
 uint32_t mavlink_from_uart_drops = 0;
 uint32_t mavlink_to_uart_drops = 0;
+uint32_t mavlink_from_uart_overflows = 0;
 constexpr size_t mavlink_to_uart_buf_size = 16;
-constexpr size_t mavlink_to_uart_buf_threshold = mavlink_to_uart_buf_size / 4;
-constexpr size_t mavlink_to_uart_buf_timeout = 5; // 5ms
+constexpr size_t mavlink_to_uart_buf_threshold = mavlink_to_uart_buf_size / 2;
+constexpr size_t mavlink_to_uart_buf_timeout = 500; // ms
 mavlink_message_t mavlink_to_gcs_buf[mavlink_to_uart_buf_size];
 uint8_t mavlink_to_gcs_buf_count = 0;
 #endif
@@ -476,10 +477,11 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
 {
   DynamicJsonDocument json(1024);
   json["enabled"] = wifiService == WIFI_SERVICE_MAVLINK_TX;
-  json["counters"]["packets_to_gcs"] = mavlink_from_uart_packets;
-  json["counters"]["packets_to_aircraft"] = mavlink_to_uart_packets;
-  json["counters"]["drops_to_gcs"] = mavlink_from_uart_drops;
-  json["counters"]["drops_to_aircraft"] = mavlink_to_uart_drops;
+  json["counters"]["packets_from_aircraft"] = mavlink_from_uart_packets;
+  json["counters"]["packets_from_gcs"] = mavlink_to_uart_packets;
+  json["counters"]["drops_from_aircraft"] = mavlink_from_uart_drops;
+  json["counters"]["drops_from_gcs"] = mavlink_to_uart_drops;
+  json["counters"]["overflows_from_aircraft"] = mavlink_from_uart_overflows;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
 
@@ -726,39 +728,58 @@ static void HandleWebUpdate()
 
   if (servicesStarted)
   {
-    while (Serial.available()) {
+    while (Serial.available())
+    {
 #if defined(MAVLINK_ENABLED)
-      if (wifiService == WIFI_SERVICE_UPDATE) {
+      if (wifiService == WIFI_SERVICE_UPDATE)
+      {
         int val = Serial.read();
         logBuffer[logPos++] = val;
         logBuffer[logPos] = 0;
-        if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+        if (val == '\n' || logPos == sizeof(logBuffer) - 1)
+        {
           logging.send(logBuffer);
           logPos = 0;
         }
-      } else if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
-        mavlink_message_t msg;
+      }
+      else if (wifiService == WIFI_SERVICE_MAVLINK_TX)
+      {
         mavlink_status_t status;
         char val = Serial.read();
-        static uint8_t seq = 0;
-        if (mavlink_parse_char(MAVLINK_COMM_0, val, &msg, &status)) {
+        static uint8_t expectedSeq = 0;
+        static bool expectedSeqSet = false;
+        if (mavlink_to_gcs_buf_count >= mavlink_to_uart_buf_size)
+        {
+          mavlink_from_uart_overflows++;
+          return;
+        }
+        if (mavlink_frame_char(MAVLINK_COMM_0, val, &mavlink_to_gcs_buf[mavlink_to_gcs_buf_count], &status) != MAVLINK_FRAMING_INCOMPLETE)
+        {
           // Track gaps in the sequence number, add to a dropped counter
-          if (seq != 0 && msg.seq != seq + 1) {
-            mavlink_from_uart_drops += msg.seq - seq - 1;
+          uint8_t seq = mavlink_to_gcs_buf[mavlink_to_gcs_buf_count].seq;
+          if (expectedSeqSet && seq != expectedSeq)
+          {
+            // account for rollovers
+            if (seq < expectedSeq)
+            {
+              mavlink_from_uart_drops += (UINT8_MAX - expectedSeq) + seq;
+            }
+            else
+            {
+              mavlink_from_uart_drops += seq - expectedSeq;
+            }
           }
-          seq = msg.seq;
-          if (mavlink_to_gcs_buf_count < mavlink_to_uart_buf_size) {
-            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count++] = msg;
-          } else {
-            // TODO: log buffer overflow
-          }
+          expectedSeq = seq + 1;
+          expectedSeqSet = true;
+          mavlink_to_gcs_buf_count++;
         }
       }
 #else
       int val = Serial.read();
       logBuffer[logPos++] = val;
       logBuffer[logPos] = 0;
-      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
+      if (val == '\n' || logPos == sizeof(logBuffer) - 1)
+      {
         logging.send(logBuffer);
         logPos = 0;
       }
@@ -785,7 +806,6 @@ static void HandleWebUpdate()
         {
           break;
           mavlinkUDP.endPacket();
-          delay(2);
           mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
           sent = mavlinkUDP.write(buf + sent, len - sent);
           mavlinkUDP.endPacket();
@@ -815,7 +835,7 @@ static void HandleWebUpdate()
     #endif
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-    if (!updater.isRunning())
+    if (!updater.isRunning() && wifiService != WIFI_SERVICE_MAVLINK_TX)
       delay(1);
     if (do_flash) {
       do_flash = false;
