@@ -114,11 +114,11 @@ constexpr size_t MAVLINK_BUF_TIMEOUT = 500;
 WiFiUDP mavlinkUDP;
 
 typedef struct {
-  uint32_t packets_downlink;
-  uint32_t packets_uplink;
-  uint32_t drops_downlink;
-  uint32_t drops_uplink;
-  uint32_t overflows_downlink;
+  uint32_t packets_downlink; // packets from the aircraft
+  uint32_t packets_uplink; // packets to the aircraft
+  uint32_t drops_downlink; // dropped packets from the aircraft
+  //uint32_t drops_uplink; // framing in the uplink direction cost too much time
+  uint32_t overflows_downlink; // buffer overflows from the aircraft
 } mavlink_stats_t;
 mavlink_stats_t mavlink_stats;
 // Buffer for storing mavlink packets from the aircraft so that we can send them to the GCS efficiently
@@ -490,7 +490,6 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   json["counters"]["packets_down"] = mavlink_stats.packets_downlink;
   json["counters"]["packets_up"] = mavlink_stats.packets_uplink;
   json["counters"]["drops_down"] = mavlink_stats.drops_downlink;
-  json["counters"]["drops_up"] = mavlink_stats.drops_uplink;
   json["counters"]["overflows_down"] = mavlink_stats.overflows_downlink;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
@@ -830,28 +829,8 @@ static void HandleWebUpdate()
       if (packetSize) {
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
         mavlinkUDP.read(buf, packetSize);
-        mavlink_message_t msg;
-        mavlink_status_t status;
-        static uint8_t expectedSeq = 0;
-        static bool expectedSeqSet = false;
-        uint8_t out[MAVLINK_MAX_PACKET_LEN];
-        for (int i = 0; i < packetSize; i++) {
-          if (mavlink_frame_char(MAVLINK_COMM_0, buf[i], &msg, &status)) {
-            uint8_t seq = msg.seq;
-            if (expectedSeqSet && seq != expectedSeq) {
-              // account for rollovers
-              if (seq < expectedSeq) {
-                mavlink_stats.drops_uplink += (UINT8_MAX - expectedSeq) + seq;
-              } else {
-                mavlink_stats.drops_uplink += seq - expectedSeq;
-              }
-            }
-            uint16_t len = mavlink_msg_to_send_buffer(out, &msg);
-            Serial.write(out, len);
-            mavlink_stats.packets_uplink++;
-            expectedSeq = seq + 1;
-          }
-        }
+        Serial.write(buf, packetSize);
+        mavlink_stats.packets_uplink++; // this isn't necessarily a single mavlink packet, but framing was too time expensive.
       }
     }
 #endif
