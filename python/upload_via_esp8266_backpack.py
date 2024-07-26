@@ -1,6 +1,6 @@
 import subprocess, os
 
-def do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env):
+def do_upload(elrs_bin_target, upload_addr, isstm, env):
     bootloader_target = None
     app_start = 0 # eka bootloader offset
 
@@ -44,23 +44,6 @@ def on_upload(source, target, env):
     isstm = env.get('PIOPLATFORM', '') in ['ststm32']
     upload_addr = ['elrs_txbp', 'elrs_txbp.local']
 
-    # Parse upload flags:
-    upload_flags = env.get('UPLOAD_FLAGS', [])
-    for line in upload_flags:
-        flags = line.split()
-        for flag in flags:
-            if "VECT_OFFSET=" in flag:
-                offset = flag.split("=")[1]
-                if "0x" in offset:
-                    offset = int(offset, 16)
-                else:
-                    offset = int(offset, 10)
-                app_start = offset
-            if "BOOTLOADER=" in flag:
-                bootloader_file = flag.split("=")[1]
-                bootloader_target = os.path.join((env.get('PROJECT_DIR')), bootloader_file)
-
-    pio_target = target[0].name
     firmware_path = str(source[0])
     bin_path = os.path.dirname(firmware_path)
     elrs_bin_target = os.path.join(bin_path, 'firmware.elrs')
@@ -70,4 +53,4 @@ def on_upload(source, target, env):
             elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
             if not os.path.exists(elrs_bin_target):
                 raise Exception("No valid binary found!")
-    do_upload(elrs_bin_target, pio_target, upload_addr, isstm, env)
+    do_upload(elrs_bin_target, upload_addr, isstm, env)
