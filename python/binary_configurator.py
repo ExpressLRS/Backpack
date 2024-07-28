@@ -244,7 +244,8 @@ def main():
 
     with open('hardware/targets.json') as f:
         targets = json.load(f)
-    mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
+    args.platform = targets[vendor][hardware][target]['platform']
+    mcu = MCUType.ESP8266 if args.platform == "esp8285" else MCUType.ESP32
 
     if args.file is None:
         srcdir = targets[vendor][hardware][target]['firmware']
