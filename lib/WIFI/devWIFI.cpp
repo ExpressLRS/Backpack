@@ -796,29 +796,29 @@ static void HandleWebUpdate()
               }
               break;
             }
-            if (shouldForward)
+          }
+          if (shouldForward)
+          {
+            // Track gaps in the sequence number, add to a dropped counter
+            uint8_t seq = msg.seq;
+            if (expectedSeqSet && seq != expectedSeq)
             {
-              // Track gaps in the sequence number, add to a dropped counter
-              uint8_t seq = msg.seq;
-              if (expectedSeqSet && seq != expectedSeq)
+              // account for rollovers
+              if (seq < expectedSeq)
               {
-                // account for rollovers
-                if (seq < expectedSeq)
-                {
-                  mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
-                }
-                else
-                {
-                  mavlink_stats.drops_downlink += seq - expectedSeq;
-                }
+                mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
               }
-              expectedSeq = seq + 1;
-              expectedSeqSet = true;
-              // Forward the message to the GCS
-              mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
-              mavlink_to_gcs_buf_count++;
-              mavlink_stats.packets_downlink++;
+              else
+              {
+                mavlink_stats.drops_downlink += seq - expectedSeq;
+              }
             }
+            expectedSeq = seq + 1;
+            expectedSeqSet = true;
+            // Forward the message to the GCS
+            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
+            mavlink_to_gcs_buf_count++;
+            mavlink_stats.packets_downlink++;
           }
         }
 #else
