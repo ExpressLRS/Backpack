@@ -762,26 +762,62 @@ static void HandleWebUpdate()
           mavlink_stats.overflows_downlink++;
           mavlink_to_gcs_buf_count = 0;
         }
-        if (mavlink_frame_char(MAVLINK_COMM_0, val, &mavlink_to_gcs_buf[mavlink_to_gcs_buf_count], &status) != MAVLINK_FRAMING_INCOMPLETE)
+        mavlink_message_t msg;
+        if (mavlink_frame_char(MAVLINK_COMM_0, val, &msg, &status) != MAVLINK_FRAMING_INCOMPLETE)
         {
-          // Track gaps in the sequence number, add to a dropped counter
-          uint8_t seq = mavlink_to_gcs_buf[mavlink_to_gcs_buf_count].seq;
-          if (expectedSeqSet && seq != expectedSeq)
+          bool shouldForward = true;
+          // Check for messages addressed to the Backpack
+          switch (msg.msgid)
           {
-            // account for rollovers
-            if (seq < expectedSeq)
+          case MAVLINK_MSG_ID_TUNNEL:
+            mavlink_tunnel_t tunnelMsg;
+            mavlink_msg_tunnel_decode(&msg, &tunnelMsg);
+            if (tunnelMsg.target_component == MAV_COMP_ID_UDP_BRIDGE && tunnelMsg.payload_length >= 2)
             {
-              mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
+              shouldForward = false;
+              constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
+              uint16_t messageType = (tunnelMsg.payload[0] << 8) | tunnelMsg.payload[1];
+              switch (messageType)
+              {
+              case MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE:
+                uint8_t newLinkMode = tunnelMsg.payload[2]; // tx_transmission_mode_e from main firmware
+                switch (newLinkMode)
+                {
+                case 0: // TX_NORMAL_MODE
+                  config.SetStartWiFiOnBoot(false);
+                  ESP.restart();
+                  break;
+                case 1: // TX_MAVLINK_MODE
+                  // Do nothing - we're already in MAVLink mode
+                  break;
+                }
+              }
             }
-            else
-            {
-              mavlink_stats.drops_downlink += seq - expectedSeq;
-            }
+            break;
           }
-          expectedSeq = seq + 1;
-          expectedSeqSet = true;
-          mavlink_to_gcs_buf_count++;
-          mavlink_stats.packets_downlink++;
+          if (shouldForward)
+          {
+            // Track gaps in the sequence number, add to a dropped counter
+            uint8_t seq = msg.seq;
+            if (expectedSeqSet && seq != expectedSeq)
+            {
+              // account for rollovers
+              if (seq < expectedSeq)
+              {
+                mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
+              }
+              else
+              {
+                mavlink_stats.drops_downlink += seq - expectedSeq;
+              }
+            }
+            expectedSeq = seq + 1;
+            expectedSeqSet = true;
+            // Forward the message to the GCS
+            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
+            mavlink_to_gcs_buf_count++;
+            mavlink_stats.packets_downlink++;
+          }
         }
       }
 #else
