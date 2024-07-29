@@ -769,57 +769,58 @@ static void HandleWebUpdate()
           // Check for messages addressed to the Backpack
           switch (msg.msgid)
           {
-          case MAVLINK_MSG_ID_TUNNEL:
-            mavlink_tunnel_t tunnelMsg;
-            mavlink_msg_tunnel_decode(&msg, &tunnelMsg);
-            if (tunnelMsg.target_component == MAV_COMP_ID_UDP_BRIDGE && tunnelMsg.payload_length >= 2)
+          case MAVLINK_MSG_ID_COMMAND_INT:
+            mavlink_command_int_t commandMsg;
+            mavlink_msg_command_int_decode(&msg, &commandMsg);
+            if (commandMsg.target_component == MAV_COMP_ID_UDP_BRIDGE)
             {
               shouldForward = false;
               constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
-              uint16_t messageType = (tunnelMsg.payload[0] << 8) | tunnelMsg.payload[1];
-              switch (messageType)
+              switch (commandMsg.command)
               {
-              case MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE:
-                uint8_t newLinkMode = tunnelMsg.payload[2]; // tx_transmission_mode_e from main firmware
-                switch (newLinkMode)
+              case MAV_CMD_USER_1:
+                switch ((int)commandMsg.param1)
                 {
-                case 0: // TX_NORMAL_MODE
-                  config.SetStartWiFiOnBoot(false);
-                  ESP.restart();
-                  break;
-                case 1: // TX_MAVLINK_MODE
-                  // Do nothing - we're already in MAVLink mode
-                  break;
+                case MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE:
+                  switch ((int)commandMsg.param2)
+                  {
+                  case 0: // TX_NORMAL_MODE
+                    config.SetStartWiFiOnBoot(false);
+                    ESP.restart();
+                    break;
+                  case 1: // TX_MAVLINK_MODE
+                    // Do nothing - we're already in MAVLink mode
+                    break;
+                  }
                 }
               }
+              break;
             }
-            break;
-          }
-          if (shouldForward)
-          {
-            // Track gaps in the sequence number, add to a dropped counter
-            uint8_t seq = msg.seq;
-            if (expectedSeqSet && seq != expectedSeq)
+            if (shouldForward)
             {
-              // account for rollovers
-              if (seq < expectedSeq)
+              // Track gaps in the sequence number, add to a dropped counter
+              uint8_t seq = msg.seq;
+              if (expectedSeqSet && seq != expectedSeq)
               {
-                mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
+                // account for rollovers
+                if (seq < expectedSeq)
+                {
+                  mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
+                }
+                else
+                {
+                  mavlink_stats.drops_downlink += seq - expectedSeq;
+                }
               }
-              else
-              {
-                mavlink_stats.drops_downlink += seq - expectedSeq;
-              }
+              expectedSeq = seq + 1;
+              expectedSeqSet = true;
+              // Forward the message to the GCS
+              mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
+              mavlink_to_gcs_buf_count++;
+              mavlink_stats.packets_downlink++;
             }
-            expectedSeq = seq + 1;
-            expectedSeqSet = true;
-            // Forward the message to the GCS
-            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
-            mavlink_to_gcs_buf_count++;
-            mavlink_stats.packets_downlink++;
           }
         }
-      }
 #else
       int val = Serial.read();
       logBuffer[logPos++] = val;
