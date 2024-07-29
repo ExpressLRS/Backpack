@@ -831,6 +831,7 @@ static void HandleWebUpdate()
         logPos = 0;
       }
 #endif
+      }
     }
 
 #if defined(MAVLINK_ENABLED)
