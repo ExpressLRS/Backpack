@@ -760,7 +760,7 @@ static void HandleWebUpdate()
         if (mavlink_to_gcs_buf_count >= MAVLINK_BUF_SIZE)
         {
           mavlink_stats.overflows_downlink++;
-          return;
+          mavlink_to_gcs_buf_count = 0;
         }
         if (mavlink_frame_char(MAVLINK_COMM_0, val, &mavlink_to_gcs_buf[mavlink_to_gcs_buf_count], &status) != MAVLINK_FRAMING_INCOMPLETE)
         {
