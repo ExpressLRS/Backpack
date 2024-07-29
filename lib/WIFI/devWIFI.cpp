@@ -775,13 +775,13 @@ static void HandleWebUpdate()
             if (commandMsg.target_component == MAV_COMP_ID_UDP_BRIDGE)
             {
               shouldForward = false;
-              constexpr uint16_t MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE = 0x8;
+              constexpr uint8_t ELRS_MODE_CHANGE = 0x8;
               switch (commandMsg.command)
               {
               case MAV_CMD_USER_1:
                 switch ((int)commandMsg.param1)
                 {
-                case MAVLINK_TUNNEL_MSG_TYPE_ELRS_MODE_CHANGE:
+                case ELRS_MODE_CHANGE:
                   switch ((int)commandMsg.param2)
                   {
                   case 0: // TX_NORMAL_MODE
