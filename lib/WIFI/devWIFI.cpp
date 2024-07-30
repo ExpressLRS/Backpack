@@ -35,7 +35,7 @@
 #include "config.h"
 
 #if defined(MAVLINK_ENABLED)
-#include "common/mavlink.h"
+#include <MAVLink.h>
 #endif
 #if defined(TARGET_VRX_BACKPACK)
 extern VrxBackpackConfig config;
@@ -765,38 +765,7 @@ static void HandleWebUpdate()
         mavlink_message_t msg;
         if (mavlink_frame_char(MAVLINK_COMM_0, val, &msg, &status) != MAVLINK_FRAMING_INCOMPLETE)
         {
-          bool shouldForward = true;
-          // Check for messages addressed to the Backpack
-          switch (msg.msgid)
-          {
-          case MAVLINK_MSG_ID_COMMAND_INT:
-            mavlink_command_int_t commandMsg;
-            mavlink_msg_command_int_decode(&msg, &commandMsg);
-            if (commandMsg.target_component == MAV_COMP_ID_UDP_BRIDGE)
-            {
-              shouldForward = false;
-              constexpr uint8_t ELRS_MODE_CHANGE = 0x8;
-              switch (commandMsg.command)
-              {
-              case MAV_CMD_USER_1:
-                switch ((int)commandMsg.param1)
-                {
-                case ELRS_MODE_CHANGE:
-                  switch ((int)commandMsg.param2)
-                  {
-                  case 0: // TX_NORMAL_MODE
-                    config.SetStartWiFiOnBoot(false);
-                    ESP.restart();
-                    break;
-                  case 1: // TX_MAVLINK_MODE
-                    // Do nothing - we're already in MAVLink mode
-                    break;
-                  }
-                }
-              }
-              break;
-            }
-          }
+          bool shouldForward = MAVLink::handleControlMessage(&msg);
           if (shouldForward)
           {
             // Track gaps in the sequence number, add to a dropped counter

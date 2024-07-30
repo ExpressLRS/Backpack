@@ -23,8 +23,7 @@
 #include "devLED.h"
 
 #if defined(MAVLINK_ENABLED)
-#include "common/mavlink.h"
-
+#include <MAVLink.h>
 #endif
 
 /////////// GLOBALS ///////////
@@ -249,9 +248,12 @@ void SendCachedMSP()
 
 #if defined(MAVLINK_ENABLED)
 // This function is only used when we're not yet in WiFi MAVLink mode - its main purpose is to detect
-// heartbeat packets and switch to WiFi MAVLink mode if we receive 3 heartbeats in 5 seconds.
+// heartbeat packets and switch to WiFi MAVLink mode if we receive 3 heartbeats in 5 seconds, or if we
+// receive a command to switch to WiFi MAVLink mode.
 void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_t *mavlink_status)
 {
+  // See if we have an explicit control message
+  MAVLink::handleControlMessage(mavlink_rx_message);
   static unsigned long heartbeatTimestamps[3] = {0, 0, 0};
   switch (mavlink_rx_message->msgid)
   {
