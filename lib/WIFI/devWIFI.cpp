@@ -821,6 +821,7 @@ static void HandleWebUpdate()
             mavlink_stats.packets_downlink++;
           }
         }
+      }
 #else
       int val = Serial.read();
       logBuffer[logPos++] = val;
@@ -831,7 +832,6 @@ static void HandleWebUpdate()
         logPos = 0;
       }
 #endif
-      }
     }
 
 #if defined(MAVLINK_ENABLED)
