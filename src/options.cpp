@@ -39,7 +39,7 @@ String& getOptions()
 
 void saveOptions(Stream &stream, bool customised)
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
 
     if (firmwareOptions.hasUID)
     {
@@ -86,8 +86,8 @@ bool options_HasStringInFlash(EspFlashStream &strmFlash)
  */
 static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
 {
-    DynamicJsonDocument flashDoc(1024);
-    DynamicJsonDocument spiffsDoc(1024);
+    JsonDocument flashDoc;
+    JsonDocument spiffsDoc;
     bool hasFlash = false;
     bool hasSpiffs = false;
 
@@ -113,7 +113,7 @@ static void options_LoadFromFlashOrFile(EspFlashStream &strmFlash)
         }
     }
 
-    DynamicJsonDocument &doc = flashDoc;
+    JsonDocument &doc = flashDoc;
     if (hasFlash && hasSpiffs)
     {
         if (flashDoc["flash-discriminator"] == spiffsDoc["flash-discriminator"])
