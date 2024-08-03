@@ -258,6 +258,7 @@ void SetSoftMACAddress()
     WiFi.setOutputPower(20.5);
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #endif
   WiFi.begin("network-name", "pass-to-network", 1);
   WiFi.disconnect();

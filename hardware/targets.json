@@ -459,6 +459,18 @@
                 "firmware": "TIMER_ESP12F_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
+            },
+            "esp32c3": {
+                "product_name": "Backpack for Race Timer with ESP32C3",
+                "firmware": "TIMER_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "Backpack for Race Timer with ESP32S3",
+                "firmware": "TIMER_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
             }
         }
     },
@@ -479,9 +491,21 @@
             },
             "NuclearHazard": {
                 "product_name": "NuclearHazard",
-                "firmware": "TIMER_ESP32_Backpack",
+                "firmware": "NuclearHazard_Backpack",
                 "upload_methods": ["wifi"],
                 "platform": "esp32"
+            },
+            "esp32c3": {
+                "product_name": "ESP32C3 Module (DIY)",
+                "firmware": "TIMER_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "ESP32S3 Module (DIY)",
+                "firmware": "TIMER_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
             }
         }
     }

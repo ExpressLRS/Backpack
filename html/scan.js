@@ -56,7 +56,7 @@ function updateConfig(data) {
         mui.tabs.activate('pane-justified-2');
         _('tx_tab').style.display = 'none';
     }
-    if(config['product_name']) _('product_name').textContent = config['product_name'];
+    if(config['product_name'] && _('product-name')) _('product_name').textContent = config['product_name'];
 
     updateAatConfig(config);
 }
