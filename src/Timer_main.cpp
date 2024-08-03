@@ -87,7 +87,7 @@ void registerPeer(uint8_t* address);
 esp_now_peer_info_t peerInfo;
 #endif
 
-void RebootIntoWifi()
+void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
 {
   DBGLN("Rebooting into wifi update mode...");
   config.SetStartWiFiOnBoot(true);

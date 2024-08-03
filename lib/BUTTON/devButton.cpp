@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "common.h"
 #include "device.h"
+#include "config.h"
 
 #if defined(PIN_BUTTON)
 #include "logging.h"
@@ -9,7 +10,7 @@
 static Button<PIN_BUTTON, false> button;
 
 extern unsigned long rebootTime;
-void RebootIntoWifi();
+void RebootIntoWifi(wifi_service_t service);
 
 static void shortPress()
 {
@@ -19,7 +20,7 @@ static void shortPress()
     }
     else
     {
-        RebootIntoWifi();
+        RebootIntoWifi(WIFI_SERVICE_UPDATE);
     }
 }
 

@@ -127,7 +127,7 @@ void SetupEspNow();
 
 /////////////////////////////////////
 
-void RebootIntoWifi()
+void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
 {
   DBGLN("Rebooting into wifi update mode...");
   config.SetStartWiFiOnBoot(true);
