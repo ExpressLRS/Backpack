@@ -77,7 +77,7 @@ MFDCrossbow::send_gps_raw_int(int8_t system_id, int8_t component_id, int32_t upT
     // Pack the message
     mavlink_msg_gps_raw_int_pack(system_id, component_id, &msg, upTime, fixType, lat, lon, alt, eph, epv, vel, cog, satellites_visible, alt_ellipsoid, h_acc, v_acc, vel_acc, hdg_acc, yaw);
 
-    // // Copy the message to the send buffer
+    // Copy the message to the send buffer
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
     
     m_port->write(buf, len);
@@ -100,7 +100,7 @@ MFDCrossbow::send_global_position_int(int8_t system_id, int8_t component_id, int
     // Copy the message to the send buffer
     uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 
-    // Send the message (.write sends as bytes)
+    // Send the message
     m_port->write(buf, len);
 }
 
@@ -133,4 +133,25 @@ MFDCrossbow::SendGpsTelemetry(crsf_packet_gps_t *packet)
     send_heartbeat(system_id, component_id, system_type, autopilot_type, system_mode, custom_mode, system_state);
     send_gps_raw_int(system_id, component_id, upTime, fixType, lat, lon, alt, gps_alt, heading, groundspeed, gps_hdop, gps_sats);
     send_global_position_int(system_id, component_id, upTime, lat, lon, alt, gps_alt, heading);
+
+    // We have received gps values, so we are ok to spam these out at 10hz
+    gpsLastUpdated = millis();
+}
+
+void
+MFDCrossbow::Loop(uint32_t now)
+{
+    ModuleBase::Loop(now);
+
+    // If the GPS has been updated in the last 10 seconds, keep spamming it out at 10hz
+    bool gpsIsValid = (now < gpsLastUpdated + 10000) && gps_sats > 0;
+
+    if (now > gpsLastSent + 100 && gpsIsValid)
+    {
+        send_heartbeat(system_id, component_id, system_type, autopilot_type, system_mode, custom_mode, system_state);
+        send_gps_raw_int(system_id, component_id, upTime, fixType, lat, lon, alt, gps_alt, heading, groundspeed, gps_hdop, gps_sats);
+        send_global_position_int(system_id, component_id, upTime, lat, lon, alt, gps_alt, heading);
+
+        gpsLastSent = now;
+    }
 }
