@@ -340,8 +340,8 @@
         "vrx": {
             "esp32": {
                 "product_name": "Built-in ESP32 Backpack",
-                "firmware": "HDZero_RX51_ESP32_Backpack",
-                "upload_methods": ["wifi"],
+                "firmware": "HDZero_Goggle_ESP32_Backpack",
+                "upload_methods": ["wifi", "zip"],
                 "platform": "esp32"
             }
         }
