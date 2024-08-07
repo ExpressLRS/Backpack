@@ -553,7 +553,7 @@
         "name": "MFD Crossbow Antenna Tracker Backpack",
         "vrx": {
             "esp82": {
-                "product_name": "Generic ESP8285 Receiver",
+                "product_name": "Generic ESP8285 / ESP8266 Receiver",
                 "firmware": "MFD_Crossbow_ESP8285_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"

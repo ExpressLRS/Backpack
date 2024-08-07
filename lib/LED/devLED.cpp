@@ -65,7 +65,7 @@ static int event()
     if (connectionState == running && blipLED)
     {
         digitalWrite(PIN_LED, LOW ^ _pin_inverted);
-        return 200; // 200ms off
+        return 50; // 50ms off
     }
     if (connectionState == binding)
     {
