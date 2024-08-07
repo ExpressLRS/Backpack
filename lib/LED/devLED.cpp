@@ -16,6 +16,13 @@ static uint8_t _pin_inverted = true;
 #else
 static uint8_t _pin_inverted = false;
 #endif
+
+#define UNDEF_PIN (-1)
+
+#ifndef PIN_LED
+#define PIN_LED UNDEF_PIN
+#endif
+
 static uint8_t _pin = -1;
 static const uint8_t *_durations;
 static uint8_t _count;
