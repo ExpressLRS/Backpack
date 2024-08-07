@@ -3,8 +3,6 @@
 #include "module_base.h"
 #include <Arduino.h>
 
-#define VRX_UART_BAUD                               115200
-
 #define BIT_BANG_FREQ                               10000
 
 #define SYNTHESIZER_REG_A                           0x00

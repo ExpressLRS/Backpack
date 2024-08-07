@@ -74,8 +74,6 @@ bool gotInitialPacket = false;
 bool headTrackingEnabled = false;
 uint32_t lastSentRequest = 0;
 
-uint32_t lastSentGPS = 0;
-
 device_t *ui_devices[] = {
 #ifdef PIN_LED
   &LED_device,
@@ -103,9 +101,6 @@ MSP msp;
 
 ELRS_EEPROM eeprom;
 VrxBackpackConfig config;
-
-uint8_t cachedGPS[64];
-uint8_t cachedLen = 0;
 
 #ifdef RAPIDFIRE_BACKPACK
   Rapidfire vrxModule;
@@ -535,22 +530,8 @@ void loop()
   if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
   {
     DBGLN("RequestVTXPacket...");
-    // RequestVTXPacket();
+    RequestVTXPacket();
     lastSentRequest = now;
-  }
-
-  // spam out GPS msgs
-  if (cachedLen > 0 && now - lastSentGPS > 100 && connectionState != binding)
-  {
-    DBGLN("Send cached GPS...");
-    Serial.write(cachedGPS, cachedLen);
-    lastSentGPS = now;
-    DBGLN("*** GPS CACHE ***");
-    for(int i = 0; i < cachedLen; i++)
-    {
-      DBG("%x,", cachedGPS[i]); // Debug prints
-    }
-    DBGLN(""); // Extra line for serial output readability
   }
 
 #if !defined(NO_AUTOBIND)

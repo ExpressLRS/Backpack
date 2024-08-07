@@ -5,7 +5,7 @@
 #include "module_base.h"
 #include <Arduino.h>
 
-#define VRX_BOOT_DELAY              0
+#define VRX_BOOT_DELAY              2000
 
 #define VRX_RESPONSE_TIMEOUT        500
 #define VRX_UART_BAUD               115200  // skyzone uses 115k baud between the ESP32-PICO and their MCU
