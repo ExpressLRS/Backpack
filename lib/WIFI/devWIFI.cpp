@@ -490,6 +490,7 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   json["counters"]["overflows_down"] = mavlink_stats.overflows_downlink;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
+  json["ip"]["remote"] = remote.toString();
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
@@ -814,8 +815,14 @@ static void HandleWebUpdate()
       (mavlink_to_gcs_buf_count > 0 && (millis() - last_mavlink_to_gcs_dump) > MAVLINK_BUF_TIMEOUT) // buffer hasn't been flushed in a while
     )
     {
-      //IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
-      mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
+      IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
+      IPAddress sendTo = broadcast;
+      if (remote != IPAddress(255, 255, 255, 255))
+      {
+        sendTo = remote;
+      }
+      mavlinkUDP.beginPacket(sendTo, MAVLINK_PORT_SEND);
+      
       for (uint8_t i = 0; i < mavlink_to_gcs_buf_count; i++)
       {
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
