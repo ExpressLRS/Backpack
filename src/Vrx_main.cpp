@@ -40,6 +40,8 @@
   #include "orqa.h"
 #elif defined(AAT_BACKPACK)
   #include "module_aat.h"
+#elif defined(CROSSBOW_BACKPACK)
+  #include "mfd_crossbow.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -116,6 +118,8 @@ VrxBackpackConfig config;
   Orqa vrxModule;
 #elif defined(AAT_BACKPACK)
   AatModule vrxModule(Serial);
+#elif defined(CROSSBOW_BACKPACK)
+  MFDCrossbow vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -328,6 +332,7 @@ void SetSoftMACAddress()
 
 void RequestVTXPacket()
 {
+#if !defined(AAT_BACKPACK) and !defined(CROSSBOW_BACKPACK)
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
@@ -336,6 +341,7 @@ void RequestVTXPacket()
 
   blinkLED();
   sendMSPViaEspnow(&packet);
+#endif
 }
 
 void sendMSPViaEspnow(mspPacket_t *packet)
