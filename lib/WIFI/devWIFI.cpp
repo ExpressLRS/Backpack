@@ -113,6 +113,7 @@ constexpr size_t MAVLINK_BUF_THRESHOLD = MAVLINK_BUF_SIZE / 2;
 constexpr size_t MAVLINK_BUF_TIMEOUT = 500;
 
 WiFiUDP mavlinkUDP;
+IPAddress remote = IPAddress(255, 255, 255, 255);
 
 typedef struct {
   uint32_t packets_downlink; // packets from the aircraft
@@ -698,6 +699,9 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
+        // Set to 802.11n only
+        WiFi.setPhyMode(WIFI_PHY_MODE_11N);
+        //WiFi.setOutputPower(20.5);
 #if defined(TARGET_TX_BACKPACK)
         if (wifiService == WIFI_SERVICE_UPDATE) {
           strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
@@ -810,8 +814,8 @@ static void HandleWebUpdate()
       (mavlink_to_gcs_buf_count > 0 && (millis() - last_mavlink_to_gcs_dump) > MAVLINK_BUF_TIMEOUT) // buffer hasn't been flushed in a while
     )
     {
-      IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
-      mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+      //IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
+      mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
       for (uint8_t i = 0; i < mavlink_to_gcs_buf_count; i++)
       {
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
@@ -833,6 +837,7 @@ static void HandleWebUpdate()
     if (wifiService == WIFI_SERVICE_MAVLINK_TX) {
       int packetSize = mavlinkUDP.parsePacket();
       if (packetSize) {
+        remote = mavlinkUDP.remoteIP();
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
         mavlinkUDP.read(buf, packetSize);
         Serial.write(buf, packetSize);
