@@ -701,9 +701,6 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
-        // Set to 802.11n only
-        WiFi.setPhyMode(WIFI_PHY_MODE_11N);
-        //WiFi.setOutputPower(20.5);
 #if defined(TARGET_TX_BACKPACK)
         if (wifiService == WIFI_SERVICE_UPDATE) {
           strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
