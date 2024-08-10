@@ -667,6 +667,15 @@ static void startServices()
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
 }
 
+IPAddress getBroadcastIP()
+{
+  if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+  {
+    return apBroadcast;
+  }
+  return WiFi.broadcastIP();
+}
+
 static void HandleWebUpdate()
 {
   unsigned long now = millis();
@@ -772,7 +781,13 @@ static void HandleWebUpdate()
         mavlink_message_t msg;
         if (mavlink_frame_char(MAVLINK_COMM_0, val, &msg, &status) != MAVLINK_FRAMING_INCOMPLETE)
         {
+
           bool shouldForward = MAVLink::handleControlMessage(&msg);
+
+          // Periodically broadcast heartbeats - if say a GCS battery dies and it gets replaced with a different one, we want to make sure it can find us
+          static uint8_t sometimesBroadcastHeartbeats = 0;
+
+
           if (shouldForward)
           {
             // Track gaps in the sequence number, add to a dropped counter
@@ -791,9 +806,22 @@ static void HandleWebUpdate()
             }
             expectedSeq = seq + 1;
             expectedSeqSet = true;
-            // Forward the message to the GCS
-            mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
-            mavlink_to_gcs_buf_count++;
+
+            // Broadcast 1/10 heartbeats to find new GCSes
+            if (msg.compid == MAV_COMP_ID_AUTOPILOT1 && msg.msgid == MAVLINK_MSG_ID_HEARTBEAT && sometimesBroadcastHeartbeats++ % 10 == 0)
+            {
+              mavlinkUDP.beginPacket(getBroadcastIP(), MAVLINK_PORT_SEND);
+              uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+              uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+              mavlinkUDP.write(buf, len);
+              mavlinkUDP.endPacket();
+            }
+            else
+            {
+              // Forward the message to the GCS
+              mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
+              mavlink_to_gcs_buf_count++;
+            }
             mavlink_stats.packets_downlink++;
           }
         }
@@ -826,15 +854,10 @@ static void HandleWebUpdate()
       {
         remote = gcsIP;
       }
-      // otherwise if we're in AP mode, broadcast to the AP subnet
-      else if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
-      {
-        remote = apBroadcast;
-      }
-      // otherwise broadcast to the station subnet
+      // otherwise broadcast
       else
       {
-        remote = WiFi.broadcastIP();
+        remote = getBroadcastIP();
       }
       mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
       
