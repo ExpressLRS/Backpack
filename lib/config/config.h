@@ -17,6 +17,13 @@ typedef enum {
     WIFI_SERVICE_MAVLINK_TX,
 } wifi_service_t;
 
+typedef enum {
+    TELEM_MODE_OFF,
+    TELEM_MODE_RECEIVER,
+    TELEM_MODE_WIFI,
+    TELEM_MODE_BLUETOOTH,
+} telem_mode_t;
+
 #if defined(TARGET_TX_BACKPACK)
 
 typedef struct {
@@ -26,6 +33,7 @@ typedef struct {
     char              password[65];
     uint8_t           address[6];
     wifi_service_t    wifiService;
+    telem_mode_t      telemMode;
 } tx_backpack_config_t;
 
 class TxBackpackConfig
@@ -41,6 +49,7 @@ public:
     char    *GetPassword() { return m_config.password; }
     uint8_t *GetGroupAddress() { return m_config.address; }
     wifi_service_t GetWiFiService() { return m_config.wifiService; }
+    telem_mode_t GetTelemMode() { return m_config.telemMode; }
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -50,6 +59,7 @@ public:
     void SetPassword(const char *ssid);
     void SetGroupAddress(const uint8_t address[6]);
     void SetWiFiService(wifi_service_t service);
+    void SetTelemMode(telem_mode_t mode);
 
 private:
     tx_backpack_config_t    m_config;
