@@ -827,7 +827,7 @@ static void HandleWebUpdate()
         remote = gcsIP;
       }
       // otherwise if we're in AP mode, broadcast to the AP subnet
-      else if (WiFi.getMode() != WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+      else if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
       {
         remote = apBroadcast;
       }
