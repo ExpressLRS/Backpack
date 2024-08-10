@@ -113,7 +113,8 @@ constexpr size_t MAVLINK_BUF_THRESHOLD = MAVLINK_BUF_SIZE / 2;
 constexpr size_t MAVLINK_BUF_TIMEOUT = 500;
 
 WiFiUDP mavlinkUDP;
-IPAddress gcsIP = IPAddress(255, 255, 255, 255);
+IPAddress gcsIP;
+bool gcsIPSet = false;
 
 typedef struct {
   uint32_t packets_downlink; // packets from the aircraft
@@ -490,7 +491,11 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   json["counters"]["overflows_down"] = mavlink_stats.overflows_downlink;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
-  json["ip"]["gcs"] = gcsIP.toString();
+  if (gcsIPSet) {
+    json["ip"]["gcs"] = gcsIP.toString();
+  } else {
+    json["ip"]["gcs"] = "IP UNSET";
+  }
   json["protocol"] = "UDP";
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -817,7 +822,7 @@ static void HandleWebUpdate()
       IPAddress remote;
 
       // If we have a GCS IP, use that
-      if (gcsIP != IPAddress(255, 255, 255, 255))
+      if (gcsIPSet)
       {
         remote = gcsIP;
       }
@@ -855,6 +860,7 @@ static void HandleWebUpdate()
       int packetSize = mavlinkUDP.parsePacket();
       if (packetSize) {
         gcsIP = mavlinkUDP.remoteIP(); // store the IP of the GCS so we can send to it directly
+        gcsIPSet = true;
         uint8_t buf[MAVLINK_MAX_PACKET_LEN];
         mavlinkUDP.read(buf, packetSize);
         Serial.write(buf, packetSize);
