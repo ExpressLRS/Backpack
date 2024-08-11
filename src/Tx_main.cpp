@@ -155,7 +155,6 @@ void SendVersionResponse()
 
 void HandleConfigMsg(mspPacket_t *packet)
 {
-  Serial.println("MSP_ELRS_BACKPACK_CONFIG:");
   uint8_t key = packet->readByte();
   uint8_t value = packet->readByte();
   switch (key)
