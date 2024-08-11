@@ -162,20 +162,20 @@ void HandleConfigMsg(mspPacket_t *packet)
     case MSP_ELRS_BACKPACK_CONFIG_TLM_MODE:
       switch (value)
       {
-        case 0: // TELEM_MODE_OFF
-          config.SetTelemMode(TELEM_MODE_OFF);
+        case BACKPACK_TELEM_MODE_OFF:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_OFF);
           config.SetWiFiService(WIFI_SERVICE_UPDATE);
           config.SetStartWiFiOnBoot(false);
           config.Commit();
           break;
-        case 1: // TELEM_MODE_RECEIVER
-          config.SetTelemMode(TELEM_MODE_RECEIVER);
+        case BACKPACK_TELEM_MODE_RECEIVER:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_RECEIVER);
           config.SetWiFiService(WIFI_SERVICE_UPDATE);
           config.SetStartWiFiOnBoot(false);
           config.Commit();
           break;
-        case 2: // TELEM_MODE_WIFI
-          config.SetTelemMode(TELEM_MODE_WIFI);
+        case BACKPACK_TELEM_MODE_WIFI:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_WIFI);
           config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
           config.SetStartWiFiOnBoot(true);
           config.Commit();
@@ -234,7 +234,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     break;
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
-    if (config.GetTelemMode() != TELEM_MODE_OFF)
+    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
     {
       sendMSPViaEspnow(packet);
     }

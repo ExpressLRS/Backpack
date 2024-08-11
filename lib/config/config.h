@@ -18,10 +18,10 @@ typedef enum {
 } wifi_service_t;
 
 typedef enum {
-    TELEM_MODE_OFF,
-    TELEM_MODE_RECEIVER,
-    TELEM_MODE_WIFI,
-    TELEM_MODE_BLUETOOTH,
+    BACKPACK_TELEM_MODE_OFF,
+    BACKPACK_TELEM_MODE_RECEIVER,
+    BACKPACK_TELEM_MODE_WIFI,
+    BACKPACK_TELEM_MODE_BLUETOOTH,
 } telem_mode_t;
 
 #if defined(TARGET_TX_BACKPACK)
