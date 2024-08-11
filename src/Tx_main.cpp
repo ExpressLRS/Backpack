@@ -233,6 +233,13 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     cacheFull = true;
     sendMSPViaEspnow(packet);
     break;
+  case MSP_ELRS_BACKPACK_CRSF_TLM:
+    DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
+    if (config.GetTelemMode() != TELEM_MODE_OFF)
+    {
+      sendMSPViaEspnow(packet);
+    }
+    break;
   case MSP_ELRS_BACKPACK_CONFIG:
     DBGLN("Processing MSP_ELRS_BACKPACK_CONFIG...");
     HandleConfigMsg(packet);
