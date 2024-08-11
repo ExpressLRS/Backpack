@@ -101,6 +101,9 @@ static UpdateWrapper updater = UpdateWrapper();
 
 #if defined(MAVLINK_ENABLED)
 WiFiUDP mavlinkUDP;
+
+IPAddress gcsIP;
+bool gcsIPSet = false;
 #endif
 
 /** Is this an IP? */
@@ -464,6 +467,12 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   json["counters"]["overflows_down"] = stats->overflows_downlink;
   json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
   json["ports"]["send"] = MAVLINK_PORT_SEND;
+  if (gcsIPSet) {
+    json["ip"]["gcs"] = gcsIP.toString();
+  } else {
+    json["ip"]["gcs"] = "IP UNSET";
+  }
+  json["protocol"] = "UDP";
 
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
@@ -720,8 +729,26 @@ static void HandleWebUpdate()
       bool timeoutExceeded = mavlink.GetQueuedMsgCount() > 0 && (millis() - last_mavlink_to_gcs_dump) > MAVLINK_BUF_TIMEOUT; // queue hasn't been flushed in a while
       if (thresholdExceeded || timeoutExceeded)
       {
-        IPAddress broadcast = WiFi.getMode() == WIFI_STA ? WiFi.broadcastIP() : apBroadcast;
-        mavlinkUDP.beginPacket(broadcast, MAVLINK_PORT_SEND);
+        // If we've set the remote IP, use that. Otherwise, we need to broadcast to find our GCS so it can send us heartbeats and we can know its IP
+        IPAddress remote;
+
+        // If we have a GCS IP, use that
+        if (gcsIPSet)
+        {
+          remote = gcsIP;
+        }
+        // otherwise if we're in AP mode, broadcast to the AP subnet
+        else if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+        {
+          remote = apBroadcast;
+        }
+        // otherwise broadcast to the station subnet
+        else
+        {
+          remote = WiFi.broadcastIP();
+        }
+
+        mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
         mavlink_message_t* msgQueue = mavlink.GetQueuedMsgs();
         for (uint8_t i = 0; i < mavlink.GetQueuedMsgCount(); i++)
         {
@@ -744,6 +771,8 @@ static void HandleWebUpdate()
         uint16_t packetSize = mavlinkUDP.parsePacket();
         if (packetSize)
         {
+          gcsIP = mavlinkUDP.remoteIP(); // store the IP of the GCS so we can send to it directly
+          gcsIPSet = true;
           uint8_t buf[MAVLINK_MAX_PACKET_LEN];
           mavlinkUDP.read(buf, packetSize);
           mavlink.ProcessMAVLinkFromGCS(buf, packetSize);
