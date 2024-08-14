@@ -168,8 +168,8 @@ void HandleConfigMsg(mspPacket_t *packet)
           config.SetStartWiFiOnBoot(false);
           config.Commit();
           break;
-        case BACKPACK_TELEM_MODE_RECEIVER:
-          config.SetTelemMode(BACKPACK_TELEM_MODE_RECEIVER);
+        case BACKPACK_TELEM_MODE_ESPNOW:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_ESPNOW);
           config.SetWiFiService(WIFI_SERVICE_UPDATE);
           config.SetStartWiFiOnBoot(false);
           config.Commit();
