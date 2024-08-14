@@ -247,6 +247,12 @@ def main():
     args.platform = targets[vendor][hardware][target]['platform']
     mcu = MCUType.ESP8266 if args.platform == "esp8285" else MCUType.ESP32
 
+    if mcu == MCUType.ESP8266:
+    import gzip
+    with open(args.file.name, 'rb') as f_in:
+        with gzip.open('firmware.bin.gz', 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
     if args.file is None:
         srcdir = targets[vendor][hardware][target]['firmware']
         shutil.copy2(srcdir + '/firmware.bin', '.')
