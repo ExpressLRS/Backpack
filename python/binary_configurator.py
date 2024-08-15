@@ -10,6 +10,7 @@ import json
 from json import JSONEncoder
 from random import randint
 from os.path import dirname
+import gzip
 
 import UnifiedConfiguration
 import serials_find
@@ -54,6 +55,9 @@ def upload_wifi(args, mcuType, upload_addr):
         upload_addr = [args.port]
     try:
         if mcuType == MCUType.ESP8266:
+            with open(args.file.name, 'rb') as f_in:
+                with gzip.open('firmware.bin.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
             upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
         else:
             upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
@@ -123,7 +127,9 @@ def upload_esp32_passthru(args):
 
 def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266:
-        shutil.copy2(args.file.name, args.out)
+        with open(args.file.name, 'rb') as f_in:
+            with gzip.open(os.path.join(args.out, 'firmware.bin.gz'), 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
     elif mcuType == MCUType.ESP32:
         dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
