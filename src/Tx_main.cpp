@@ -57,6 +57,9 @@ ELRS_EEPROM eeprom;
 TxBackpackConfig config;
 mspPacket_t cachedVTXPacket;
 mspPacket_t cachedHTPacket;
+#if defined(MAVLINK_ENABLED)
+MAVLink mavlink;
+#endif
 
 /////////// FUNCTION DEFS ///////////
 
@@ -150,6 +153,39 @@ void SendVersionResponse()
   msp.sendPacket(&out, &Serial);
 }
 
+void HandleConfigMsg(mspPacket_t *packet)
+{
+  uint8_t key = packet->readByte();
+  uint8_t value = packet->readByte();
+  switch (key)
+  {
+    case MSP_ELRS_BACKPACK_CONFIG_TLM_MODE:
+      switch (value)
+      {
+        case BACKPACK_TELEM_MODE_OFF:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_OFF);
+          config.SetWiFiService(WIFI_SERVICE_UPDATE);
+          config.SetStartWiFiOnBoot(false);
+          config.Commit();
+          break;
+        case BACKPACK_TELEM_MODE_ESPNOW:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_ESPNOW);
+          config.SetWiFiService(WIFI_SERVICE_UPDATE);
+          config.SetStartWiFiOnBoot(false);
+          config.Commit();
+          break;
+        case BACKPACK_TELEM_MODE_WIFI:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_WIFI);
+          config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
+          config.SetStartWiFiOnBoot(true);
+          config.Commit();
+          break;
+      }
+      rebootTime = millis();
+      break;
+  }
+}
+
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
@@ -195,6 +231,17 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     cachedHTPacket = *packet;
     cacheFull = true;
     sendMSPViaEspnow(packet);
+    break;
+  case MSP_ELRS_BACKPACK_CRSF_TLM:
+    DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
+    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
+    {
+      sendMSPViaEspnow(packet);
+    }
+    break;
+  case MSP_ELRS_BACKPACK_CONFIG:
+    DBGLN("Processing MSP_ELRS_BACKPACK_CONFIG...");
+    HandleConfigMsg(packet);
     break;
   default:
     // transparently forward MSP packets via espnow to any subscribers
@@ -245,46 +292,6 @@ void SendCachedMSP()
     sendMSPViaEspnow(&cachedHTPacket);
   }
 }
-
-#if defined(MAVLINK_ENABLED)
-// This function is only used when we're not yet in WiFi MAVLink mode - its main purpose is to detect
-// heartbeat packets and switch to WiFi MAVLink mode if we receive 3 heartbeats in 5 seconds, or if we
-// receive a command to switch to WiFi MAVLink mode.
-void ProcessMAVLinkFromTX(mavlink_message_t *mavlink_rx_message, mavlink_status_t *mavlink_status)
-{
-  // See if we have an explicit control message
-  MAVLink::handleControlMessage(mavlink_rx_message);
-  static unsigned long heartbeatTimestamps[3] = {0, 0, 0};
-  switch (mavlink_rx_message->msgid)
-  {
-  case MAVLINK_MSG_ID_HEARTBEAT:
-  {
-    mavlink_heartbeat_t heartbeat;
-    mavlink_msg_heartbeat_decode(mavlink_rx_message, &heartbeat);
-    if (mavlink_rx_message->compid == MAV_COMP_ID_AUTOPILOT1)
-    {
-      // If we hit this line we shouldn't be in WiFi update mode but let's be certain.
-      if (connectionState != wifiUpdate)
-      {
-        unsigned long now = millis();
-        // Push the timestamp we received the heartbeat back into the array
-        for (int i = 0; i < 2; i++)
-        {
-          heartbeatTimestamps[i] = heartbeatTimestamps[i + 1];
-        }
-        heartbeatTimestamps[2] = now;
-        // If we have received 3 heartbeats in the last 5 seconds, switch to WiFi update mode
-        if (now - heartbeatTimestamps[0] < 5000)
-        {
-          RebootIntoWifi(WIFI_SERVICE_MAVLINK_TX);
-        }
-      }
-    }
-    break;
-  }
-  }
-}
-#endif
 
 void SetSoftMACAddress()
 {
@@ -359,16 +366,15 @@ void setup()
     config.SetStartWiFiOnBoot(true);
   #endif
 
+  
   if (config.GetStartWiFiOnBoot())
   {
-    config.SetStartWiFiOnBoot(false);
-    if (config.GetWiFiService() != WIFI_SERVICE_UPDATE)
+    wifiService = config.GetWiFiService();
+    if (wifiService == WIFI_SERVICE_UPDATE)
     {
-      // Store the intended service mode before writing default back to persistent flash
-      wifiService = config.GetWiFiService();
-      config.SetWiFiService(WIFI_SERVICE_UPDATE);
+      config.SetStartWiFiOnBoot(false);
+      config.Commit();
     }
-    config.Commit();
     connectionState = wifiUpdate;
     devicesTriggerEvent();
   }
@@ -420,30 +426,22 @@ void loop()
     }
   #endif
 
-  if (connectionState == wifiUpdate)
-  {
-    return;
-  }
-
   if (Serial.available())
   {
     uint8_t c = Serial.read();
 
+    // Try to parse MSP packets from the TX
     if (msp.processReceivedByte(c))
     {
       // Finished processing a complete packet
       ProcessMSPPacketFromTX(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
-#if defined(MAVLINK_ENABLED)
-    // Process MAVLink messages to switch to wifi update mode
-    mavlink_message_t mavlink_rx_message;
-    mavlink_status_t mavlink_status;
-    if (mavlink_parse_char(MAVLINK_COMM_0, c, &mavlink_rx_message, &mavlink_status))
-    {
-      ProcessMAVLinkFromTX(&mavlink_rx_message, &mavlink_status);
-    }
-#endif
+
+  #if defined(MAVLINK_ENABLED)
+    // Try to parse MAVLink packets from the TX
+    mavlink.ProcessMAVLinkFromTX(c);
+  #endif
   }
 
   if (cacheFull && sendCached)

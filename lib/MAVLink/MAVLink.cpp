@@ -3,49 +3,62 @@
 #include "MAVLink.h"
 #include <config.h>
 
-// Returns whether the message is a control message, i.e. a message where we don't want to
-// pass the message to the flight controller, but rather handle it ourselves. If the message
-// is a control message, the function handles it internally.
-bool MAVLink::handleControlMessage(mavlink_message_t *msg)
+void
+MAVLink::ProcessMAVLinkFromTX(uint8_t c)
 {
-    bool shouldForward = true;
-    // Check for messages addressed to the Backpack
-    switch (msg->msgid)
+    mavlink_status_t status;
+    mavlink_message_t msg;
+
+    if (mavlink_frame_char(MAVLINK_COMM_0, c, &msg, &status) != MAVLINK_FRAMING_INCOMPLETE)
     {
-    case MAVLINK_MSG_ID_COMMAND_INT:
-        mavlink_command_int_t commandMsg;
-        mavlink_msg_command_int_decode(msg, &commandMsg);
-        if (commandMsg.target_component == MAV_COMP_ID_UDP_BRIDGE)
+        if (mavlink_to_gcs_buf_count >= MAVLINK_BUF_SIZE)
         {
-            shouldForward = false;
-            constexpr uint8_t ELRS_MODE_CHANGE = 0x8;
-            switch (commandMsg.command)
+            // Cant fit any more msgs in the queue,
+            // drop the oldest msg and start overwriting
+            mavlink_stats.overflows_downlink++;
+            mavlink_to_gcs_buf_count = 0;
+        }
+        
+        // Track gaps in the sequence number, add to a dropped counter
+        uint8_t seq = msg.seq;
+        if (expectedSeqSet && seq != expectedSeq)
+        {
+            // account for rollovers
+            if (seq < expectedSeq)
             {
-            case MAV_CMD_USER_1:
-                switch ((int)commandMsg.param1)
-                {
-                case ELRS_MODE_CHANGE:
-                    switch ((int)commandMsg.param2)
-                    {
-                    case 0: // TX_NORMAL_MODE
-                        config.SetStartWiFiOnBoot(false);
-                        ESP.restart();
-                        break;
-                    case 1: // TX_MAVLINK_MODE
-                        if (config.GetWiFiService() != WIFI_SERVICE_MAVLINK_TX)
-                        {
-                            config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
-                            config.SetStartWiFiOnBoot(true);
-                            config.Commit();
-                            ESP.restart();
-                        }
-                        break;
-                    }
-                }
+                mavlink_stats.drops_downlink += (UINT8_MAX - expectedSeq) + seq;
             }
-            break;
+            else
+            {
+                mavlink_stats.drops_downlink += seq - expectedSeq;
+            }
+        }
+        expectedSeq = seq + 1;
+        expectedSeqSet = true;
+
+        // Queue the msgs, to forward to peers
+        mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
+        mavlink_to_gcs_buf_count++;
+        mavlink_stats.packets_downlink++;
+    }
+}
+
+void
+MAVLink::ProcessMAVLinkFromGCS(uint8_t *data, uint16_t len)
+{
+    mavlink_status_t status;
+    mavlink_message_t msg;
+
+    for (uint16_t i = 0; i < len; i++)
+    {
+        if (mavlink_frame_char(MAVLINK_COMM_1, data[i], &msg, &status) != MAVLINK_FRAMING_INCOMPLETE)
+        {
+            // Send the message to the tx uart
+            uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+            uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+            Serial.write(buf, len);
+            mavlink_stats.packets_uplink++;
         }
     }
-    return shouldForward;
 }
 #endif

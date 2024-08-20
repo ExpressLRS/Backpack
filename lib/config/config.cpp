@@ -90,6 +90,13 @@ TxBackpackConfig::SetWiFiService(wifi_service_t service)
     m_config.wifiService = service;
     m_modified = true;
 }
+
+void
+TxBackpackConfig::SetTelemMode(telem_mode_t mode)
+{
+    m_config.telemMode = mode;
+    m_modified = true;
+}
 #endif
 
 /////////////////////////////////////////////////////

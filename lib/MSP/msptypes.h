@@ -23,6 +23,10 @@
 #define MSP_ELRS_SET_SEND_UID                   0x00B5
 #define MSP_ELRS_SET_OSD                        0x00B6
 
+// Config opcodes
+#define MSP_ELRS_BACKPACK_CONFIG                0x30
+#define MSP_ELRS_BACKPACK_CONFIG_TLM_MODE       0x31
+
 // CRSF encapsulated msp defines
 #define ENCAPSULATED_MSP_PAYLOAD_SIZE           4
 #define ENCAPSULATED_MSP_FRAME_LEN              8
