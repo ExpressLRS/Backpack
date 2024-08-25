@@ -2,14 +2,20 @@
     "generic": {
         "name": "Generic backpack for any TX module",
         "txbp": {
-            "esp": {
-                "product_name": "Backpack for ESP32-based TX module",
+            "esp8285": {
+                "product_name": "ESP8285 Backpack for ESP32-based TX module",
                 "firmware": "ESP_TX_Backpack",
                 "upload_methods": ["uart", "etx", "passthru", "wifi"],
                 "platform": "esp8285"
             },
+            "esp32-c3": {
+                "product_name": "ESP32-C3 Backpack for ESP32-based TX module",
+                "firmware": "ESP32C3_TX_Backpack",
+                "upload_methods": ["uart", "etx", "passthru", "wifi"],
+                "platform": "esp32-c3"
+            },
             "stm": {
-                "product_name": "Backpack for STM32-based TX module",
+                "product_name": "ESP8285 Backpack for STM32-based TX module",
                 "firmware": "STM_TX_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
@@ -137,6 +143,29 @@
             },
             "iflight-900": {
                 "product_name": "iFlight 900MHz TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            }
+        }
+    },
+    "jumper": {
+        "name": "Jumper",
+        "txbp": {
+            "t12-max": {
+                "product_name": "Jumper T-12 Max Internal TX Modules",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "t15": {
+                "product_name": "Jumper T-15 Internal TX Modules",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["uart", "wifi"]
+            },
+            "t20": {
+                "product_name": "Jumper T-20 Internal TX Modules with Backpack extension",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["uart", "wifi"]
@@ -311,7 +340,7 @@
         "vrx": {
             "esp32": {
                 "product_name": "Built-in ESP32 Backpack",
-                "firmware": "HDZero_RX51_ESP32_Backpack",
+                "firmware": "HDZero_Goggle_ESP32_Backpack",
                 "upload_methods": ["wifi"],
                 "platform": "esp32"
             }
@@ -439,7 +468,7 @@
             }
         }
     },
-    "timer": {
+    "generic-timer": {
         "name": "Generic backpack for any Race Timer",
         "timer": {
             "esp32": {
@@ -459,11 +488,23 @@
                 "firmware": "TIMER_ESP12F_Backpack",
                 "upload_methods": ["uart", "wifi"],
                 "platform": "esp8285"
+            },
+            "esp32c3": {
+                "product_name": "Backpack for Race Timer with ESP32C3",
+                "firmware": "TIMER_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "Backpack for Race Timer with ESP32S3",
+                "firmware": "TIMER_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
             }
         }
     },
     "rotorhazard": {
-        "name": "RotorHazard",
+        "name": "RotorHazard Timer Backpack",
         "timer": {
             "esp32": {
                 "product_name": "ESP32 Module (DIY)",
@@ -479,9 +520,61 @@
             },
             "NuclearHazard": {
                 "product_name": "NuclearHazard",
-                "firmware": "TIMER_ESP32_Backpack",
+                "firmware": "NuclearHazard_Backpack",
                 "upload_methods": ["wifi"],
                 "platform": "esp32"
+            },
+            "esp32c3": {
+                "product_name": "ESP32C3 Module (DIY)",
+                "firmware": "TIMER_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "ESP32S3 Module (DIY)",
+                "firmware": "TIMER_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
+            }
+        }
+    },
+    "diy-aat": {
+        "name": "DIY Automatic Antenna Tracker Backpack",
+        "aat": {
+            "pwmrx": {
+                "product_name": "5xPWM Receiver",
+                "firmware": "AAT_ESP_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            }
+        }
+    },
+    "mfd-crossbow": {
+        "name": "MFD Crossbow Antenna Tracker Backpack",
+        "aat": {
+            "esp82": {
+                "product_name": "Generic ESP8285 / ESP8266 Receiver",
+                "firmware": "MFD_Crossbow_ESP8285_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp32": {
+                "product_name": "Generic ESP32 Receiver",
+                "firmware": "MFD_Crossbow_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp32c3": {
+                "product_name": "Generic ESP32C3 Receiver",
+                "firmware": "MFD_Crossbow_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "Generic ESP32S3 Receiver",
+                "firmware": "MFD_Crossbow_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
             }
         }
     }

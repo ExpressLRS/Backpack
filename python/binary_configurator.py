@@ -10,6 +10,7 @@ import json
 from json import JSONEncoder
 from random import randint
 from os.path import dirname
+import gzip
 
 import UnifiedConfiguration
 import serials_find
@@ -54,6 +55,9 @@ def upload_wifi(args, mcuType, upload_addr):
         upload_addr = [args.port]
     try:
         if mcuType == MCUType.ESP8266:
+            with open(args.file.name, 'rb') as f_in:
+                with gzip.open('firmware.bin.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
             upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
         else:
             upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
@@ -93,7 +97,7 @@ def upload_esp32_uart(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        start_addr = '0x0000' if args.platform.startswith('esp32-') else '0x1000'
         esptool.main(['--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', str(args.baud), '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
@@ -104,7 +108,7 @@ def upload_esp32_etx(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        start_addr = '0x0000' if args.platform.startswith('esp32-') else '0x1000'
         esptool.main(['--passthrough', '--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', '460800', '--before', 'etx', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
@@ -115,7 +119,7 @@ def upload_esp32_passthru(args):
         args.port = serials_find.get_serial_port()
     try:
         dir = os.path.dirname(args.file.name)
-        start_addr = '0x0000' if args.platform.startswith('esp32-c') else '0x1000'
+        start_addr = '0x0000' if args.platform.startswith('esp32-') else '0x1000'
         esptool.main(['--passthrough', '--chip', args.platform.replace('-', ''), '--port', args.port, '--baud', '230400', '--before', 'passthru', '--after', 'hard_reset', 'write_flash', '-z', '--flash_mode', 'dio', '--flash_freq', '40m', '--flash_size', 'detect', start_addr, os.path.join(dir, 'bootloader.bin'), '0x8000', os.path.join(dir, 'partitions.bin'), '0xe000', os.path.join(dir, 'boot_app0.bin'), '0x10000', args.file.name])
     except:
         return ElrsUploadResult.ErrorGeneral
@@ -123,7 +127,9 @@ def upload_esp32_passthru(args):
 
 def upload_dir(mcuType, args):
     if mcuType == MCUType.ESP8266:
-        shutil.copy2(args.file.name, args.out)
+        with open(args.file.name, 'rb') as f_in:
+            with gzip.open(os.path.join(args.out, 'firmware.bin.gz'), 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
     elif mcuType == MCUType.ESP32:
         dir = os.path.dirname(args.file.name)
         shutil.copy2(args.file.name, args.out)
@@ -244,7 +250,8 @@ def main():
 
     with open('hardware/targets.json') as f:
         targets = json.load(f)
-    mcu = MCUType.ESP8266 if targets[vendor][hardware][target]['platform'] == "esp8285" else MCUType.ESP32
+    args.platform = targets[vendor][hardware][target]['platform']
+    mcu = MCUType.ESP8266 if args.platform == "esp8285" else MCUType.ESP32
 
     if args.file is None:
         srcdir = targets[vendor][hardware][target]['firmware']

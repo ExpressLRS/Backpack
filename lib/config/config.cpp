@@ -51,6 +51,7 @@ TxBackpackConfig::SetDefaults()
     m_config.ssid[0] = 0;
     m_config.password[0] = 0;
     memset(m_config.address, 0, 6);
+    m_config.wifiService = WIFI_SERVICE_UPDATE;
     m_modified = true;
     Commit();
 }
@@ -83,6 +84,19 @@ TxBackpackConfig::SetGroupAddress(const uint8_t address[6])
     m_modified = true;
 }
 
+void
+TxBackpackConfig::SetWiFiService(wifi_service_t service)
+{
+    m_config.wifiService = service;
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetTelemMode(telem_mode_t mode)
+{
+    m_config.telemMode = mode;
+    m_modified = true;
+}
 #endif
 
 /////////////////////////////////////////////////////

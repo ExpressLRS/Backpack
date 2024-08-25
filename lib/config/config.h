@@ -11,13 +11,29 @@
 #define VRX_BACKPACK_CONFIG_VERSION     5
 #define TIMER_BACKPACK_CONFIG_VERSION   3
 
+
+typedef enum {
+    WIFI_SERVICE_UPDATE,
+    WIFI_SERVICE_MAVLINK_TX,
+} wifi_service_t;
+
+typedef enum {
+    BACKPACK_TELEM_MODE_OFF,
+    BACKPACK_TELEM_MODE_ESPNOW,
+    BACKPACK_TELEM_MODE_WIFI,
+    BACKPACK_TELEM_MODE_BLUETOOTH,
+} telem_mode_t;
+
 #if defined(TARGET_TX_BACKPACK)
+
 typedef struct {
-    uint32_t    version;
-    bool        startWiFi;
-    char        ssid[33];
-    char        password[65];
-    uint8_t     address[6];
+    uint32_t          version;
+    bool              startWiFi;
+    char              ssid[33];
+    char              password[65];
+    uint8_t           address[6];
+    wifi_service_t    wifiService;
+    telem_mode_t      telemMode;
 } tx_backpack_config_t;
 
 class TxBackpackConfig
@@ -32,6 +48,8 @@ public:
     char    *GetSSID() { return m_config.ssid; }
     char    *GetPassword() { return m_config.password; }
     uint8_t *GetGroupAddress() { return m_config.address; }
+    wifi_service_t GetWiFiService() { return m_config.wifiService; }
+    telem_mode_t GetTelemMode() { return m_config.telemMode; }
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -40,6 +58,8 @@ public:
     void SetSSID(const char *ssid);
     void SetPassword(const char *ssid);
     void SetGroupAddress(const uint8_t address[6]);
+    void SetWiFiService(wifi_service_t service);
+    void SetTelemMode(telem_mode_t mode);
 
 private:
     tx_backpack_config_t    m_config;

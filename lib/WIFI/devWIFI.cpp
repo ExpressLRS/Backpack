@@ -9,6 +9,7 @@
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <Update.h>
+#include <esp_wifi.h>
 #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -33,6 +34,10 @@
 #include "WebContent.h"
 
 #include "config.h"
+
+#if defined(MAVLINK_ENABLED)
+#include <MAVLink.h>
+#endif
 #if defined(TARGET_VRX_BACKPACK)
 #if defined(HAS_HEADTRACKING)
 #include "devHeadTracker.h"
@@ -41,6 +46,10 @@ extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
 #elif defined(TARGET_TX_BACKPACK)
 extern TxBackpackConfig config;
+extern wifi_service_t wifiService;
+#if defined(MAVLINK_ENABLED)
+extern MAVLink mavlink;
+#endif
 #elif defined(TARGET_TIMER_BACKPACK)
 extern TimerBackpackConfig config;
 #else
@@ -53,7 +62,8 @@ static const char *myHostname = "elrs_vrx";
 static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
 static const char *myHostname = "elrs_txbp";
-static const char *wifi_ap_ssid = "ExpressLRS TX Backpack";
+static char wifi_ap_ssid[33]; // will be set depending on wifiService
+
 #elif defined(TARGET_TIMER_BACKPACK)
 static const char *myHostname = "elrs_timer";
 static const char *wifi_ap_ssid = "ExpressLRS Timer Backpack";
@@ -77,6 +87,7 @@ static volatile unsigned long changeTime = 0;
 static const byte DNS_PORT = 53;
 static IPAddress apIP(10, 0, 0, 1);
 static IPAddress netMsk(255, 255, 255, 0);
+static IPAddress apBroadcast(10, 0, 0, 255);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
@@ -94,9 +105,12 @@ static bool do_flash = false;
 static uint32_t totalSize;
 static UpdateWrapper updater = UpdateWrapper();
 
-static AsyncEventSource logging("/logging");
-static char logBuffer[256];
-static int logPos = 0;
+#if defined(MAVLINK_ENABLED)
+WiFiUDP mavlinkUDP;
+
+IPAddress gcsIP;
+bool gcsIPSet = false;
+#endif
 
 /** Is this an IP? */
 static boolean isIp(String str)
@@ -148,8 +162,6 @@ static struct {
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
-  {"/log.js", "text/javascript", (uint8_t *)LOG_JS, sizeof(LOG_JS)},
-  {"/log.html", "text/html", (uint8_t *)LOG_HTML, sizeof(LOG_HTML)},
 #if defined(HAS_HEADTRACKING)
   {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
   {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
@@ -228,12 +240,7 @@ static void WebUpdateHandleRoot(AsyncWebServerRequest *request)
 
 static void GetConfiguration(AsyncWebServerRequest *request)
 {
-#if defined(PLATFORM_ESP32)
-  DynamicJsonDocument json(32768);
-#else
-  DynamicJsonDocument json(2048);
-#endif
-
+  JsonDocument json;
   json["config"]["ssid"] = station_ssid;
   json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
   json["config"]["product_name"] = firmwareOptions.product_name;
@@ -499,6 +506,32 @@ static void WebUploadRTCUpdateHandler(AsyncWebServerRequest *request) {
   #endif
 }
 
+#if defined(MAVLINK_ENABLED)
+static void WebMAVLinkHandler(AsyncWebServerRequest *request)
+{
+  mavlink_stats_t* stats = mavlink.GetMavlinkStats();
+  
+  DynamicJsonDocument json(1024);
+  json["enabled"] = wifiService == WIFI_SERVICE_MAVLINK_TX;
+  json["counters"]["packets_down"] = stats->packets_downlink;
+  json["counters"]["packets_up"] = stats->packets_uplink;
+  json["counters"]["drops_down"] = stats->drops_downlink;
+  json["counters"]["overflows_down"] = stats->overflows_downlink;
+  json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
+  json["ports"]["send"] = MAVLINK_PORT_SEND;
+  if (gcsIPSet) {
+    json["ip"]["gcs"] = gcsIP.toString();
+  } else {
+    json["ip"]["gcs"] = "IP UNSET";
+  }
+  json["protocol"] = "UDP";
+
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+  serializeJson(json, *response);
+  request->send(response);
+}
+#endif
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -638,8 +671,9 @@ static void startServices()
 #if defined(AAT_BACKPACK)
   WebAatInit(server);
 #endif
-
-  server.addHandler(&logging);
+#if defined(MAVLINK_ENABLED)
+  server.on("/mavlink", HTTP_GET, WebMAVLinkHandler);
+#endif
 
   server.onNotFound(WebUpdateHandleNotFound);
 
@@ -659,6 +693,9 @@ static void startServices()
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
 
   startMDNS();
+#if defined(MAVLINK_ENABLED)
+  mavlinkUDP.begin(MAVLINK_PORT_LISTEN);
+#endif
 
   servicesStarted = true;
   DBGLN("HTTPUpdateServer ready! Open http://%s.local in your browser", myHostname);
@@ -703,9 +740,27 @@ static void HandleWebUpdate()
         #endif
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
+#if defined(TARGET_TX_BACKPACK)
+        if (wifiService == WIFI_SERVICE_UPDATE)
+        {
+          strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
+        }
+        else if (wifiService == WIFI_SERVICE_MAVLINK_TX)
+        {
+          // Generate a unique SSID using config.address as hex
+          sprintf(wifi_ap_ssid, "ExpressLRS TX Backpack %02X%02X%02X",
+            firmwareOptions.uid[3],
+            firmwareOptions.uid[4],
+            firmwareOptions.uid[5]
+          );
+        }
+#endif
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
         startServices();
+        #if defined(PLATFORM_ESP32)
+        esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+        #endif
         break;
       case WIFI_STA:
         DBGLN("Connecting to home network '%s' '%s'", station_ssid, station_password);
@@ -726,15 +781,67 @@ static void HandleWebUpdate()
 
   if (servicesStarted)
   {
-    while (Serial.available()) {
-      int val = Serial.read();
-      logBuffer[logPos++] = val;
-      logBuffer[logPos] = 0;
-      if (val == '\n' || logPos == sizeof(logBuffer)-1) {
-        logging.send(logBuffer);
-        logPos = 0;
+  #if defined(MAVLINK_ENABLED)
+    if (wifiService == WIFI_SERVICE_MAVLINK_TX)
+    {
+      // Dump the mavlink_to_gcs_buf to the GCS
+      static unsigned long last_mavlink_to_gcs_dump = 0;
+
+      bool thresholdExceeded = mavlink.GetQueuedMsgCount() > MAVLINK_BUF_THRESHOLD; // msg queue is full enough
+      bool timeoutExceeded = mavlink.GetQueuedMsgCount() > 0 && (millis() - last_mavlink_to_gcs_dump) > MAVLINK_BUF_TIMEOUT; // queue hasn't been flushed in a while
+      if (thresholdExceeded || timeoutExceeded)
+      {
+        // If we've set the remote IP, use that. Otherwise, we need to broadcast to find our GCS so it can send us heartbeats and we can know its IP
+        IPAddress remote;
+
+        // If we have a GCS IP, use that
+        if (gcsIPSet)
+        {
+          remote = gcsIP;
+        }
+        // otherwise if we're in AP mode, broadcast to the AP subnet
+        else if (WiFi.getMode() == WIFI_AP || WiFi.getMode() == WIFI_AP_STA)
+        {
+          remote = apBroadcast;
+        }
+        // otherwise broadcast to the station subnet
+        else
+        {
+          remote = WiFi.broadcastIP();
+        }
+
+        mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
+        mavlink_message_t* msgQueue = mavlink.GetQueuedMsgs();
+        for (uint8_t i = 0; i < mavlink.GetQueuedMsgCount(); i++)
+        {
+          uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+          uint16_t len = mavlink_msg_to_send_buffer(buf, &msgQueue[i]);
+          size_t sent = mavlinkUDP.write(buf, len);
+          if (sent < len)
+          {
+            break;
+          }
+        }
+        mavlinkUDP.endPacket();
+        mavlink.ResetQueuedMsgCount();
+        last_mavlink_to_gcs_dump = millis();
+      }
+
+      // Check if we have MAVLink UDP data to send over UART
+      if (wifiService == WIFI_SERVICE_MAVLINK_TX)
+      {
+        uint16_t packetSize = mavlinkUDP.parsePacket();
+        if (packetSize)
+        {
+          gcsIP = mavlinkUDP.remoteIP(); // store the IP of the GCS so we can send to it directly
+          gcsIPSet = true;
+          uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+          mavlinkUDP.read(buf, packetSize);
+          mavlink.ProcessMAVLinkFromGCS(buf, packetSize);
+        }
       }
     }
+  #endif
 
     dnsServer.processNextRequest();
     #if defined(PLATFORM_ESP8266)
@@ -742,7 +849,11 @@ static void HandleWebUpdate()
     #endif
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
+#if defined(MAVLINK_ENABLED)
+    if (!updater.isRunning() && wifiService != WIFI_SERVICE_MAVLINK_TX)
+#else
     if (!updater.isRunning())
+#endif
       delay(1);
     if (do_flash) {
       do_flash = false;

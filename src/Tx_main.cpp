@@ -22,6 +22,10 @@
 #include "devButton.h"
 #include "devLED.h"
 
+#if defined(MAVLINK_ENABLED)
+#include <MAVLink.h>
+#endif
+
 /////////// GLOBALS ///////////
 
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -29,6 +33,8 @@ uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 const uint8_t version[] = {LATEST_VERSION};
 
 connectionState_e connectionState = starting;
+// Assume we are in wifi update mode until we know otherwise
+wifi_service_t wifiService = WIFI_SERVICE_UPDATE;
 unsigned long rebootTime = 0;
 
 bool cacheFull = false;
@@ -51,6 +57,9 @@ ELRS_EEPROM eeprom;
 TxBackpackConfig config;
 mspPacket_t cachedVTXPacket;
 mspPacket_t cachedHTPacket;
+#if defined(MAVLINK_ENABLED)
+MAVLink mavlink;
+#endif
 
 /////////// FUNCTION DEFS ///////////
 
@@ -65,10 +74,14 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 esp_now_peer_info_t peerInfo;
 #endif
 
-void RebootIntoWifi()
+void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
 {
   DBGLN("Rebooting into wifi update mode...");
   config.SetStartWiFiOnBoot(true);
+#if defined(TARGET_TX_BACKPACK)
+  // TODO it might be better to add wifi service to each type of backpack
+  config.SetWiFiService(service);
+#endif
   config.Commit();
   rebootTime = millis();
 }
@@ -140,6 +153,39 @@ void SendVersionResponse()
   msp.sendPacket(&out, &Serial);
 }
 
+void HandleConfigMsg(mspPacket_t *packet)
+{
+  uint8_t key = packet->readByte();
+  uint8_t value = packet->readByte();
+  switch (key)
+  {
+    case MSP_ELRS_BACKPACK_CONFIG_TLM_MODE:
+      switch (value)
+      {
+        case BACKPACK_TELEM_MODE_OFF:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_OFF);
+          config.SetWiFiService(WIFI_SERVICE_UPDATE);
+          config.SetStartWiFiOnBoot(false);
+          config.Commit();
+          break;
+        case BACKPACK_TELEM_MODE_ESPNOW:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_ESPNOW);
+          config.SetWiFiService(WIFI_SERVICE_UPDATE);
+          config.SetStartWiFiOnBoot(false);
+          config.Commit();
+          break;
+        case BACKPACK_TELEM_MODE_WIFI:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_WIFI);
+          config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
+          config.SetStartWiFiOnBoot(true);
+          config.Commit();
+          break;
+      }
+      rebootTime = millis();
+      break;
+  }
+}
+
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
   if (packet->function == MSP_ELRS_BIND)
@@ -185,6 +231,17 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     cachedHTPacket = *packet;
     cacheFull = true;
     sendMSPViaEspnow(packet);
+    break;
+  case MSP_ELRS_BACKPACK_CRSF_TLM:
+    DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
+    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
+    {
+      sendMSPViaEspnow(packet);
+    }
+    break;
+  case MSP_ELRS_BACKPACK_CONFIG:
+    DBGLN("Processing MSP_ELRS_BACKPACK_CONFIG...");
+    HandleConfigMsg(packet);
     break;
   default:
     // transparently forward MSP packets via espnow to any subscribers
@@ -258,6 +315,7 @@ void SetSoftMACAddress()
     WiFi.setOutputPower(20.5);
   #elif defined(PLATFORM_ESP32)
     WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #endif
   WiFi.begin("network-name", "pass-to-network", 1);
   WiFi.disconnect();
@@ -294,6 +352,7 @@ void setup()
     Serial1.setDebugOutput(true);
   #endif
   Serial.begin(460800);
+  Serial.setRxBufferSize(4096);
 
   options_init();
 
@@ -307,10 +366,15 @@ void setup()
     config.SetStartWiFiOnBoot(true);
   #endif
 
+  
   if (config.GetStartWiFiOnBoot())
   {
-    config.SetStartWiFiOnBoot(false);
-    config.Commit();
+    wifiService = config.GetWiFiService();
+    if (wifiService == WIFI_SERVICE_UPDATE)
+    {
+      config.SetStartWiFiOnBoot(false);
+      config.Commit();
+    }
     connectionState = wifiUpdate;
     devicesTriggerEvent();
   }
@@ -362,21 +426,22 @@ void loop()
     }
   #endif
 
-  if (connectionState == wifiUpdate)
-  {
-    return;
-  }
-
   if (Serial.available())
   {
     uint8_t c = Serial.read();
 
+    // Try to parse MSP packets from the TX
     if (msp.processReceivedByte(c))
     {
       // Finished processing a complete packet
       ProcessMSPPacketFromTX(msp.getReceivedPacket());
       msp.markPacketReceived();
     }
+
+  #if defined(MAVLINK_ENABLED)
+    // Try to parse MAVLink packets from the TX
+    mavlink.ProcessMAVLinkFromTX(c);
+  #endif
   }
 
   if (cacheFull && sendCached)
