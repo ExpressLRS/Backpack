@@ -28,6 +28,7 @@ public:
     int getAzimuth();
     byte getBearing(int azimuth);
     void getDirection(char *myArray, int azimuth);
+    int readChipId();
 
 private:
     void _writeReg(byte reg, byte val);

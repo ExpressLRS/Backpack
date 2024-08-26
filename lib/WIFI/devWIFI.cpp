@@ -868,7 +868,7 @@ static void HandleWebUpdate()
 #if defined(HAS_HEADTRACKING)
     static long lastCall = 0;
     static HeadTrackerState last_state = STATE_ERROR;
-    if (now - lastCall > 10) {
+    if (now - lastCall > 50) {
       auto current_state = getHeadTrackerState();
       switch(current_state)
       {
@@ -885,7 +885,10 @@ static void HandleWebUpdate()
           float yaw, pitch, roll;
           getEuler(&yaw, &pitch, &roll);
           snprintf_P(payload, sizeof(payload), IMU_JSON, yaw, pitch, roll);
-          ws.textAll(payload, strlen(payload));
+          if (ws.availableForWriteAll())
+          {
+            ws.textAll(payload, strlen(payload));
+          }
         }
         break;
 

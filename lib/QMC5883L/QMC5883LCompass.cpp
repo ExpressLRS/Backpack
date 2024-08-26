@@ -67,7 +67,6 @@ QMC5883LCompass::QMC5883LCompass() {
 	@since v0.1;
 **/
 void QMC5883LCompass::init(){
-	Wire.begin();
 	_writeReg(0x0B,0x01);
 	setMode(0x01,0x0C,0x10,0X00);
 }
@@ -417,4 +416,15 @@ void QMC5883LCompass::getDirection(char* myArray, int azimuth){
 	myArray[0] = _bearings[d][0];
 	myArray[1] = _bearings[d][1];
 	myArray[2] = _bearings[d][2];
+}
+
+int QMC5883LCompass::readChipId(){
+    Wire.beginTransmission(_ADDR);
+    Wire.write(0x0D);
+    int err = Wire.endTransmission();
+    if (!err) {
+        Wire.requestFrom(_ADDR, (byte)1);
+        return Wire.read();
+    }
+    return -1;
 }
