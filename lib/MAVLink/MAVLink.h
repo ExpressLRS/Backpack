@@ -10,7 +10,7 @@ constexpr size_t MAVLINK_BUF_SIZE = 16;
 // Threshold at which we will flush the buffer
 constexpr size_t MAVLINK_BUF_THRESHOLD = MAVLINK_BUF_SIZE / 2;
 // Timeout for flushing the buffer in ms
-constexpr size_t MAVLINK_BUF_TIMEOUT = 500;
+constexpr size_t MAVLINK_BUF_TIMEOUT = 100;
 
 typedef struct {
   uint32_t packets_downlink; // packets from the aircraft
