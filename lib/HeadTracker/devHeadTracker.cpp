@@ -30,7 +30,6 @@ static void initialize()
     // Compass init first
     compass.init();
     hasCompass = compass.readChipId() == 0xFF;
-    hasCompass = false;
 	if (hasCompass) compass.setMode(0x01,0x08,0x10,0X00); // continuous, 100Hz, 8G, 512 over sample
 
     // Initializing the IMU
@@ -66,7 +65,7 @@ static int start()
         int (*cal)[3][2] = config.GetCompassCalibration();
         compass.setCalibration((*cal)[0][0],(*cal)[0][1],(*cal)[1][0],(*cal)[1][1],(*cal)[2][0],(*cal)[2][1]);
     }
-    //TODO: load gyro/accel calibration from settings
+    imu.SetCalibration(config.GetIMUCalibration());
     memcpy(orientation, *config.GetBoardOrientation(), sizeof(orientation));
     return DURATION_IMMEDIATELY;
 }
@@ -115,86 +114,91 @@ static int timeout()
     FusionVector a;
     FusionVector g;
 
-    if (imu.readIMUData(a, g)) {
-        switch (ht_state) {
-            case STATE_RUNNING: {
-                rotate(a.array, orientation);
-                rotate(g.array, orientation);
+    if (!imu.readIMUData(a, g))
+        return DURATION_IMMEDIATELY;
 
-                FusionVector m FUSION_VECTOR_ZERO;
-                if (hasCompass)
-                {
-                    compass.read();
+    switch (ht_state) {
+        case STATE_RUNNING: {
+            rotate(a.array, orientation);
+            rotate(g.array, orientation);
 
-                    m.axis.x = compass.getX();
-                    m.axis.y = compass.getY();
-                    m.axis.z = compass.getZ();
-                    rotate(m.array, orientation);
+            FusionVector m FUSION_VECTOR_ZERO;
+            if (hasCompass)
+            {
+                compass.read();
+
+                m.axis.x = compass.getX();
+                m.axis.y = compass.getY();
+                m.axis.z = compass.getZ();
+                rotate(m.array, orientation);
+            }
+
+            // Calculate delta time (in seconds) to account for gyroscope sample clock error
+            const clock_t timestamp = micros();
+            static clock_t previousTimestamp;
+            const float deltaTime = (float) (timestamp - previousTimestamp) / (float) 1000000;
+            previousTimestamp = timestamp;
+
+            FusionAhrsUpdate(&ahrs, g, a, m, deltaTime);
+
+            euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+            euler.angle.roll -= rollHome;
+            euler.angle.pitch -= pitchHome;
+            euler.angle.yaw -= yawHome;
+            break;
+        }
+
+        case STATE_COMPASS_CALIBRATING: {
+            if ((millis() - cal_started) < 10000) {
+                compass.read();
+
+                int x = compass.getX();
+                int y = compass.getY();
+                int z = compass.getZ();
+
+                if (x < calibrationData[0][0]) {
+                    calibrationData[0][0] = x;
+                }
+                if (x > calibrationData[0][1]) {
+                    calibrationData[0][1] = x;
                 }
 
-                // Calculate delta time (in seconds) to account for gyroscope sample clock error
-                const clock_t timestamp = micros();
-                static clock_t previousTimestamp;
-                const float deltaTime = (float) (timestamp - previousTimestamp) / (float) 1000000;
-                previousTimestamp = timestamp;
-
-                FusionAhrsUpdate(&ahrs, g, a, m, deltaTime);
-
-                euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
-                euler.angle.roll -= rollHome;
-                euler.angle.pitch -= pitchHome;
-                euler.angle.yaw -= yawHome;
-//                DBGLN("%d %d %d", (int)euler.angle.roll, (int)euler.angle.pitch, (int)euler.angle.yaw);
-                break;
-            }
-
-            case STATE_COMPASS_CALIBRATING: {
-                if ((millis() - cal_started) < 10000) {
-                    compass.read();
-
-                    int x = compass.getX();
-                    int y = compass.getY();
-                    int z = compass.getZ();
-
-                    if (x < calibrationData[0][0]) {
-                        calibrationData[0][0] = x;
-                    }
-                    if (x > calibrationData[0][1]) {
-                        calibrationData[0][1] = x;
-                    }
-
-                    if (y < calibrationData[1][0]) {
-                        calibrationData[1][0] = y;
-                    }
-                    if (y > calibrationData[1][1]) {
-                        calibrationData[1][1] = y;
-                    }
-
-                    if (z < calibrationData[2][0]) {
-                        calibrationData[2][0] = z;
-                    }
-                    if (z > calibrationData[2][1]) {
-                        calibrationData[2][1] = z;
-                    }
-                } else {
-                    compass.setCalibration(
-                            calibrationData[0][0],
-                            calibrationData[0][1],
-                            calibrationData[1][0],
-                            calibrationData[1][1],
-                            calibrationData[2][0],
-                            calibrationData[2][1]
-                    );
-                    config.SetCompassCalibration(calibrationData);
-                    ht_state = STATE_RUNNING;
+                if (y < calibrationData[1][0]) {
+                    calibrationData[1][0] = y;
                 }
-                break;
-            }
+                if (y > calibrationData[1][1]) {
+                    calibrationData[1][1] = y;
+                }
 
-            case STATE_IMU_CALIBRATING: {
-
-                break;
+                if (z < calibrationData[2][0]) {
+                    calibrationData[2][0] = z;
+                }
+                if (z > calibrationData[2][1]) {
+                    calibrationData[2][1] = z;
+                }
+            } else {
+                compass.setCalibration(
+                        calibrationData[0][0],
+                        calibrationData[0][1],
+                        calibrationData[1][0],
+                        calibrationData[1][1],
+                        calibrationData[2][0],
+                        calibrationData[2][1]
+                );
+                config.SetCompassCalibration(calibrationData);
+                config.Commit();
+                ht_state = STATE_RUNNING;
             }
+            break;
+        }
+
+        case STATE_IMU_CALIBRATING: {
+            if (imu.UpdateCalibration(g)) {
+                config.SetIMUCalibration(imu.GetCalibration());
+                config.Commit();
+                ht_state = STATE_RUNNING;
+            }
+            break;
         }
     }
     return DURATION_IMMEDIATELY;
@@ -215,7 +219,9 @@ void startCompassCalibration()
 
 void startIMUCalibration()
 {
-
+    imu.BeginCalibration();
+    cal_started = millis();
+    ht_state = STATE_IMU_CALIBRATING;
 }
 
 HeadTrackerState getHeadTrackerState()

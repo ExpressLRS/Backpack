@@ -1,7 +1,3 @@
-//
-// Created by Paul Kendall on 25/08/2024.
-//
-
 #ifndef BACKPACK_IMU_H
 #define BACKPACK_IMU_H
 
@@ -11,7 +7,14 @@ class IMU {
 public:
     bool initialize();
     bool readIMUData(FusionVector &accel, FusionVector &gyro);
-    int getSampleRate() { return sampleRate; }
+    int getSampleRate() const { return sampleRate; }
+
+    void BeginCalibration();
+    bool UpdateCalibration(FusionVector &g);
+
+    void SetCalibration(float (*calibration)[3]);
+
+    const float *GetCalibration();
 
 private:
     int sampleRate = 0;

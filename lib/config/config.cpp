@@ -221,6 +221,13 @@ VrxBackpackConfig::SetCompassCalibration(const int calibrationData[3][2])
 }
 
 void
+VrxBackpackConfig::SetIMUCalibration(const float calibration[3])
+{
+    memcpy(m_config.imuCalibration, calibration, sizeof(m_config.imuCalibration));
+    m_modified = true;
+}
+
+void
 VrxBackpackConfig::SetBoardOrientation(const float orientation[3])
 {
     memcpy(m_config.boardOrientation, orientation, sizeof(m_config.boardOrientation));

@@ -589,11 +589,11 @@ function start() {
             //     e.style.backgroundColor = 'red';
             // };
             websock.onerror = function(evt) { console.log(evt); };
-            websock.onmessage = function(evt) {
+            websock.onmessage = async function(evt) {
                 d = JSON.parse(evt.data);
                 if (d['done']) {
                     calibrationOff();
-                    cuteAlert({
+                    await cuteAlert({
                         type: 'info',
                         title: "Calibration",
                         message: "Calibration successful",
@@ -668,8 +668,8 @@ if (_('x-angle')) _('x-angle').addEventListener('input', setOrientation);
 if (_('y-angle')) _('y-angle').addEventListener('input', setOrientation);
 if (_('z-angle')) _('z-angle').addEventListener('input', setOrientation);
 
-function calibrateCompass() {
-    cuteAlert({
+async function calibrateCompass() {
+    await cuteAlert({
         type: 'info',
         title: "Calibrate Compass",
         message: "Rotate the board in all directions for 10 seconds until the succeeded popup appears",
@@ -681,8 +681,8 @@ function calibrateCompass() {
     });
 }
 
-function calibrateIMU() {
-    cuteAlert({
+async function calibrateIMU() {
+    await cuteAlert({
         type: 'info',
         title: "Calibrate IMU",
         message: "Place the board flat on the table and wait until the succeeded popup appears",
@@ -713,15 +713,15 @@ function saveOrientation() {
 
 function calibrationOn() {
     _('main').classList.add('loading');
-    _('calibrating').style.display='block';
+    let calibrating = document.createElement('div')
+    calibrating.innerHTML = '<div class="ring">Calibrating<span></span></div>'
     mui.overlay('on', {
         'keyboard': false,
         'static': true
-    }, _('calibrating'));
+    }, calibrating);
 }
 
-function calibrationOff()
-{
+function calibrationOff() {
     _('main').classList.remove('loading');
     mui.overlay('off');
 }

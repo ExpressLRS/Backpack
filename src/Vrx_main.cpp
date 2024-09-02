@@ -441,6 +441,8 @@ void setup()
     Serial.begin(VRX_UART_BAUD);
   #endif
 
+  delay(2000);
+
   options_init();
 
   eeprom.Begin();
