@@ -30,29 +30,8 @@ static IRAM_ATTR void irq_handler() {
 }
 
 bool IMU::initialize() {
-    auto *imu = new ICM42670P(Wire, false);
-    int ret = imu->begin();
-    if (ret == 0) {
-        if ((ret = imu->enableDataInterrupt(PIN_INT, irq_handler))) {
-            DBGLN("Interrupt enable failed: %d");
-            return false;
-        }
-
-        sampleRate = 100;
-
-        // Accel ODR = 100 Hz and Full Scale Range = 16G
-        imu->startAccel(100, 16);
-        aRes = 16.0/32768;
-        // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
-        imu->startGyro(100, 2000);
-        gRes = 2000.0/32768;
-
-        device = imu;
-        deviceType = IMU_ICM42670P;
-        return true;
-    }
-    delete imu;
-
+    Wire.setClock(400000);
+    DBGLN("Try MPU6050");
     auto *mpu6050 = new MPU6050(MPU6050_DEFAULT_ADDRESS, &Wire);
     mpu6050->initialize();
     if (mpu6050->testConnection()) {
@@ -90,6 +69,31 @@ bool IMU::initialize() {
         return true;
     }
     delete mpu6050;
+
+    DBGLN("Try ICM42670P");
+    auto *imu = new ICM42670P(Wire, false);
+    int ret = imu->begin();
+    if (ret == 0) {
+        if ((ret = imu->enableDataInterrupt(PIN_INT, irq_handler))) {
+            DBGLN("Interrupt enable failed: %d");
+            return false;
+        }
+
+        sampleRate = 100;
+
+        // Accel ODR = 100 Hz and Full Scale Range = 16G
+        imu->startAccel(100, 16);
+        aRes = 16.0/32768;
+        // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
+        imu->startGyro(100, 2000);
+        gRes = 2000.0/32768;
+
+        device = imu;
+        deviceType = IMU_ICM42670P;
+        DBGLN("Found ICM42670P");
+        return true;
+    }
+    delete imu;
 
     DBGLN("IMU initialization failed: No IMU");
     return false;

@@ -25,7 +25,8 @@ static uint32_t cal_started;
 
 static void initialize()
 {
-    Wire.begin(PIN_SDA, PIN_SCL, 400000);
+    Wire.setClock(400000);
+    Wire.begin(PIN_SDA, PIN_SCL);
 
     // Compass init first
     compass.init();
@@ -67,6 +68,16 @@ static int start()
     }
     imu.SetCalibration(config.GetIMUCalibration());
     memcpy(orientation, *config.GetBoardOrientation(), sizeof(orientation));
+
+#ifdef DEBUG_LOG
+    Serial.printf("Load %7.2f %7.2f %7.2f\r\n", orientation[0], orientation[1], orientation[2]);
+#endif
+    if (isnan(orientation[0]) || isnan(orientation[2]) || isnan(orientation[2])) {
+        orientation[0] = 0;
+        orientation[1] = 0;
+        orientation[2] = 0;
+    }
+    FusionAhrsReset(&ahrs);
     return DURATION_IMMEDIATELY;
 }
 
@@ -242,6 +253,9 @@ void resetBoardOrientation()
 
 void saveBoardOrientation()
 {
+#ifdef DEBUG_LOG
+    Serial.printf("Save %7.2f %7.2f %7.2f\r\n", orientation[0], orientation[1], orientation[2]);
+#endif
     config.SetBoardOrientation(orientation);
     config.Commit();
 }
