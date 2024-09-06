@@ -289,7 +289,7 @@ void getEuler(float *yaw, float *pitch, float *roll)
 device_t HeadTracker_device = {
     .initialize = initialize,
     .start = start,
-    .event = NULL,
+    .event = nullptr,
     .timeout = timeout
 };
 

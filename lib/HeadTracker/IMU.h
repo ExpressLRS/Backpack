@@ -6,15 +6,15 @@
 class IMU {
 public:
     bool initialize();
-    bool readIMUData(FusionVector &accel, FusionVector &gyro);
+    static bool readIMUData(FusionVector &accel, FusionVector &gyro);
     int getSampleRate() const { return sampleRate; }
 
-    void BeginCalibration();
-    bool UpdateCalibration(FusionVector &g);
+    static void BeginCalibration();
+    static bool UpdateCalibration(FusionVector &g);
 
-    void SetCalibration(float (*calibration)[3]);
+    static void SetCalibration(float (*calibration)[3]);
 
-    const float *GetCalibration();
+    static const float *GetCalibration();
 
 private:
     int sampleRate = 0;

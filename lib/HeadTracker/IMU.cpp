@@ -16,9 +16,9 @@ static float aRes;
 static float gRes;
 
 // Calibration data
+constexpr int Loops = 20;
 static float imuCalibration[3];
 static double kP, kI;
-static int Loops = 20;
 static int16_t eSample;
 static float ITerm[3] = {0 ,0, 0};
 static int c, L;
@@ -33,12 +33,12 @@ bool IMU::initialize() {
     Wire.setClock(400000);
     DBGLN("Try MPU6050");
     auto *mpu6050 = new MPU6050(MPU6050_DEFAULT_ADDRESS, &Wire);
-    mpu6050->initialize();
     if (mpu6050->testConnection()) {
         DBGLN("Found MPU6050");
         pinMode(PIN_INT, INPUT_PULLUP);
         attachInterrupt(PIN_INT, irq_handler, RISING);
         mpu6050->setSleepEnabled(false);
+        mpu6050->setClockSource(1);
         mpu6050->setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
         mpu6050->setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
         mpu6050->setDLPFMode(MPU6050_DLPF_BW_188);
@@ -52,8 +52,8 @@ bool IMU::initialize() {
         mpu6050->setI2CBypassEnabled(true);
         mpu6050->setClockOutputEnabled(false);
         mpu6050->setIntDataReadyEnabled(true);
-        mpu6050->setFIFOEnabled(true);
         mpu6050->resetFIFO();
+        mpu6050->setFIFOEnabled(true);
         mpu6050->setXGyroFIFOEnabled(true);
         mpu6050->setYGyroFIFOEnabled(true);
         mpu6050->setZGyroFIFOEnabled(true);
