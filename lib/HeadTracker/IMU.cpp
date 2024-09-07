@@ -32,26 +32,11 @@ static IRAM_ATTR void irq_handler() {
 bool IMU::initialize() {
     Wire.setClock(400000);
     DBGLN("Try MPU6050");
-    auto *mpu6050 = new MPU6050(MPU6050_DEFAULT_ADDRESS, &Wire);
-    if (mpu6050->testConnection()) {
+    auto *mpu6050 = new MPU6050();
+    if (mpu6050->initialize()) {
         DBGLN("Found MPU6050");
         pinMode(PIN_INT, INPUT_PULLUP);
         attachInterrupt(PIN_INT, irq_handler, RISING);
-        mpu6050->setSleepEnabled(false);
-        mpu6050->setClockSource(1);
-        mpu6050->setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
-        mpu6050->setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
-        mpu6050->setDLPFMode(MPU6050_DLPF_BW_188);
-        mpu6050->setRate(9); // 1000/(1+79) = 100Hz
-        mpu6050->setInterruptMode(false);
-        mpu6050->setInterruptDrive(false);
-        mpu6050->setInterruptLatch(false);
-        mpu6050->setInterruptLatchClear(true);
-        mpu6050->setFSyncInterruptLevel(false);
-        mpu6050->setFSyncInterruptEnabled(false);
-        mpu6050->setI2CBypassEnabled(true);
-        mpu6050->setClockOutputEnabled(false);
-        mpu6050->setIntDataReadyEnabled(true);
         sampleRate = 100;
 
         aRes = 16.0/32768;
@@ -95,7 +80,6 @@ bool IMU::initialize() {
 bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
     bool hasData = irq_received;
     if (!hasData) return false;
-    irq_received = false;
 
     switch (deviceType) {
         case IMU_ICM42670P: {
@@ -111,20 +95,15 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
         }
 
         case IMU_MPU6050: {
-            int16_t values[6];
-            ((MPU6050 *)device)->getMotion6(&values[0], &values[1], &values[2], &values[3], &values[4], &values[5]);
-            accel.axis.x =  values[0] * aRes;
-            accel.axis.y =  values[1] * aRes;
-            accel.axis.z =  values[2] * aRes;
-            gyro.axis.x =  values[3] * gRes;
-            gyro.axis.y =  values[4] * gRes;
-            gyro.axis.z =  values[5] * gRes;
+            if (!((MPU6050 *)device)->getDataFromRegisters(accel, gyro))
+                return false;
             break;
         }
     }
     gyro.axis.x += imuCalibration[0];
     gyro.axis.y += imuCalibration[1];
     gyro.axis.z += imuCalibration[2];
+    irq_received = false;
     return true;
 }
 
