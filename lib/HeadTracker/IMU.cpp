@@ -46,7 +46,7 @@ bool IMU::initialize() {
         mpu6050->setInterruptMode(false);
         mpu6050->setInterruptDrive(false);
         mpu6050->setInterruptLatch(false);
-        mpu6050->setInterruptLatchClear(false);
+        mpu6050->setInterruptLatchClear(true);
         mpu6050->setFSyncInterruptLevel(false);
         mpu6050->setFSyncInterruptEnabled(false);
         mpu6050->setI2CBypassEnabled(true);
@@ -120,7 +120,6 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
         case IMU_MPU6050: {
             uint8_t values[12];
             ((MPU6050 *)device)->GetCurrentFIFOPacket(values, 12);
-            ((MPU6050 *)device)->getIntDataReadyStatus(); // Clears the interrupt status
             accel.axis.x =  (int16_t)((values[0] << 8) | values[1]) * aRes;
             accel.axis.y =  (int16_t)((values[2] << 8) | values[3]) * aRes;
             accel.axis.z =  (int16_t)((values[4] << 8) | values[5]) * aRes;
