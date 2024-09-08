@@ -262,8 +262,8 @@ void saveBoardOrientation()
 
 void setBoardOrientation(int xAngle, int yAngle, int zAngle)
 {
-    orientation[0] = yAngle * DEG_TO_RAD;
-    orientation[1] = xAngle * DEG_TO_RAD;
+    orientation[0] = xAngle * DEG_TO_RAD;
+    orientation[1] = yAngle * DEG_TO_RAD;
     orientation[2] = zAngle * DEG_TO_RAD;
     ahrs.initialising = true;
     ahrs.rampedGain = 10.0f;

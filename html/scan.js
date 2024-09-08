@@ -636,8 +636,8 @@ function draw() {
     background(192);
 
     rotateY(radians(-Euler.heading+180));
-    rotateX(radians(-Euler.pitch));
-    rotateZ(radians(Euler.roll));
+    rotateZ(radians(Euler.pitch));
+    rotateX(radians(Euler.roll));
 
     push();
     stroke('#CCC');
@@ -662,7 +662,13 @@ function draw() {
 if (_('set-center')) _('set-center').addEventListener('click', () => {websock.send('sc');});
 if (_('cal-compass')) _('cal-compass').addEventListener('click', calibrateCompass);
 if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
-if (_('reset-board')) _('reset-board').addEventListener('click', () => {websock.send('ro');});
+if (_('reset-board')) _('reset-board').addEventListener('click', (e) => {
+    _('x-angle').value = 0;
+    _('y-angle').value = 0;
+    _('z-angle').value = 0;
+    setOrientation(e);
+    websock.send('ro');
+});
 if (_('save-orientation')) _('save-orientation').addEventListener('click', saveOrientation);
 if (_('x-angle')) _('x-angle').addEventListener('input', setOrientation);
 if (_('y-angle')) _('y-angle').addEventListener('input', setOrientation);

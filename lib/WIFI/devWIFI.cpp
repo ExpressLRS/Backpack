@@ -177,7 +177,7 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
     // Send JSON over websocket
     char payload[80];
     float (*o)[3] = config.GetBoardOrientation();
-    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2], (*o)[1], (*o)[0]);
+    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2] * RAD_TO_DEG, (*o)[0] * RAD_TO_DEG, (*o)[1] * RAD_TO_DEG);
     ws.text(client->id(), payload, strlen(payload));
   }
   if (type == WS_EVT_DATA) {
