@@ -118,12 +118,13 @@
 						<div id="canvas-holder"></div>
 						<div class="mui-panel mui--text-left" style="max-width: 800px; margin: 0 auto;" >
 							<div class="mui-info mui-panel" style="background: #BBDEFB">
-							To set the board orientation, place the device that the head tracker is mounted in/on in its natural position
-							and use the controls below to obtain a flat and level ground plane then press "Save Board Orientation".
-							</div>
-							<div style="max-width: 500px; margin: 0 auto;" class="mui--text-left">
-								<label for="z-angle">Yaw/Pan Angle <span id="label-z"></span>&nbsp;(<span id="angle-z"></span>)</label>
-								<input id="z-angle" type="range" min="-180" max="180" value="0" class="slider">
+								To set the board orientation, you need to think about the transformations required to take the board from flat and level and
+								pointing away from you using the right-hand rule to its mounted orientation.
+								<ul>
+									<li>First, calculate the angle of rotation about the pitch axis (pitch back is positive)</li>
+									<li>Second, calculate the angle of rotation about the roll axis (roll right is positive)</li>
+									<li>Lastly, calculate the angle of rotation about the yaw axis (yaw left is positive)</li>
+								</ul>
 							</div>
 							<div style="max-width: 500px; margin: 0 auto;" class="mui--text-left">
 								<label for="x-angle">Pitch/Tilt Angle <span id="label-x"></span>&nbsp;(<span id="angle-x"></span>)</label>
@@ -132,6 +133,10 @@
 							<div style="max-width: 500px; margin: 0 auto;" class="mui--text-left">
 								<label for="y-angle">Roll Angle <span id="label-y"></span>&nbsp;(<span id="angle-y"></span>)</label>
 								<input id="y-angle" type="range" min="-180" max="180" value="0" class="slider">
+							</div>
+							<div style="max-width: 500px; margin: 0 auto;" class="mui--text-left">
+								<label for="z-angle">Yaw/Pan Angle <span id="label-z"></span>&nbsp;(<span id="angle-z"></span>)</label>
+								<input id="z-angle" type="range" min="-180" max="180" value="0" class="slider">
 							</div>
 							<div style="max-width: 500px; margin: 0 auto;">
 								<button id='reset-board' class="mui-btn mui-btn--small mui-btn--primary">Reset Board Orientation</button>
