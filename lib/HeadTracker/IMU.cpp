@@ -52,13 +52,6 @@ bool IMU::initialize() {
         mpu6050->setI2CBypassEnabled(true);
         mpu6050->setClockOutputEnabled(false);
         mpu6050->setIntDataReadyEnabled(true);
-        mpu6050->resetFIFO();
-        mpu6050->setFIFOEnabled(true);
-        mpu6050->setXGyroFIFOEnabled(true);
-        mpu6050->setYGyroFIFOEnabled(true);
-        mpu6050->setZGyroFIFOEnabled(true);
-        mpu6050->setAccelFIFOEnabled(true);
-
         sampleRate = 100;
 
         aRes = 16.0/32768;
@@ -118,14 +111,14 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
         }
 
         case IMU_MPU6050: {
-            uint8_t values[12];
-            ((MPU6050 *)device)->GetCurrentFIFOPacket(values, 12);
-            accel.axis.x =  (int16_t)((values[0] << 8) | values[1]) * aRes;
-            accel.axis.y =  (int16_t)((values[2] << 8) | values[3]) * aRes;
-            accel.axis.z =  (int16_t)((values[4] << 8) | values[5]) * aRes;
-            gyro.axis.x =  (int16_t)((values[6] << 8) | values[7]) * gRes;
-            gyro.axis.y =  (int16_t)((values[8] << 8) | values[9]) * gRes;
-            gyro.axis.z =  (int16_t)((values[10] << 8) | values[11]) * gRes;
+            int16_t values[6];
+            ((MPU6050 *)device)->getMotion6(&values[0], &values[1], &values[2], &values[3], &values[4], &values[5]);
+            accel.axis.x =  values[0] * aRes;
+            accel.axis.y =  values[1] * aRes;
+            accel.axis.z =  values[2] * aRes;
+            gyro.axis.x =  values[3] * gRes;
+            gyro.axis.y =  values[4] * gRes;
+            gyro.axis.z =  values[5] * gRes;
             break;
         }
     }
