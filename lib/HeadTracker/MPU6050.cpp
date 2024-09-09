@@ -20,8 +20,7 @@ bool MPU6050::initialize() {
         0x38, 0x01,
         0x23, 0x78
     };
-    Wire.setTimeOut(1000);
-    Wire.setTimeOut(1000);
+    Wire.setTimeout(1000);
     Wire.beginTransmission(ADDR);
     Wire.write(WHO_AM_I);
     Wire.endTransmission();

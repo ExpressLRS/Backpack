@@ -5,10 +5,12 @@
 
 #include "ICM42670P.h"
 #include "MPU6050.h"
+#include "QMI8658C.h"
 
 static enum {
     IMU_ICM42670P,
-    IMU_MPU6050
+    IMU_MPU6050,
+    IMU_QMI8658C
 } deviceType;
 
 static void *device;
@@ -48,6 +50,23 @@ bool IMU::initialize() {
     }
     delete mpu6050;
 
+    DBGLN("Try QMI8658C");
+    auto *qmi8658c = new QMI8658C();
+    if (qmi8658c->initialize()) {
+        DBGLN("Found QMI8658C");
+        pinMode(PIN_INT, INPUT_PULLUP);
+        attachInterrupt(PIN_INT, irq_handler, RISING);
+        sampleRate = 100;
+
+        aRes = 16.0/32768;
+        gRes = 2000.0/32768;
+
+        device = qmi8658c;
+        deviceType = IMU_QMI8658C;
+        return true;
+    }
+    delete qmi8658c;
+
     DBGLN("Try ICM42670P");
     auto *imu = new ICM42670P(Wire, false);
     int ret = imu->begin();
@@ -84,7 +103,7 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
     switch (deviceType) {
         case IMU_ICM42670P: {
             inv_imu_sensor_event_t imu_event;
-            ((ICM42670P *)device)->getDataFromRegisters(&imu_event);
+            ((ICM42670P *) device)->getDataFromRegisters(&imu_event);
             accel.axis.x =  imu_event.accel[0] * aRes;
             accel.axis.y =  imu_event.accel[1] * aRes;
             accel.axis.z =  imu_event.accel[2] * aRes;
@@ -95,7 +114,13 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
         }
 
         case IMU_MPU6050: {
-            if (!((MPU6050 *)device)->getDataFromRegisters(accel, gyro))
+            if (!((MPU6050 *) device)->getDataFromRegisters(accel, gyro))
+                return false;
+            break;
+        }
+
+        case IMU_QMI8658C: {
+            if (!((QMI8658C *) device)->getDataFromRegisters(accel, gyro))
                 return false;
             break;
         }
