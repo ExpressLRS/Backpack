@@ -1,9 +1,11 @@
 #if defined(HAS_HEADTRACKING)
-#include "IMU.h"
-
+#include "Arduino.h"
+#include "Wire.h"
 #include "logging.h"
 
-#include "ICM42670P.h"
+#include "IMU.h"
+
+#include "ICMSeries.h"
 #include "MPU6050.h"
 #include "QMI8658C.h"
 
@@ -68,26 +70,18 @@ bool IMU::initialize() {
     delete qmi8658c;
 
     DBGLN("Try ICM42670P");
-    auto *imu = new ICM42670P(Wire, false);
-    int ret = imu->begin();
-    if (ret == 0) {
-        if ((ret = imu->enableDataInterrupt(PIN_INT, irq_handler))) {
-            DBGLN("Interrupt enable failed: %d");
-            return false;
-        }
-
+    auto *imu = new ICMSeries();
+    if (imu->initialize()) {
+        DBGLN("Found ICM42670P");
+        pinMode(PIN_INT, INPUT_PULLUP);
+        attachInterrupt(PIN_INT, irq_handler, RISING);
         sampleRate = 100;
 
-        // Accel ODR = 100 Hz and Full Scale Range = 16G
-        imu->startAccel(100, 16);
         aRes = 16.0/32768;
-        // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
-        imu->startGyro(100, 2000);
         gRes = 2000.0/32768;
 
         device = imu;
         deviceType = IMU_ICM42670P;
-        DBGLN("Found ICM42670P");
         return true;
     }
     delete imu;
@@ -102,14 +96,8 @@ bool IMU::readIMUData(FusionVector &accel, FusionVector &gyro) {
 
     switch (deviceType) {
         case IMU_ICM42670P: {
-            inv_imu_sensor_event_t imu_event;
-            ((ICM42670P *) device)->getDataFromRegisters(&imu_event);
-            accel.axis.x =  imu_event.accel[0] * aRes;
-            accel.axis.y =  imu_event.accel[1] * aRes;
-            accel.axis.z =  imu_event.accel[2] * aRes;
-            gyro.axis.x =  imu_event.gyro[0] * gRes;
-            gyro.axis.y =  imu_event.gyro[1] * gRes;
-            gyro.axis.z =  imu_event.gyro[2] * gRes;
+            if (!((ICMSeries *) device)->getDataFromRegisters(accel, gyro))
+                return false;
             break;
         }
 
