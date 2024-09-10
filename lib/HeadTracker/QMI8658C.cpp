@@ -40,9 +40,6 @@ int QMI8658C::writeCommand(uint8_t cmd)
 }
 
 bool QMI8658C::initialize() {
-    Wire.setTimeout(1000);
-    Wire.setClock(400000);
-
     writeRegister(0x60, 0xB0);  // Reset
     while(!(readRegister(0x4D) & 0x80));
 

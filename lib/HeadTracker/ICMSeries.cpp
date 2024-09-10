@@ -21,11 +21,7 @@ void ICMSeries::writeMem1Register(uint8_t reg, uint8_t val) {
 }
 
 bool ICMSeries::initialize() {
-    Wire.setTimeout(1000);
-    Wire.setClock(1000000);
-
     int whoami = readRegister(WHO_AM_I);
-    DBGLN("WHO_AM_I %x", whoami);
     if (whoami != 0x60 && whoami != 0x61 && whoami != 0x67 && whoami != 0x69 && whoami != 0x64) {
         return false;
     }

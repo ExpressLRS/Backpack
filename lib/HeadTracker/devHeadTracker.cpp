@@ -29,8 +29,9 @@ static uint32_t cal_started;
 
 static void initialize()
 {
-    Wire.setClock(400000);
     Wire.begin(PIN_SDA, PIN_SCL);
+    Wire.setClock(400000);
+    Wire.setTimeout(1000);
 
     // Compass init first
     compass.init();
@@ -38,15 +39,23 @@ static void initialize()
 	if (hasCompass) compass.setMode(0x01,0x08,0x10,0X00); // continuous, 100Hz, 8G, 512 over sample
 
     // Initializing the IMU
-    imu = new ICMSeries();
-    if (!imu->initialize())
-    {
+    imu = new MPU6050();
+    if (imu->initialize()) {
+        DBGLN("Found MPU6050 IMU")
+    }
+    else {
         delete imu;
-        imu = new MPU6050();
-        if (!imu->initialize()) {
+        imu = new QMI8658C();
+        if (imu->initialize()) {
+            DBGLN("Found QMI8658C IMU")
+        }
+        else {
             delete imu;
-            imu = new QMI8658C();
-            if (!imu->initialize()) {
+            imu = new ICMSeries();
+            if (imu->initialize()) {
+                DBGLN("Found ICM Series IMU")
+            }
+            else {
                 delete imu;
                 ht_state = STATE_ERROR;
                 return;

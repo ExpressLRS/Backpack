@@ -19,8 +19,6 @@ bool MPU6050::initialize() {
         0x38, 0x01,
         0x23, 0x78
     };
-    Wire.setTimeout(1000);
-    Wire.setClock(400000);
 
     if (((readRegister(WHO_AM_I) >> 1) & 0x3F) != 0x34) {
         return false;
