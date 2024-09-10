@@ -2,18 +2,16 @@
 #define BACKPACK_ICM_H
 
 #include "FusionMath.h"
+#include "IMUBase.h"
 
-class ICMSeries {
+class ICMSeries : IMUBase {
 public:
+    ICMSeries() : IMUBase(0x68) {}
     bool initialize();
     bool getDataFromRegisters(FusionVector &accel, FusionVector &gyro);
 
 private:
-    static void writeRegister(uint8_t reg, uint8_t val);
-    static uint8_t readRegister(uint8_t reg);
-    static uint8_t readBuffer(uint8_t reg, uint8_t *buffer, int length);
-
-    static void writeMem1Register(uint8_t reg, uint8_t val);
+    void writeMem1Register(uint8_t reg, uint8_t val);
 };
 
 #endif //BACKPACK_ICM_H

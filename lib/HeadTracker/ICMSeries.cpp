@@ -3,7 +3,6 @@
 #include "Wire.h"
 #include "ICMSeries.h"
 
-#define ADDR 0x68
 #define WHO_AM_I 0x75
 #define REVISION_ID 0x01
 #define ACCEL_X1 0x0B
@@ -12,13 +11,6 @@
 #define ARES (16.0 / 32768)
 #define GRES (2000.0 / 32768)
 
-void ICMSeries::writeRegister(uint8_t reg, uint8_t val) {
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.write(val);
-    Wire.endTransmission();
-}
-
 void ICMSeries::writeMem1Register(uint8_t reg, uint8_t val) {
     uint32_t t1 = millis();
     writeRegister(0x1F, 0x10);
@@ -26,27 +18,6 @@ void ICMSeries::writeMem1Register(uint8_t reg, uint8_t val) {
     writeRegister(0x7A, reg);
     writeRegister(0x7B, val);
     writeRegister(0x1F, 0x00);
-}
-
-uint8_t ICMSeries::readRegister(uint8_t reg) {
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.endTransmission();
-    Wire.requestFrom(ADDR, 1);
-    return Wire.read();
-}
-
-uint8_t ICMSeries::readBuffer(uint8_t reg, uint8_t *buffer, int length) {
-    uint32_t t1 = millis();
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.endTransmission();
-    Wire.requestFrom(ADDR, length);
-    int count = 0;
-    while (Wire.available() && (millis() - t1 < 1000) && count < length) {
-        buffer[count++] = Wire.read();
-    }
-    return count;
 }
 
 bool ICMSeries::initialize() {

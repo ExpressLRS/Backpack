@@ -3,43 +3,12 @@
 #include "Wire.h"
 #include "QMI8658C.h"
 
-#define ADDR 0x6B
 #define WHO_AM_I 0x00
 #define REVISION_ID 0x01
-#define INT_STATUS 0x3A
 #define ACCEL_X_L 0x35
 
 #define ARES (16.0 / 32768)
 #define GRES (1024.0 / 32768)
-
-void QMI8658C::writeRegister(uint8_t reg, uint8_t val) {
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.write(val);
-    Wire.endTransmission();
-}
-
-uint8_t QMI8658C::readRegister(uint8_t reg) {
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.endTransmission();
-    Wire.requestFrom(ADDR, 1);
-    return Wire.read();
-}
-
-uint8_t QMI8658C::readBuffer(uint8_t reg, uint8_t *buffer, int length) {
-    uint32_t t1 = millis();
-    Wire.beginTransmission(ADDR);
-    Wire.write(reg);
-    Wire.endTransmission();
-    Wire.requestFrom(ADDR, length);
-    int count = 0;
-    while (Wire.available() && (millis() - t1 < 1000) && count < length) {
-        buffer[count++] = Wire.read();
-    }
-    return count;
-}
-
 
 int QMI8658C::writeCommand(uint8_t cmd)
 {
@@ -80,7 +49,6 @@ bool QMI8658C::initialize() {
     writeRegister(0x02, 0b01100000);   // enable auto-increment, BE
 
     if (readRegister(WHO_AM_I) != 0x05) {
-        DBGLN("WHO_AM_I failed");
         return false;
     }
 
@@ -99,7 +67,7 @@ bool QMI8658C::initialize() {
 
     // disable AHB clock gating
     writeRegister(0x0B, 0x01);
-    writeCommand(0x12);                 // times out!
+    writeCommand(0x12);                 // times out, but meh!
 
     writeRegister(0x02, 0b01110000);   // enable auto-increment, BE, INT2 enable
 

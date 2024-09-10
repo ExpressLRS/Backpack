@@ -1,15 +1,12 @@
-#include "FusionMath.h"
+#include "IMUBase.h"
 
-class QMI8658C {
+class QMI8658C : public IMUBase {
 public:
+    QMI8658C() : IMUBase(0x6B) {}
+
     bool initialize();
     bool getDataFromRegisters(FusionVector &accel, FusionVector &gyro);
 
 private:
-    static void writeRegister(uint8_t reg, uint8_t val);
-    static uint8_t readRegister(uint8_t reg);
-
-    static int writeCommand(uint8_t cmd);
-
-    static uint8_t readBuffer(uint8_t reg, uint8_t *buffer, int length);
+    int writeCommand(uint8_t cmd);
 };
