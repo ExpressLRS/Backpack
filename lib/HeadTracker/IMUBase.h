@@ -8,6 +8,7 @@ public:
     virtual ~IMUBase() = default;
 
     virtual bool initialize() = 0;
+    void setInterruptHandler(int pin);
 
     bool readIMUData(FusionVector &accel, FusionVector &gyro);
 
@@ -35,8 +36,6 @@ protected:
     uint8_t readBuffer(uint8_t reg, uint8_t *buffer, int length);
 
     virtual bool getDataFromRegisters(FusionVector &accel, FusionVector &gyro) = 0;
-
-    void setInterruptHandler(int pin);
 };
 
 #endif //BACKPACK_IMUBASE_H

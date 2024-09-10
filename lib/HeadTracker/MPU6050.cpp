@@ -1,5 +1,4 @@
 #include "Arduino.h"
-#include "Wire.h"
 #include "MPU6050.h"
 
 #define WHO_AM_I 0x75
@@ -9,27 +8,22 @@
 #define GRES (2000.0 / 32768)
 
 bool MPU6050::initialize() {
-    static uint8_t INIT_DATA[] = {
-        0x6B, 0x01,
-        0x1B, 0x18,
-        0x1C, 0x18,
-        0x1A, 0x01,
-        0x19, 0x09,
-        0x37, 0x02,
-        0x38, 0x01,
-        0x23, 0x78
-    };
-
+    // First check if this an MPU6050
     if (((readRegister(WHO_AM_I) >> 1) & 0x3F) != 0x34) {
         return false;
     }
-    for (uint32_t i=0 ; i<sizeof(INIT_DATA) ; i+=2) {
-        writeRegister(INIT_DATA[i], INIT_DATA[i+1]);
-    }
 
-    setInterruptHandler(PIN_INT);
+    writeRegister(0x6B, 0x01);  // PWR_MGMT_1, use X axis gyro as clock reference
+    writeRegister(0x1B, 0x18);  // GYRO_CONFIG, 2000dps
+    writeRegister(0x1C, 0x18);  // ACCEL_CONFIG, +-16g
+    writeRegister(0x1A, 0x01);  // CONFIG, 184/188Hz DLPF
+    writeRegister(0x19, 0x09);  // SMPRT_DIV, 1kHz / (1 + 9) = 100Hz
+    writeRegister(0x37, 0x02);  // INT_PIN_CFG, I2C_BYPASS_EN
+    writeRegister(0x38, 0x01);  // INT_ENABLE, DATA_RDY_EN
+    writeRegister(0x23, 0x00);  // FIFO_EN, disabled
+
     gyroRange = 2000.0;
-    gRes = 2000.0 / 32768;
+    gRes = GRES;
 
     return true;
 }
@@ -37,6 +31,7 @@ bool MPU6050::initialize() {
 bool MPU6050::getDataFromRegisters(FusionVector &accel, FusionVector &gyro) {
     uint8_t values[14];
 
+    // Read Accel, temp & gyro data (ignore the temp)
     readBuffer(ACCEL_X_H, values, 14);
     accel.axis.x =  (int16_t)((values[0] << 8) | values[1]) * ARES;
     accel.axis.y =  (int16_t)((values[2] << 8) | values[3]) * ARES;

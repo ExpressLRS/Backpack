@@ -26,7 +26,6 @@ static float rollHome = 0, pitchHome = 0, yawHome = 0;
 static int calibrationData[3][2];
 static uint32_t cal_started;
 
-
 static void initialize()
 {
     Wire.begin(PIN_SDA, PIN_SCL);
@@ -62,6 +61,7 @@ static void initialize()
             }
         }
     }
+    imu->setInterruptHandler(PIN_INT);
 
     FusionAhrsInitialise(&ahrs);
     // Set AHRS algorithm settings

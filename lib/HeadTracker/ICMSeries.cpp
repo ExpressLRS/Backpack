@@ -1,5 +1,4 @@
 #include "Arduino.h"
-#include "logging.h"
 #include "Wire.h"
 #include "ICMSeries.h"
 
@@ -11,54 +10,33 @@
 #define ARES (16.0 / 32768)
 #define GRES (2000.0 / 32768)
 
-void ICMSeries::writeMem1Register(uint8_t reg, uint8_t val) {
-    uint32_t t1 = millis();
-    writeRegister(0x1F, 0x10);
-    while (!(readRegister(0x00) & 0x08) && (millis() - t1 < 1000));
-    writeRegister(0x7A, reg);
-    writeRegister(0x7B, val);
-    writeRegister(0x1F, 0x00);
-}
-
 bool ICMSeries::initialize() {
+    // Make sure it's one of the supported ICM IMUs
+    // ICM42607P, ICM42607C, ICM42670P, ICM42670S, ICM42670T
     int whoami = readRegister(WHO_AM_I);
     if (whoami != 0x60 && whoami != 0x61 && whoami != 0x67 && whoami != 0x69 && whoami != 0x64) {
         return false;
     }
 
     /* Reset device */
-    /* Ensure BLK_SEL_R and BLK_SEL_W are set to 0 */
-    writeRegister(0x7C, 0);
-    writeRegister(0x79, 0);
-    writeRegister(0x02, 0x10);
+    writeRegister(0x7C, 0);         // BLK_SEL_R
+    writeRegister(0x79, 0);         // BLK_SEL_W
+    writeRegister(0x02, 0x10);      // SIGNAL_PATH_RESET (soft reset device)
     delay(1);
-    writeRegister(0x01, 0x04);
-    writeRegister(0x36, 0x41);
+    writeRegister(0x01, 0x04);      // DEVICE_CONFIG
+    writeRegister(0x36, 0x41);      // INF_CONFIG1, i2c mode, PLL clock
 
-    /* Clear the reset done interrupt */
-    readRegister(0x3A);
+    readRegister(0x3A);             // Clear the reset done interrupt
 
-    writeMem1Register(0x03, 0x00);
+    writeRegister(0x06, 0x03);      // INT_CONFIG, interrupt push-pull, active high
+    writeRegister(0x2B, 0x08);      // INT_SOURCE0, drdy
 
-    writeRegister(0x06, 0x03);
-    writeRegister(0x35, 0x50);
-    writeMem1Register(0x00, 0x09);
-    writeRegister(0x29, 0x01);
+    writeRegister(0x21, 9);         // 16G, 100Hz
+    writeRegister(0x20, 9);         // 2000dps, 100Hz
+    writeRegister(0x1F, 0x0F);      // Low noise mode for Accel/Gyro
 
-    writeMem1Register(0x02, 0x01);
-    writeMem1Register(0x01, 0x24);
-
-    writeRegister(0x2B, 0x1C);
-    writeRegister(0x2C, 0x0F);
-    writeMem1Register(0x2F, 0xF8);
-
-    writeRegister(0x21, 9); // 16G, 100Hz
-    writeRegister(0x20, 9); // 2000dps, 100Hz
-    writeRegister(0x1F, 0x0F); // Low noise mode for Accel/Gyro
-
-    setInterruptHandler(PIN_INT);
     gyroRange = 2000.0;
-    gRes = 2000.0 / 32768;
+    gRes = GRES;
 
     return true;
 }
@@ -71,7 +49,7 @@ bool ICMSeries::getDataFromRegisters(FusionVector &accel, FusionVector &gyro) {
         return false;
     }
 
-    // read teh accel and gyro data
+    // read the accel and gyro data
     readBuffer(ACCEL_X1, values, 12);
 
     // map into Gs and dps

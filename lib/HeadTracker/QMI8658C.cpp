@@ -40,10 +40,10 @@ int QMI8658C::writeCommand(uint8_t cmd)
 }
 
 bool QMI8658C::initialize() {
-    writeRegister(0x60, 0xB0);  // Reset
+    writeRegister(0x60, 0xB0);          // Reset
     while(!(readRegister(0x4D) & 0x80));
 
-    writeRegister(0x02, 0b01100000);   // enable auto-increment, BE
+    writeRegister(0x02, 0b01100000);    // enable auto-increment, BIG endian
 
     if (readRegister(WHO_AM_I) != 0x05) {
         return false;
@@ -54,28 +54,27 @@ bool QMI8658C::initialize() {
         return false;
     }
 
-    writeRegister(0x03, 0b00110011);   // 16G, 896.8 ODR
-    writeRegister(0x06, 0b00000111);   // both LPF enabled @ 13.37% ODR
-    writeRegister(0x03, 0b10110011);   // 16G, 896.8 ODR + self test
-    writeRegister(0x04, 0b01100011);   // 1024dps, 896.8 ODR
-    writeRegister(0x06, 0b01110111);   // both LPF enabled @ 13.37% ODR
-    writeRegister(0x04, 0b11100011);   // 1024dps, 896.8 ODR + self test
-    writeRegister(0x08, 0b10000011);   // SyncSample, G+A enabled
+    writeRegister(0x03, 0b00110011);    // 16G, 896.8 ODR
+    writeRegister(0x06, 0b00000111);    // both LPF enabled @ 13.37% ODR
+    writeRegister(0x03, 0b10110011);    // 16G, 896.8 ODR + self test
+    writeRegister(0x04, 0b01100011);    // 1024dps, 896.8 ODR
+    writeRegister(0x06, 0b01110111);    // both LPF enabled @ 13.37% ODR
+    writeRegister(0x04, 0b11100011);    // 1024dps, 896.8 ODR + self test
+    writeRegister(0x08, 0b10000011);    // SyncSample, G+A enabled
 
     // disable AHB clock gating
     writeRegister(0x0B, 0x01);
     writeCommand(0x12);                 // times out, but meh!
 
-    writeRegister(0x02, 0b01110000);   // enable auto-increment, BE, INT2 enable
+    writeRegister(0x02, 0b01110000);    // enable auto-increment, BE, INT2 enable
 
     if ((readRegister(0x08) & 3) != 3) {
         DBGLN("Check mode failed");
         return false;
     }
 
-    setInterruptHandler(PIN_INT);
     gyroRange = 1024.0;
-    gRes = 1024.0 / 32768;
+    gRes = GRES;
 
     return true;
 }
