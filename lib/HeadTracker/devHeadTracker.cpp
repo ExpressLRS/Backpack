@@ -8,10 +8,14 @@
 #include "devHeadTracker.h"
 
 #include "QMC5883LCompass.h"
-#include "IMU.h"
+#include "IMUBase.h"
+#include "ICMSeries.h"
+#include "MPU6050.h"
+#include "QMI8658C.h"
+#include "Fusion.h"
 
 static HeadTrackerState ht_state = STATE_ERROR;
-static IMU imu;
+static IMUBase *imu;
 static QMC5883LCompass compass;
 static bool hasCompass = false;
 static FusionAhrs ahrs;
@@ -34,10 +38,20 @@ static void initialize()
 	if (hasCompass) compass.setMode(0x01,0x08,0x10,0X00); // continuous, 100Hz, 8G, 512 over sample
 
     // Initializing the IMU
-    if (!imu.initialize())
+    imu = new ICMSeries();
+    if (!imu->initialize())
     {
-        ht_state = STATE_ERROR;
-        return;
+        delete imu;
+        imu = new MPU6050();
+        if (!imu->initialize()) {
+            delete imu;
+            imu = new QMI8658C();
+            if (!imu->initialize()) {
+                delete imu;
+                ht_state = STATE_ERROR;
+                return;
+            }
+        }
     }
 
     FusionAhrsInitialise(&ahrs);
@@ -45,10 +59,10 @@ static void initialize()
     const FusionAhrsSettings settings = {
             .convention = FusionConventionNwu,
             .gain = 0.5f,
-            .gyroscopeRange = 2000.0f, /* replace this with actual gyroscope range in degrees/s */
+            .gyroscopeRange = imu->getGyroRange(), /* replace this with actual gyroscope range in degrees/s */
             .accelerationRejection = 10.0f,
             .magneticRejection = 10.0f,
-            .recoveryTriggerPeriod = 5U * imu.getSampleRate(), /* 5 seconds */
+            .recoveryTriggerPeriod = 5U * imu->getSampleRate(), /* 5 seconds */
     };
     FusionAhrsSetSettings(&ahrs, &settings);
     DBGLN("starting head tracker");
@@ -66,7 +80,7 @@ static int start()
         int (*cal)[3][2] = config.GetCompassCalibration();
         compass.setCalibration((*cal)[0][0],(*cal)[0][1],(*cal)[1][0],(*cal)[1][1],(*cal)[2][0],(*cal)[2][1]);
     }
-    imu.SetCalibration(config.GetIMUCalibration());
+    imu->setCalibration(config.GetIMUCalibration());
     memcpy(orientation, *config.GetBoardOrientation(), sizeof(orientation));
 
 #ifdef DEBUG_LOG
@@ -125,7 +139,7 @@ static int timeout()
     FusionVector a;
     FusionVector g;
 
-    if (!imu.readIMUData(a, g))
+    if (!imu->readIMUData(a, g))
         return DURATION_IMMEDIATELY;
 
     switch (ht_state) {
@@ -204,8 +218,8 @@ static int timeout()
         }
 
         case STATE_IMU_CALIBRATING: {
-            if (imu.UpdateCalibration(g)) {
-                config.SetIMUCalibration(imu.GetCalibration());
+            if (imu->updateCalibration(g)) {
+                config.SetIMUCalibration(imu->getCalibration());
                 config.Commit();
                 ht_state = STATE_RUNNING;
             }
@@ -230,7 +244,7 @@ void startCompassCalibration()
 
 void startIMUCalibration()
 {
-    imu.BeginCalibration();
+    imu->beginCalibration();
     cal_started = millis();
     ht_state = STATE_IMU_CALIBRATING;
 }

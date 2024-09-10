@@ -60,6 +60,10 @@ bool ICMSeries::initialize() {
     writeRegister(0x20, 9); // 2000dps, 100Hz
     writeRegister(0x1F, 0x0F); // Low noise mode for Accel/Gyro
 
+    setInterruptHandler(PIN_INT);
+    gyroRange = 2000.0;
+    gRes = 2000.0 / 32768;
+
     return true;
 }
 

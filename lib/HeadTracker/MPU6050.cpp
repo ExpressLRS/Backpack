@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #include "Wire.h"
 #include "MPU6050.h"
 
@@ -24,9 +25,14 @@ bool MPU6050::initialize() {
     if (((readRegister(WHO_AM_I) >> 1) & 0x3F) != 0x34) {
         return false;
     }
-    for (int i=0 ; i<sizeof(INIT_DATA) ; i+=2) {
+    for (uint32_t i=0 ; i<sizeof(INIT_DATA) ; i+=2) {
         writeRegister(INIT_DATA[i], INIT_DATA[i+1]);
     }
+
+    setInterruptHandler(PIN_INT);
+    gyroRange = 2000.0;
+    gRes = 2000.0 / 32768;
+
     return true;
 }
 

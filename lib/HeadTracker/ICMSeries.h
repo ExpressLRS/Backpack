@@ -4,10 +4,12 @@
 #include "FusionMath.h"
 #include "IMUBase.h"
 
-class ICMSeries : IMUBase {
+class ICMSeries : public IMUBase {
 public:
     ICMSeries() : IMUBase(0x68) {}
     bool initialize();
+
+protected:
     bool getDataFromRegisters(FusionVector &accel, FusionVector &gyro);
 
 private:

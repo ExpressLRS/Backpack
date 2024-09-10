@@ -75,6 +75,11 @@ bool QMI8658C::initialize() {
         DBGLN("Check mode failed");
         return false;
     }
+
+    setInterruptHandler(PIN_INT);
+    gyroRange = 1024.0;
+    gRes = 1024.0 / 32768;
+
     return true;
 }
 
