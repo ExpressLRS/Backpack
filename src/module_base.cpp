@@ -12,6 +12,7 @@
 #include "crsf_protocol.h"
 #endif
 
+int16_t ptrChannelData[3];
 void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE);
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
@@ -153,6 +154,9 @@ MSPModuleBase::Loop(uint32_t now)
             }
             else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && headTrackingEnabled)
             {
+                ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+                ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+                ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
                 sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();

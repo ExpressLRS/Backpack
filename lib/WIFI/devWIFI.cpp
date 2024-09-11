@@ -39,8 +39,10 @@
 #include <MAVLink.h>
 #endif
 #if defined(TARGET_VRX_BACKPACK)
-#if defined(HAS_HEADTRACKING)
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
 #include "devHeadTracker.h"
+#include "crsf_protocol.h"
+
 #endif
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
@@ -91,8 +93,10 @@ static IPAddress apBroadcast(10, 0, 0, 255);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
-#if defined(HAS_HEADTRACKING)
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
 static AsyncWebSocket ws("/ws");
+extern bool sendHeadTrackingChangesToVrx;
+extern bool headTrackingEnabled;
 #endif
 static bool servicesStarted = false;
 
@@ -162,36 +166,36 @@ static struct {
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
-#if defined(HAS_HEADTRACKING)
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
   {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
   {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
   {"/p5.js", "text/javascript", (uint8_t *)P5_JS, sizeof(P5_JS)},
 #endif
 };
 
-#if defined(HAS_HEADTRACKING)
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
 static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
 {
   if (type == WS_EVT_CONNECT) {
-    static const char IMU_JSON[] PROGMEM = R"=====({"orientation":true,"heading":%f,"pitch":%f,"roll":%f})=====";
+    static const char IMU_JSON[] PROGMEM = R"=====({"orientation":true,"heading":%f,"pitch":%f,"roll":%f,"hasIMU":%s})=====";
     // Send JSON over websocket
-    char payload[80];
+    char payload[128];
+#if defined(HAS_HEADTRACKING)
     float (*o)[3] = config.GetBoardOrientation();
-    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2] * RAD_TO_DEG, (*o)[0] * RAD_TO_DEG, (*o)[1] * RAD_TO_DEG);
+    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2] * RAD_TO_DEG, (*o)[0] * RAD_TO_DEG, (*o)[1] * RAD_TO_DEG, "true");
+#else
+    snprintf_P(payload, sizeof(payload), IMU_JSON, 0.0, 0.0, 0.0, "false");
+#endif
     ws.text(client->id(), payload, strlen(payload));
+    headTrackingEnabled = true;
+    sendHeadTrackingChangesToVrx = true;
   }
   if (type == WS_EVT_DATA) {
-    if (memcmp(data, "cc", 2) == 0) {
-      startCompassCalibration();
-    } else if (memcmp(data, "ci", 2) == 0) {
-      startIMUCalibration();
-    } else if (memcmp(data, "sc", 2) == 0) {
+    if (memcmp(data, "sc", 2) == 0) {
       resetCenter();
-    } else if (memcmp(data, "ro", 2) == 0) {
-      resetBoardOrientation();
-    } else if (memcmp(data, "sv", 2) == 0) {
-      saveBoardOrientation();
-    } else if (memcmp(data, "o:", 2) == 0) {
+    }
+#if defined(HAS_HEADTRACKING)
+    if (memcmp(data, "o:", 2) == 0) {
       char buf[64];
       memcpy(buf, data+2, len-2);
       buf[len-2] = 0;
@@ -203,7 +207,16 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
       int y = atoi(colon+1);
       int z = atoi(colon2+1);
       setBoardOrientation(x, y, z);
+    } else if (memcmp(data, "cc", 2) == 0) {
+      startCompassCalibration();
+    } else if (memcmp(data, "ci", 2) == 0) {
+      startIMUCalibration();
+    } else if (memcmp(data, "ro", 2) == 0) {
+      resetBoardOrientation();
+    } else if (memcmp(data, "sv", 2) == 0) {
+      saveBoardOrientation();
     }
+#endif
   }
 }
 #endif
@@ -247,6 +260,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 
 #if defined(STM32_TX_BACKPACK)
   json["stm32"] = "yes";
+#endif
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
+  json["config"]["head-tracking"] = true;
 #endif
 #if defined(AAT_BACKPACK)
   WebAatAppendConfig(json);
@@ -682,7 +698,7 @@ static void startServices()
     server.on(files[i].url, WebUpdateSendContent);
   }
 
-  #if defined(HAS_HEADTRACKING)
+  #if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
   #endif
@@ -865,14 +881,13 @@ static void HandleWebUpdate()
       rebootTime = millis() + 200;
     }
 
-#if defined(HAS_HEADTRACKING)
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
     static long lastCall = 0;
     static HeadTrackerState last_state = STATE_ERROR;
     if (now - lastCall > 50) {
       auto current_state = getHeadTrackerState();
-      switch(current_state)
+      if (current_state == STATE_RUNNING)
       {
-      case STATE_RUNNING:
         if (last_state == STATE_IMU_CALIBRATING || last_state == STATE_COMPASS_CALIBRATING)
         {
           ws.textAll("{\"done\": true}");
@@ -890,13 +905,6 @@ static void HandleWebUpdate()
             ws.textAll(payload, strlen(payload));
           }
         }
-        break;
-
-      case STATE_COMPASS_CALIBRATING:
-        break;
-
-      case STATE_IMU_CALIBRATING:
-        break;
       }
       lastCall = now;
       last_state = current_state;

@@ -44,6 +44,8 @@ function updateConfig(data) {
         _('stamode').style.display = 'block';
         if (!config['aat']) {
             if (_('rtctab')) _('rtctab').style.display = 'table-cell';
+        }
+        if (config['head-tracking']) {
             if (_('httab')) _('httab').style.display = 'table-cell';
         }
         _('ssid').textContent = config.ssid;
@@ -607,7 +609,10 @@ function start() {
                     _('label-x').textContent = d.pitch;
                     _('label-y').textContent = d.roll;
                     _('label-z').textContent = d.heading;
-                                }
+                    if (!d.hasIMU) {
+                        show(document.querySelectorAll('.hasIMU'), 'none');
+                    }
+                }
                 if (d['heading']) {
                     Euler = d;
                     _('angle-x').textContent = Euler.pitch;

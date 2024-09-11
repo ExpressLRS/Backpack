@@ -510,7 +510,6 @@ void loop()
       sendRTCChangesToVrx = false;
       vrxModule.SetRTC();
     }
-    return;
   }
 
   if (BindingExpired(now))

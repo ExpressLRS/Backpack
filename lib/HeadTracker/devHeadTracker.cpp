@@ -1,11 +1,14 @@
 #include <Arduino.h>
 
-#if defined(HAS_HEADTRACKING)
 #include <Wire.h>
-#include "config.h"
-#include "logging.h"
+
+#include "crsf_protocol.h"
 
 #include "devHeadTracker.h"
+
+#if defined(HAS_HEADTRACKING)
+#include "config.h"
+#include "logging.h"
 
 #include "QMC5883LCompass.h"
 #include "IMUBase.h"
@@ -316,4 +319,30 @@ device_t HeadTracker_device = {
     .timeout = timeout
 };
 
+#endif
+#if defined(SUPPORT_HEADTRACKING)
+extern int16_t ptrChannelData[3];
+
+HeadTrackerState getHeadTrackerState()
+{
+    return STATE_RUNNING;
+}
+
+float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
+    const float run = in_max - in_min;
+    const float rise = out_max - out_min;
+    const float delta = x - in_min;
+    return (delta * rise) / run + out_min;
+}
+
+void resetCenter()
+{
+}
+
+void getEuler(float *yaw, float *pitch, float *roll)
+{
+    *yaw = fmap(ptrChannelData[0], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
+    *pitch = fmap(ptrChannelData[2], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
+    *roll = -fmap(ptrChannelData[1], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
+}
 #endif
