@@ -615,8 +615,8 @@ function start() {
                 }
                 if (d['heading']) {
                     Euler = d;
-                    _('angle-x').textContent = Euler.pitch;
-                    _('angle-y').textContent = Euler.roll;
+                    _('angle-x').textContent = Euler.roll;
+                    _('angle-y').textContent = Euler.pitch;
                     _('angle-z').textContent = Euler.heading;
                 }
             };
@@ -665,7 +665,6 @@ function draw() {
 }
 
 if (_('set-center')) _('set-center').addEventListener('click', () => {websock.send('sc');});
-if (_('cal-compass')) _('cal-compass').addEventListener('click', calibrateCompass);
 if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
 if (_('reset-board')) _('reset-board').addEventListener('click', (e) => {
     _('x-angle').value = 0;
@@ -678,19 +677,6 @@ if (_('save-orientation')) _('save-orientation').addEventListener('click', saveO
 if (_('x-angle')) _('x-angle').addEventListener('input', setOrientation);
 if (_('y-angle')) _('y-angle').addEventListener('input', setOrientation);
 if (_('z-angle')) _('z-angle').addEventListener('input', setOrientation);
-
-async function calibrateCompass() {
-    await cuteAlert({
-        type: 'info',
-        title: "Calibrate Compass",
-        message: "Rotate the board in all directions for 10 seconds until the succeeded popup appears",
-        confirmText: "Calibrate",
-        cancelText: "Cancel"
-    }).then((e)=>{
-        websock.send('cc');
-        calibrationOn();
-    });
-}
 
 async function calibrateIMU() {
     await cuteAlert({

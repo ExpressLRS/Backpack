@@ -7,11 +7,9 @@ extern device_t HeadTracker_device;
 typedef enum {
     STATE_ERROR,
     STATE_RUNNING,
-    STATE_COMPASS_CALIBRATING,
     STATE_IMU_CALIBRATING
 } HeadTrackerState;
 
-void startCompassCalibration();
 void startIMUCalibration();
 void resetBoardOrientation();
 void saveBoardOrientation();

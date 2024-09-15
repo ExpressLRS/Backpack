@@ -207,8 +207,6 @@ static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, Aw
       int y = atoi(colon+1);
       int z = atoi(colon2+1);
       setBoardOrientation(x, y, z);
-    } else if (memcmp(data, "cc", 2) == 0) {
-      startCompassCalibration();
     } else if (memcmp(data, "ci", 2) == 0) {
       startIMUCalibration();
     } else if (memcmp(data, "ro", 2) == 0) {
@@ -888,7 +886,7 @@ static void HandleWebUpdate()
       auto current_state = getHeadTrackerState();
       if (current_state == STATE_RUNNING)
       {
-        if (last_state == STATE_IMU_CALIBRATING || last_state == STATE_COMPASS_CALIBRATING)
+        if (last_state == STATE_IMU_CALIBRATING)
         {
           ws.textAll("{\"done\": true}");
         }
