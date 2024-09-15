@@ -640,9 +640,9 @@ function setup() {
 function draw() {
     background(192);
 
-    rotateY(radians(-Euler.heading+180));
+    rotateY(radians(Euler.heading + 180)); // Add 180 degrees so the plane is facing away at zero
     rotateZ(radians(Euler.pitch));
-    rotateX(radians(Euler.roll));
+    rotateX(radians(-Euler.roll)); // Invert the about the pitch axis (i.e. roll is opposite)
 
     push();
     stroke('#CCC');

@@ -64,29 +64,29 @@ ModuleBase::Loop(uint32_t now)
 {
 #if defined(HAS_HEADTRACKING)
     static uint32_t lastSend = 0;
-    if (headTrackingEnabled && now - lastSend > 20)
+    if (connectionState != wifiUpdate && headTrackingEnabled && now - lastSend > 20)
     {
         float fyaw, fpitch, froll;
         getEuler(&fyaw, &fpitch, &froll);
 
         // convert from degrees to servo positions
 
-        int pan = map((fyaw + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
-        int tilt = map((fpitch + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
-        int roll = map((froll + 90)*1000, 0, 180*1000, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
-
+        int pan = -map(fyaw*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int tilt = map(fpitch*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int roll = map(froll*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
         mspPacket_t packet;
         packet.reset();
         packet.makeCommand();
         packet.function = MSP_ELRS_BACKPACK_SET_PTR;
         packet.addByte(pan & 0xFF);
         packet.addByte(pan >> 8);
-        packet.addByte(tilt & 0xFF);
+        packet.addByte(roll & 0xFF); // rotating about roll is pitch axis
+        packet.addByte(roll>> 8);
+        packet.addByte(tilt & 0xFF); // rotating about pitch is roll axis
         packet.addByte(tilt >> 8);
-        packet.addByte(roll & 0xFF);
-        packet.addByte(roll >> 8);
         sendMSPViaEspnow(&packet);
         lastSend = now;
+Serial.printf("%6.2f, %d\r\n",fpitch, tilt);
     }
 #endif
 }

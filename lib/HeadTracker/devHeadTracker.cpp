@@ -307,9 +307,9 @@ void resetCenter()
 
 void getEuler(float *yaw, float *pitch, float *roll)
 {
-    *yaw = -euler.angle.yaw;
-    *pitch = euler.angle.pitch;
-    *roll = -euler.angle.roll;
+    *yaw = normalize(euler.angle.yaw, -180.0, 180.0);
+    *pitch = normalize(euler.angle.pitch, -180.0, 180.0);
+    *roll = normalize(euler.angle.roll, -180.0, 180.0);
 }
 
 device_t HeadTracker_device = {
@@ -341,8 +341,8 @@ void resetCenter()
 
 void getEuler(float *yaw, float *pitch, float *roll)
 {
-    *yaw = fmap(ptrChannelData[0], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
+    *yaw = -fmap(ptrChannelData[0], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
     *pitch = fmap(ptrChannelData[2], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
-    *roll = -fmap(ptrChannelData[1], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
+    *roll = fmap(ptrChannelData[1], CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000, -180.0, 180.0);
 }
 #endif
