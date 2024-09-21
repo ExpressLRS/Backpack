@@ -295,7 +295,7 @@
             },
             "nomad": {
                 "product_name": "RadioMaster Nomad Xrossband TX",
-                "firmware": "ESP_TX_Backpack",
+                "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["passthru", "wifi"]
             }
