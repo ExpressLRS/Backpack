@@ -164,6 +164,7 @@ VrxBackpackConfig::SetDefaults()
     m_config.aat.project = 0xff;
     m_config.aat.servoSmooth = 5;
     m_config.aat.centerDir = 0; // N
+    m_config.aat.azimuthServoFastFlip = 1;
     m_config.aat.servoEndpoints[0].low = 500; // AZIM
     m_config.aat.servoEndpoints[0].high = 2500;
     m_config.aat.servoEndpoints[1].low = 1000; // ELEV
@@ -221,6 +222,12 @@ VrxBackpackConfig::SetAatServoSmooth(uint8_t val)
 }
 
 void
+VrxBackpackConfig::SetAatAzimuthServoFastFlip(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.azimuthServoFastFlip, val);
+}
+
+void
 VrxBackpackConfig::SetAatServoLow(uint8_t idx, uint16_t val)
 {
     CONFIG_MOD_CHECK(m_config.aat.servoEndpoints[idx].low, val);
@@ -254,6 +261,12 @@ void
 VrxBackpackConfig::SetAatServoMode(uint8_t val)
 {
     CONFIG_MOD_CHECK(m_config.aat.servoMode, val);
+}
+
+void
+VrxBackpackConfig::SetAatSatelliteHomeMin(uint8_t val)
+{
+    CONFIG_MOD_CHECK(m_config.aat.satelliteHomeMin, val);
 }
 
 /**
