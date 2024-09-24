@@ -7,6 +7,7 @@ void WebAatAppendConfig(ArduinoJson::JsonDocument &json)
 {
     auto aat = json["config"].createNestedObject("aat");
     aat["satmin"] = config.GetAatSatelliteHomeMin();
+    aat["azim_sff"] = config.GetAatAzimuthServoFastFlip();
     aat["servosmoo"] = config.GetAatServoSmooth();
     aat["servomode"] = config.GetAatServoMode();
     aat["project"] = config.GetAatProject();
@@ -28,6 +29,10 @@ void WebAatConfig(AsyncWebServerRequest *request)
     // Servos
     if (request->hasArg("servosmoo"))
         config.SetAatServoSmooth(request->arg("servosmoo").toInt());
+    if (request->hasArg("azim_sff"))
+        config.SetAatAzimuthServoFastFlip(request->arg("azim_sff").toInt());
+    else
+        config.SetAatAzimuthServoFastFlip(0);
     if (request->hasArg("servomode"))
         config.SetAatServoMode(request->arg("servomode").toInt());
     if (request->hasArg("azim_center"))
@@ -50,6 +55,9 @@ void WebAatConfig(AsyncWebServerRequest *request)
         vrxModule.overrideTargetBearing(request->arg("bear").toInt());
     if (request->hasArg("elev"))
         vrxModule.overrideTargetElev(request->arg("elev").toInt());
+    // Satellite Config
+    if (request->hasArg("satmin"))
+        config.SetAatSatelliteHomeMin(request->arg("satmin").toInt());
 
     const char *response;
     if (request->arg("commit").toInt() == 1)
