@@ -52,6 +52,8 @@ TxBackpackConfig::SetDefaults()
     m_config.password[0] = 0;
     memset(m_config.address, 0, 6);
     m_config.wifiService = WIFI_SERVICE_UPDATE;
+    m_config.mavlinkListenPort = 14555;  // Default MavLink listen port
+    m_config.mavlinkSendPort = 14550;    // Default MavLink send port
     m_modified = true;
     Commit();
 }
@@ -95,6 +97,19 @@ void
 TxBackpackConfig::SetTelemMode(telem_mode_t mode)
 {
     m_config.telemMode = mode;
+    m_modified = true;
+}
+void
+TxBackpackConfig::SetMavlinkListenPort(uint16_t port)
+{
+    m_config.mavlinkListenPort = port;
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetMavlinkSendPort(uint16_t port)
+{
+    m_config.mavlinkSendPort = port;
     m_modified = true;
 }
 #endif
@@ -297,6 +312,7 @@ TimerBackpackConfig::Commit()
     if (!m_modified)
     {
         // No changes
+        DBGLN("No Config Changes Detected")
         return;
     }
     // Write the struct to eeprom
