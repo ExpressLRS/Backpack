@@ -228,8 +228,8 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
   }
 }
 
-static void sendResponse(AsyncWebServerRequest *request, const String &msg, const String &type = "application/json") {
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", msg);
+static void sendResponse(AsyncWebServerRequest *request, const String &msg, const String &type = "text/plain") {
+  AsyncWebServerResponse *response = request->beginResponse(200, type, msg);
   response->addHeader("Connection", "close");
   request->send(response);
   request->client()->close();
