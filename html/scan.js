@@ -6,6 +6,7 @@ function _(el) {
 
 function init() {
     initAat();
+    initMavLink();
 
     // sends XMLHttpRequest, so do it last
     initOptions();
@@ -25,6 +26,27 @@ function initAat() {
     );
 }
 
+function initMavLink() {
+    // Fetch initial MavLink configuration
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            const data = JSON.parse(this.responseText);
+            updateMavLinkConfig(data);
+            
+            // Start periodic updates of MavLink stats
+            updateMavLinkStats();
+            setInterval(updateMavLinkStats, 1000);
+
+            const resetButton = _('mavlink_reset_defaults');
+            if (resetButton) {
+                resetButton.addEventListener('click', resetMavLinkDefaults);
+            }
+        }
+    };
+    xmlhttp.open('GET', '/mavlink', true);
+    xmlhttp.send();
+}
 function initOptions() {
     const xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
@@ -36,6 +58,63 @@ function initOptions() {
     };
     xmlhttp.open('GET', '/config', true);
     xmlhttp.send();
+}
+
+function updateMavLinkConfig(data) {
+    _('mavlink_listen_port').value = data.ports.listen;
+    _('mavlink_send_port').value = data.ports.send;
+}
+
+function updateMavLinkStats() {
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            const data = JSON.parse(this.responseText);
+            
+            // Update Stats
+            _('mavlink_gcs_ip').textContent = data.ip.gcs;
+            _('mavlink_packets_down').textContent = data.counters.packets_down;
+            _('mavlink_packets_up').textContent = data.counters.packets_up;
+            _('mavlink_drops_down').textContent = data.counters.drops_down;
+            _('mavlink_overflows_down').textContent = data.counters.overflows_down;
+        }
+    };
+    xmlhttp.open('GET', '/mavlink', true);
+    xmlhttp.send();
+}
+
+function resetMavLinkDefaults() {
+    const defaultSendPort = 14550;
+    const defaultListenPort = 14555;
+
+    // Update the input fields
+    _('mavlink_listen_port').value = defaultListenPort;
+    _('mavlink_send_port').value = defaultSendPort;
+
+    // Send the new values to the server
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4) {
+            if (this.status == 200) {
+                cuteAlert({
+                    type: "success",
+                    title: "Default Settings Applied",
+                    message: "MavLink ports have been reset to default values."
+                });
+                // Refresh the MavLink stats to reflect the changes
+                updateMavLinkStats();
+            } else {
+                cuteAlert({
+                    type: "error",
+                    title: "Error",
+                    message: "Failed to apply default settings. Please try again."
+                });
+            }
+        }
+    };
+    xmlhttp.open('POST', '/setmavlink', true);
+    xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xmlhttp.send(`listen=${defaultListenPort}&send=${defaultSendPort}`);
 }
 
 function updateConfig(data) {

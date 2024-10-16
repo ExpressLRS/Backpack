@@ -228,12 +228,15 @@ static void WebUpdateSendNetworks(AsyncWebServerRequest *request)
   }
 }
 
-static void sendResponse(AsyncWebServerRequest *request, const String &msg, WiFiMode_t mode) {
-  AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", msg);
+static void sendResponse(AsyncWebServerRequest *request, const String &msg, const String &type = "text/plain") {
+  AsyncWebServerResponse *response = request->beginResponse(200, type, msg);
   response->addHeader("Connection", "close");
   request->send(response);
   request->client()->close();
   changeTime = millis();
+}
+
+static void changeWifiMode(WiFiMode_t mode){
   changeMode = mode;
 }
 
@@ -241,7 +244,8 @@ static void WebUpdateAccessPoint(AsyncWebServerRequest *request)
 {
   DBGLN("Starting Access Point");
   String msg = String("Access Point starting, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
-  sendResponse(request, msg, WIFI_AP);
+  sendResponse(request, msg);
+  changeWifiMode(WIFI_AP);
 }
 
 static void WebUpdateConnect(AsyncWebServerRequest *request)
@@ -249,7 +253,8 @@ static void WebUpdateConnect(AsyncWebServerRequest *request)
   DBGLN("Connecting to home network");
   String msg = String("Connecting to network '") + station_ssid + "', connect to http://" +
     myHostname + ".local from a browser on that network";
-  sendResponse(request, msg, WIFI_STA);
+  sendResponse(request, msg);
+  changeWifiMode(WIFI_STA);
 }
 
 static void WebUpdateSetHome(AsyncWebServerRequest *request)
@@ -280,13 +285,16 @@ static void WebUpdateForget(AsyncWebServerRequest *request)
     strcpy(station_ssid, firmwareOptions.home_wifi_ssid);
     strcpy(station_password, firmwareOptions.home_wifi_password);
     String msg = String("Temporary network forgotten, attempting to connect to network '") + station_ssid + "'";
-    sendResponse(request, msg, WIFI_STA);
+    sendResponse(request, msg);
+    changeWifiMode(WIFI_STA);
+    
   }
   else {
     station_ssid[0] = 0;
     station_password[0] = 0;
     String msg = String("Home network forgotten, please connect to access point '") + wifi_ap_ssid + "' with password '" + wifi_ap_password + "'";
-    sendResponse(request, msg, WIFI_AP);
+    sendResponse(request, msg);
+    changeWifiMode(WIFI_AP);
   }
 }
 
@@ -465,8 +473,8 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   json["counters"]["packets_up"] = stats->packets_uplink;
   json["counters"]["drops_down"] = stats->drops_downlink;
   json["counters"]["overflows_down"] = stats->overflows_downlink;
-  json["ports"]["listen"] = MAVLINK_PORT_LISTEN;
-  json["ports"]["send"] = MAVLINK_PORT_SEND;
+  json["ports"]["listen"] = config.GetMavlinkListenPort();
+  json["ports"]["send"] = config.GetMavlinkSendPort();
   if (gcsIPSet) {
     json["ip"]["gcs"] = gcsIP.toString();
   } else {
@@ -477,6 +485,35 @@ static void WebMAVLinkHandler(AsyncWebServerRequest *request)
   AsyncResponseStream *response = request->beginResponseStream("application/json");
   serializeJson(json, *response);
   request->send(response);
+}
+
+static void WebUpdateSetMavLink(AsyncWebServerRequest *request)
+{
+    uint16_t listen_port = request->arg("listen").toInt();
+    uint16_t send_port = request->arg("send").toInt();
+
+    DBGLN("Setting MavLink configuration: listen=%d, send=%d", listen_port, send_port);
+
+    config.SetMavlinkListenPort(listen_port);
+    config.SetMavlinkSendPort(send_port);
+    config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
+    config.Commit();
+
+    // Restart MavLink UDP service
+    mavlinkUDP.stop();
+    mavlinkUDP.begin(config.GetMavlinkListenPort());
+
+    String response = F(
+      "<html><head>"
+      "<meta http-equiv='refresh' content='2;url=/'>"
+      "<title>MavLink Settings Updated</title>"
+      "</head><body>"
+      "<h1>MavLink Settings Updated Successfully</h1>"
+      "<p>Redirecting back to the main page in 2 seconds...</p>"
+      "</body></html>"
+    );
+
+    sendResponse(request, response, "text/html");
 }
 #endif
 
@@ -600,6 +637,9 @@ static void startServices()
   server.on("/config", HTTP_GET, GetConfiguration);
   server.on("/networks.json", WebUpdateSendNetworks);
   server.on("/sethome", WebUpdateSetHome);
+  #if defined(MAVLINK_ENABLED)
+  server.on("/setmavlink", WebUpdateSetMavLink);
+  #endif
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
@@ -632,7 +672,7 @@ static void startServices()
 
   startMDNS();
 #if defined(MAVLINK_ENABLED)
-  mavlinkUDP.begin(MAVLINK_PORT_LISTEN);
+  mavlinkUDP.begin(config.GetMavlinkListenPort());
 #endif
 
   servicesStarted = true;
@@ -748,7 +788,7 @@ static void HandleWebUpdate()
           remote = WiFi.broadcastIP();
         }
 
-        mavlinkUDP.beginPacket(remote, MAVLINK_PORT_SEND);
+        mavlinkUDP.beginPacket(remote, config.GetMavlinkSendPort());
         mavlink_message_t* msgQueue = mavlink.GetQueuedMsgs();
         for (uint8_t i = 0; i < mavlink.GetQueuedMsgCount(); i++)
         {
