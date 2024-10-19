@@ -149,8 +149,8 @@
 					<form action="/aatconfig" id="aatconfig" method="POST" class="mui-form">
 						<div class="mui-panel">
 							<fieldset><legend>Servo maximum speed</legend>
-								Use the slider to limit the maximum rotational speed of the servo. Note that when the azimuth servo
-								must flip from one side to the other, the servo always will move at full speed.
+								Use the slider to set a limit on the servo's maximum rotational speed. Note that when the azimuth servo
+								needs to flip from one side to the other, it may move at full speed if the 'Fast Flip' option is enabled.
 								<input type="range" id="servosmoo" name="servosmoo" list="servosmoo_markers" value="5" min="0" max="9" step="1" style="width: 100%;"/>
 								<datalist id="servosmoo_markers">
 									<option value="0" label="Fast" title="Lickedy Speed"></option>
@@ -179,7 +179,7 @@
 						</div>
 						<div class="mui-panel">
 							<fieldset><legend>Azimuth servo</legend>
-								Enter the micrsecond (us) values for the min and max position of the horizontal servo, using the slider to test positions.
+								Enter the microsecond (us) values for the min and max position of the horizontal servo, using the slider to test positions.
 								<input type="range" id="bear" name="bear" class="aatlive" list="azim_markers" value="0" min="-180" max="180" step="45" style="width: 100%;"/>
 								<datalist id="bear_markers">
 									<option value="-180"></option>
@@ -205,9 +205,15 @@
 									<input id="azim_max" type="number" name="azim_max" min="500" max="2500"/>
 									<label for="azim_max">Max</label>
 								</div>
+								<div class="mui-checkbox mui-col-xs-12">
+									<label>
+										<input id="azim_sff" type="checkbox" name="azim_sff" value="1">
+										Fast Flip (If the azimuth servo needs to move more than 80% of the distance, jump immediately)
+									</label>
+								</div>
 							</fieldset>
 							<fieldset><legend>Elevation servo</legend>
-								Enter the micrsecond (us) values for the min and max position of the vertical servo, using the slider to test positions.
+								Enter the microsecond (us) values for the min and max position of the vertical servo, using the slider to test positions.
 								<input type="range" id="elev" name="elev" class="aatlive" list="elev_markers" value="45" min="0" max="90" step="15" style="width: 100%;"/>
 								<datalist id="elev_markers">
 									<option value="0" label="0"></option>
@@ -233,7 +239,7 @@
 						</div>
 						<div class="mui-panel">
 							<fieldset><legend>Battery voltage</legend>
-								Battery voltage is calculated using the formula <strong>VBAT = (ADC - offset) / scale</strong>. If voltage is reading too high, increase scale.
+								<div>Battery voltage is calculated using the formula <strong>VBAT = (ADC - offset) / scale</strong>. If voltage is reading too high, increase scale.</div>
 								<div class="mui-textfield mui-col-xs-6">
 									<input id="vbat_scale" type="number" name="vbat_scale" min="1" max="1000"/>
 									<label for="vbat_scale">Scale</label>
@@ -242,6 +248,25 @@
 									<input id="vbat_offset" type="number" name="vbat_offset" min="-1000" max="1000"/>
 									<label for="vbat_offset">Offset</label>
 								</div>
+							</fieldset>
+						</div>
+						<div class="mui-panel">
+							<fieldset>
+								<legend>Home position settings</legend>
+								Define the minimum number of satellites required to establish the home position.
+								<input type="range" id="satmin" name="satmin" list="satmin_markers" min="5" max="21" step="2"
+									   style="width: 100%;" />
+								<datalist id="satmin_markers">
+									<option value="5" label="5" title="Less precise"></option>
+									<option value="7" label="7"></option>
+									<option value="9" label="9"></option>
+									<option value="11" label="11"></option>
+									<option value="13" label="13"></option>
+									<option value="15" label="15"></option>
+									<option value="17" label="17"></option>
+									<option value="19" label="19"></option>
+									<option value="21" label="21" title="More precise"></option>
+								</datalist>
 							</fieldset>
 						</div>
 						<input type="hidden" name="commit" value="1"/>

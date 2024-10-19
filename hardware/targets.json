@@ -156,19 +156,19 @@
                 "product_name": "Jumper T-12 Max Internal TX Modules",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["etx", "wifi"]
             },
             "t15": {
                 "product_name": "Jumper T-15 Internal TX Modules",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["etx", "wifi"]
             },
             "t20": {
                 "product_name": "Jumper T-20 Internal TX Modules with Backpack extension",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["uart", "etx" ,"wifi"]
             }
         }
     },
@@ -292,6 +292,12 @@
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
+            },
+            "nomad": {
+                "product_name": "RadioMaster Nomad Xrossband TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },

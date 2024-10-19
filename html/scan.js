@@ -78,8 +78,10 @@ function updateAatConfig(config)
     _('azim_center').value = config.aat.azim_center;
     _('azim_min').value = config.aat.azim_min;
     _('azim_max').value = config.aat.azim_max;
+    _('azim_sff').checked = config.aat.azim_sff === 1;
     _('elev_min').value = config.aat.elev_min;
     _('elev_max').value = config.aat.elev_max;
+    _('satmin').value = config.aat.satmin;
     aatAzimCenterChanged();
 
     // VBAT
@@ -417,6 +419,7 @@ function aatLineElementChanged()
         body: new URLSearchParams({
             'bear': _('bear').value,
             'elev': _('elev').value,
+            'azim_sff': _('azim_sff').checked ? 1 : 0,
         })
     });
   }
