@@ -578,7 +578,7 @@ void AatModule::servoUpdate(uint32_t now)
         int32_t maxDiff = (10 - config.GetAatServoSmooth()) * SMOOTHNESS_US_PER_STEP;
         // If the distance the servo needs to go is more than 80% away
         // jump immediately. otherwise smooth it
-        if (idx == IDX_AZIM && (abs(diff) * 100 / range) > 80)
+        if (config.GetAatAzimuthServoFastFlip() && idx == IDX_AZIM && (abs(diff) * 100 / range) > 80)
         {
             // Prevent the servo from flipping back and forth around the 180 point
             // by only allowing 1 flip ever Xms. Just keep pushing toward the limit
