@@ -1,10 +1,6 @@
 #if defined(MAVLINK_ENABLED)
 #include "common/mavlink.h"
 
-// This is the port that we will listen for mavlink packets on
-constexpr uint16_t MAVLINK_PORT_LISTEN = 14555;
-// This is the port that we will send mavlink packets to
-constexpr uint16_t MAVLINK_PORT_SEND = 14550;
 // Size of the buffer that we will use to store mavlink packets in units of mavlink_message_t
 constexpr size_t MAVLINK_BUF_SIZE = 16;
 // Threshold at which we will flush the buffer

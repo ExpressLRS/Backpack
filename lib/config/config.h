@@ -7,7 +7,7 @@
 #define VRX_BACKPACK_CONFIG_MAGIC   (0b10U << 30)
 #define TIMER_BACKPACK_CONFIG_MAGIC (0b11U << 30)
 
-#define TX_BACKPACK_CONFIG_VERSION      3
+#define TX_BACKPACK_CONFIG_VERSION      4
 #define VRX_BACKPACK_CONFIG_VERSION     5
 #define TIMER_BACKPACK_CONFIG_VERSION   3
 
@@ -34,6 +34,8 @@ typedef struct {
     uint8_t           address[6];
     wifi_service_t    wifiService;
     telem_mode_t      telemMode;
+    uint16_t          mavlinkListenPort;
+    uint16_t          mavlinkSendPort;
 } tx_backpack_config_t;
 
 class TxBackpackConfig
@@ -50,6 +52,8 @@ public:
     uint8_t *GetGroupAddress() { return m_config.address; }
     wifi_service_t GetWiFiService() { return m_config.wifiService; }
     telem_mode_t GetTelemMode() { return m_config.telemMode; }
+    uint16_t GetMavlinkListenPort() const { return m_config.mavlinkListenPort; }
+    uint16_t GetMavlinkSendPort() const { return m_config.mavlinkSendPort; }
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -60,6 +64,8 @@ public:
     void SetGroupAddress(const uint8_t address[6]);
     void SetWiFiService(wifi_service_t service);
     void SetTelemMode(telem_mode_t mode);
+    void SetMavlinkListenPort(uint16_t port);
+    void SetMavlinkSendPort(uint16_t port);
 
 private:
     tx_backpack_config_t    m_config;
