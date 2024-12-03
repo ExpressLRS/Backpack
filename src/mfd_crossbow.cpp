@@ -82,6 +82,22 @@ MFDCrossbow::SendGlobalPositionInt()
 }
 
 void
+MFDCrossbow::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
+{
+    uint16_t voltage = ((uint16_t)rawCrsfPacket[3] << 8 | rawCrsfPacket[4]);
+    uint16_t amperage = ((uint16_t)rawCrsfPacket[5] << 8 | rawCrsfPacket[6]);
+    uint32_t mah = ((uint32_t)rawCrsfPacket[7] << 16 | (uint32_t)rawCrsfPacket[8] << 8 | rawCrsfPacket[9]);
+    uint8_t percentage = rawCrsfPacket[10];
+
+    // Initialize the string buffer
+    char buf[100];
+    // Print the battery telemetry to the string buffer
+    sprintf(buf, "Battery: %d.%02dV %d.%02dA %dmAh %d%%", voltage / 100, voltage % 100, amperage / 100, amperage % 100, mah, percentage);
+    // Print the string buffer to the serial port
+    m_port->write(buf, strlen(buf));
+}
+
+void
 MFDCrossbow::SendGpsTelemetry(crsf_packet_gps_t *packet)
 {
     int32_t rawLat = be32toh(packet->p.lat); // Convert to host byte order
