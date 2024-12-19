@@ -127,8 +127,10 @@ bool IMUBase::updateCalibration(FusionVector &g)
         c = 0;
         eSample = 0;
         L++;
+#ifdef DEBUG_LOG
         DBGLN("Finished loop iteration %d", L);
         Serial.printf("%6.2f %6.2f %6.2f\r\n", imuCalibration[0], imuCalibration[1], imuCalibration[2]);
+#endif
     }
     return L == Loops;
 }

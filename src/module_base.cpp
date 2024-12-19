@@ -71,7 +71,7 @@ ModuleBase::Loop(uint32_t now)
 
         // convert from degrees to servo positions
 
-        int pan = -map(fyaw*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int pan = map(-fyaw*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
         int tilt = map(fpitch*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
         int roll = map(froll*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
         mspPacket_t packet;
@@ -86,7 +86,7 @@ ModuleBase::Loop(uint32_t now)
         packet.addByte(tilt >> 8);
         sendMSPViaEspnow(&packet);
         lastSend = now;
-Serial.printf("%6.2f, %d\r\n",fpitch, tilt);
+// Serial.printf("%d, %d, %d\r\n",pan, tilt, roll);
     }
 #endif
 }
