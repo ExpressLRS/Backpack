@@ -3,12 +3,12 @@
 #include "elrs_eeprom.h"
 
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
-#define TX_BACKPACK_CONFIG_MAGIC    (0b01 << 30)
-#define VRX_BACKPACK_CONFIG_MAGIC   (0b10 << 30)
-#define TIMER_BACKPACK_CONFIG_MAGIC (0b11 << 30)
+#define TX_BACKPACK_CONFIG_MAGIC    (0b01U << 30)
+#define VRX_BACKPACK_CONFIG_MAGIC   (0b10U << 30)
+#define TIMER_BACKPACK_CONFIG_MAGIC (0b11U << 30)
 
 #define TX_BACKPACK_CONFIG_VERSION      4
-#define VRX_BACKPACK_CONFIG_VERSION     3
+#define VRX_BACKPACK_CONFIG_VERSION     5
 #define TIMER_BACKPACK_CONFIG_VERSION   3
 
 
@@ -87,7 +87,11 @@ typedef struct {
     char        ssid[33];
     char        password[65];
     uint8_t     address[6];
-
+#if defined(HAS_HEADTRACKING)
+    int         compassCalibration[3][2];
+    float       imuCalibration[3];
+    float       boardOrientation[3];
+#endif
 #if defined(AAT_BACKPACK)
     struct __attribute__((packed)) tagAatConfig {
         uint8_t     satelliteHomeMin;     // minimum number of satellites to establish home
@@ -133,6 +137,16 @@ public:
     void SetSSID(const char *ssid);
     void SetPassword(const char *ssid);
     void SetGroupAddress(const uint8_t address[6]);
+
+#if defined(HAS_HEADTRACKING)
+    int     (*GetCompassCalibration())[3][2] { return &m_config.compassCalibration; }
+    float   (*GetIMUCalibration())[3] { return &m_config.imuCalibration; }
+    float   (*GetBoardOrientation())[3] { return &m_config.boardOrientation; }
+
+    void SetCompassCalibration(const int calibration[3][2]);
+    void SetIMUCalibration(const float calibration[3]);
+    void SetBoardOrientation(const float orientation[3]);
+#endif
 
 #if defined(AAT_BACKPACK)
     uint8_t GetAatSatelliteHomeMin() const { return m_config.aat.satelliteHomeMin; }

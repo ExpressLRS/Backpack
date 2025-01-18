@@ -27,7 +27,7 @@ def compress(data):
     return buf.getvalue()
 
 def build_html(mainfile, var, out, env):
-    with open('html/%s' % mainfile, 'r') as file:
+    with open('html/%s' % mainfile, 'r', encoding='ISO-8859-1') as file:
         data = file.read()
     if mainfile.endswith('.html'):
         data = html_minifier.html_minify(data).replace('@VERSION@', get_version(env)).replace('@PLATFORM@', re.sub("_via_.*", "", env['PIOENV']))
@@ -37,6 +37,13 @@ def build_html(mainfile, var, out, env):
         data = rjsmin.jsmin(data)
     out.write('static const char PROGMEM %s[] = {\n' % var)
     out.write(','.join("0x{:02x}".format(c) for c in compress(data.encode('utf-8'))))
+    out.write('\n};\n\n')
+
+def build_binary(mainfile, var, out, env):
+    with open('html/%s' % mainfile, 'rb') as file:
+        data = file.read()
+    out.write('static const char PROGMEM %s[] = {\n' % var)
+    out.write(','.join("0x{:02x}".format(c) for c in data))
     out.write('\n};\n\n')
 
 def build_common(env, mainfile):
@@ -50,6 +57,9 @@ def build_common(env, mainfile):
             build_html("elrs.css", "ELRS_CSS", out, env)
             build_html("mui.css", "MUI_CSS", out, env)
             build_html("logo.svg", "LOGO_SVG", out, env)
+            build_html("p5.js", "P5_JS", out, env)
+            build_html("airplane.obj", "PLANE_OBJ", out, env)
+            build_binary("texture.gif", "TEXTURE_GIF", out, env)
     finally:
         if not os.path.exists("include/WebContent.h") or not filecmp.cmp(path, "include/WebContent.h"):
             shutil.copyfile(path, "include/WebContent.h")
