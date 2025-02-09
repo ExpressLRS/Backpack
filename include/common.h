@@ -11,3 +11,5 @@ typedef enum
 
 extern connectionState_e connectionState;
 extern unsigned long bindingStart;
+
+#define UID_SIZE 6
