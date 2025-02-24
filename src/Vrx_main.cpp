@@ -12,7 +12,6 @@
 
 #include "msp.h"
 #include "msptypes.h"
-#include "ESPNOW_Helpers.h"
 #include "logging.h"
 #include "helpers.h"
 #include "common.h"
@@ -126,6 +125,7 @@ VrxBackpackConfig config;
 /////////// FUNCTION DEFS ///////////
 
 void ProcessMSPPacket(mspPacket_t *packet);
+void sendMSPViaEspnow(mspPacket_t *packet);
 void resetBootCounter();
 void SetupEspNow();
 
@@ -340,8 +340,28 @@ void RequestVTXPacket()
   packet.addByte(0);  // empty byte
 
   blinkLED();
-  ESPNOW::sendMSPViaEspnow(&packet);
+  sendMSPViaEspnow(&packet);
 #endif
+}
+
+void sendMSPViaEspnow(mspPacket_t *packet)
+{
+  // Do not send while in binding mode.  The currently used firmwareOptions.uid may be garbage.
+  if (connectionState == binding)
+    return;
+
+  uint8_t packetSize = msp.getTotalPacketSize(packet);
+  uint8_t nowDataOutput[packetSize];
+
+  uint8_t result = msp.convertToByteArray(packet, nowDataOutput);
+
+  if (!result)
+  {
+    // packet could not be converted to array, bail out
+    return;
+  }
+
+  esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
 }
 
 void resetBootCounter()
