@@ -121,7 +121,12 @@ function updateConfig(data) {
     let config = data.config;
     if (config.mode==="STA") {
         _('stamode').style.display = 'block';
-        if (_('rtctab')) _('rtctab').style.display = 'table-cell';
+        if (!config['aat']) {
+            if (_('rtctab')) _('rtctab').style.display = 'table-cell';
+        }
+        if (config['head-tracking']) {
+            if (_('httab')) _('httab').style.display = 'table-cell';
+        }
         _('ssid').textContent = config.ssid;
     } else {
         _('apmode').style.display = 'block';
@@ -504,7 +509,7 @@ _('sethome').addEventListener('submit', callback("Set Home Network", "An error o
 _('connect').addEventListener('click', callback("Connect to Home Network", "An error occurred connecting to the Home network", "/connect", null));
 _('access').addEventListener('click', callback("Access Point", "An error occurred starting the Access Point", "/access", null));
 _('forget').addEventListener('click', callback("Forget Home Network", "An error occurred forgetting the home network", "/forget", null));
-if (_('setrtc')) _('setrtc').addEventListener('submit', callback("Set RTC Time", "An error occured setting the RTC time", "/setrtc", function() {
+if (_('setrtc')) _('setrtc').addEventListener('submit', callback("Set RTC Time", "An error occurred setting the RTC time", "/setrtc", function() {
     return new FormData(_('setrtc'));
 }));
 
@@ -617,3 +622,185 @@ function cuteAlert({
       alertFrame.addEventListener("click", stopProp);
     });
   }
+
+//=========================================================
+
+if (_('httab')) _('httab').addEventListener('mui.tabs.showstart', start);
+
+var websock;
+var Euler = {heading: 0.0, pitch: 0.0, roll: 0.0};
+
+const loadScript = (FILE_URL, async = true, type = "text/javascript") => {
+    return new Promise((resolve, reject) => {
+        try {
+            const scriptEle = document.createElement("script");
+            scriptEle.type = type;
+            scriptEle.async = async;
+            scriptEle.src = FILE_URL;
+
+            scriptEle.addEventListener("load", (ev) => {
+                resolve({ status: true });
+            });
+
+            scriptEle.addEventListener("error", (ev) => {
+                reject({
+                    status: false,
+                    message: `Failed to load the script ${FILE_URL}`
+                });
+            });
+
+            document.body.appendChild(scriptEle);
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+let ht_loaded = false;
+function start() {
+    if (!ht_loaded) {
+        loadScript('p5.js').then(()=>{
+            ht_loaded = true;
+            websock = new WebSocket('ws://' + window.location.hostname + '/ws');
+            // websock.onopen = function(evt) {
+            //     console.log('websock open');
+            //     var e = document.getElementById('webSockStatus');
+            //     e.style.backgroundColor = 'green';
+            // };
+            // websock.onclose = function(evt) {
+            //     console.log('websock close');
+            //     var e = document.getElementById('webSockStatus');
+            //     e.style.backgroundColor = 'red';
+            // };
+            websock.onerror = function(evt) { console.log(evt); };
+            websock.onmessage = async function(evt) {
+                d = JSON.parse(evt.data);
+                if (d['done']) {
+                    calibrationOff();
+                    await cuteAlert({
+                        type: 'info',
+                        title: "Calibration",
+                        message: "Calibration successful",
+                        confirmText: "OK",
+                    });
+                }
+                if (d['orientation']) {
+                    _('x-angle').value = d.pitch;
+                    _('y-angle').value = d.roll;
+                    _('z-angle').value = d.heading;
+                    _('label-x').textContent = d.pitch;
+                    _('label-y').textContent = d.roll;
+                    _('label-z').textContent = d.heading;
+                    if (!d.hasIMU) {
+                        show(document.querySelectorAll('.hasIMU'), 'none');
+                    }
+                }
+                if (d['heading']) {
+                    Euler = d;
+                    _('angle-x').textContent = Euler.roll;
+                    _('angle-y').textContent = Euler.pitch;
+                    _('angle-z').textContent = Euler.heading;
+                }
+            };
+        })
+    }
+}
+
+let plane;
+let tex;
+
+function preload() {
+    plane = loadModel('airplane.obj', true);
+    tex = loadImage('texture.gif');
+}
+
+function setup() {
+    var canvas = createCanvas(500, 500, WEBGL);
+    canvas.parent('canvas-holder');
+}
+
+function draw() {
+    background(192);
+
+    rotateY(radians(Euler.heading + 180)); // Add 180 degrees so the plane is facing away at zero
+    rotateZ(radians(Euler.pitch));
+    rotateX(radians(-Euler.roll)); // Invert the about the pitch axis (i.e. roll is opposite)
+
+    push();
+    stroke('#CCC');
+    strokeWeight(0.5);
+    for (let x=-width/2; x <= width/2; x +=20) {
+        line(x, 0, -height/2, x, 0, height/2);
+    }
+    for (let z=-height/2; z <= height/2; z +=20) {
+        line(-width/2, 0, z, width/2, 0, z);
+    }
+    pop();
+
+    push();
+    noStroke();
+    scale(2);
+    translate(0,-26,0);
+    texture(tex);
+    model(plane);
+    pop();
+}
+
+if (_('set-center')) _('set-center').addEventListener('click', () => {websock.send('sc');});
+if (_('cal-gyro')) _('cal-gyro').addEventListener('click', calibrateIMU);
+if (_('reset-board')) _('reset-board').addEventListener('click', (e) => {
+    _('x-angle').value = 0;
+    _('y-angle').value = 0;
+    _('z-angle').value = 0;
+    setOrientation(e);
+    websock.send('ro');
+});
+if (_('save-orientation')) _('save-orientation').addEventListener('click', saveOrientation);
+if (_('x-angle')) _('x-angle').addEventListener('input', setOrientation);
+if (_('y-angle')) _('y-angle').addEventListener('input', setOrientation);
+if (_('z-angle')) _('z-angle').addEventListener('input', setOrientation);
+
+async function calibrateIMU() {
+    await cuteAlert({
+        type: 'info',
+        title: "Calibrate IMU",
+        message: "Place the board flat on the table and wait until the succeeded popup appears",
+        confirmText: "Calibrate",
+        cancelText: "Cancel"
+    }).then((e)=>{
+        websock.send('ci');
+        calibrationOn();
+    });
+}
+
+function setOrientation(e) {
+    _('label-x').textContent = _('x-angle').value;
+    _('label-y').textContent = _('y-angle').value;
+    _('label-z').textContent = _('z-angle').value;
+    websock.send('o:' + _('x-angle').value + ':' + _('y-angle').value + ':' + _('z-angle').value);
+}
+
+function saveOrientation() {
+    websock.send('sv');
+    cuteAlert({
+        type: 'info',
+        title: "Save Board Orientation",
+        message: "Board orientation has been saved to configuration",
+        confirmText: "OK"
+    });
+}
+
+function calibrationOn() {
+    _('main').classList.add('loading');
+    let calibrating = document.createElement('div')
+    calibrating.innerHTML = '<div class="ring">Calibrating<span></span></div>'
+    mui.overlay('on', {
+        'keyboard': false,
+        'static': true
+    }, calibrating);
+}
+
+function calibrationOff() {
+    _('main').classList.remove('loading');
+    mui.overlay('off');
+}

@@ -23,6 +23,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devLED.h"
+#include "devHeadTracker.h"
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -31,7 +32,7 @@
 #elif defined(STEADYVIEW_BACKPACK)
   #include "steadyview.h"
 #elif defined(FUSION_BACKPACK)
-  #include "fusion.h"
+  #include "tbs_fusion.h"
 #elif defined(HDZERO_BACKPACK)
   #include "hdzero.h"
 #elif defined(SKYZONE_MSP_BACKPACK)
@@ -82,6 +83,9 @@ device_t *ui_devices[] = {
   &Button_device,
 #endif
   &WIFI_device,
+#ifdef HAS_HEADTRACKING
+  &HeadTracker_device
+#endif
 };
 
 #if defined(PLATFORM_ESP32)
@@ -243,7 +247,11 @@ void ProcessMSPPacket(mspPacket_t *packet)
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
+    #if defined(HAS_HEADTRACKING)
+    resetCenter();
+    #else
     sendHeadTrackingChangesToVrx = true;
+    #endif
     break;
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGV("Processing MSP_ELRS_BACKPACK_CRSF_TLM type %x\n", packet->payload[1]);
@@ -495,16 +503,6 @@ void loop()
       }
   #endif
 
-  if (connectionState == wifiUpdate)
-  {
-    if (sendRTCChangesToVrx)
-    {
-      sendRTCChangesToVrx = false;
-      vrxModule.SetRTC();
-    }
-    return;
-  }
-
   if (BindingExpired(now))
   {
     DBGLN("Binding expired");
@@ -526,14 +524,6 @@ void loop()
     vrxModule.SendHeadTrackingEnableCmd(headTrackingEnabled);
   }
 
-  // spam out a bunch of requests for the desired band/channel for the first 5s
-  if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
-  {
-    DBGLN("RequestVTXPacket...");
-    RequestVTXPacket();
-    lastSentRequest = now;
-  }
-
 #if !defined(NO_AUTOBIND)
   // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
   if (now > BINDING_TIMEOUT && config.GetBootCount() > 0)
@@ -542,6 +532,24 @@ void loop()
     resetBootCounter();
   }
 #endif
+
+  if (connectionState == wifiUpdate)
+  {
+    if (sendRTCChangesToVrx)
+    {
+      sendRTCChangesToVrx = false;
+      vrxModule.SetRTC();
+    }
+    return;
+  }
+
+  // spam out a bunch of requests for the desired band/channel for the first 5s
+  if (!gotInitialPacket && now - VRX_BOOT_DELAY < 5000 && now - lastSentRequest > 1000 && connectionState != binding)
+  {
+    DBGLN("RequestVTXPacket...");
+    RequestVTXPacket();
+    lastSentRequest = now;
+  }
 
 #if defined(PLATFORM_ESP32)
   if (uxQueueMessagesWaiting(rxqueue) > 0 && Serial.availableForWrite() == 128)
