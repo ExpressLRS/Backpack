@@ -11,6 +11,7 @@
 
 #include "msp.h"
 #include "msptypes.h"
+#include "ESPNOW_Helpers.h"
 #include "logging.h"
 #include "config.h"
 #include "common.h"
@@ -27,8 +28,6 @@
 #endif
 
 /////////// GLOBALS ///////////
-
-uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 const uint8_t version[] = {LATEST_VERSION};
 
@@ -63,7 +62,6 @@ MAVLink mavlink;
 
 /////////// FUNCTION DEFS ///////////
 
-void sendMSPViaEspnow(mspPacket_t *packet);
 void sendMSPViaWiFiUDP(mspPacket_t *packet);
 
 /////////////////////////////////////
@@ -198,12 +196,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     cachedVTXPacket = *packet;
     cacheFull = true;
     // transparently forward MSP packets via espnow to any subscribers
-    sendMSPViaEspnow(packet);
+    ESPNOW::sendMSPViaEspnow(packet);
     break;
 
   case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE...");
-    sendMSPViaEspnow(packet);
+    ESPNOW::sendMSPViaEspnow(packet);
     break;
 
   case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
@@ -220,7 +218,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     cachedHTPacket = *packet;
     cacheFull = true;
-    sendMSPViaEspnow(packet);
+    ESPNOW::sendMSPViaEspnow(packet);
     break;
 
   case MSP_ELRS_BACKPACK_CRSF_TLM:
@@ -231,7 +229,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     }
     if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
     {
-      sendMSPViaEspnow(packet);
+      ESPNOW::sendMSPViaEspnow(packet);
     }
     break;
 
@@ -258,39 +256,14 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
       rebootTime = millis(); // restart to set SetSoftMACAddress
       return;
     }
-    sendMSPViaEspnow(packet);
+    ESPNOW::sendMSPViaEspnow(packet);
     break;
 
   default:
     // transparently forward MSP packets via espnow to any subscribers
-    sendMSPViaEspnow(packet);
+    ESPNOW::sendMSPViaEspnow(packet);
     break;
   }
-}
-
-void sendMSPViaEspnow(mspPacket_t *packet)
-{
-  uint8_t packetSize = msp.getTotalPacketSize(packet);
-  uint8_t nowDataOutput[packetSize];
-
-  uint8_t result = msp.convertToByteArray(packet, nowDataOutput);
-
-  if (!result)
-  {
-    // packet could not be converted to array, bail out
-    return;
-  }
-
-  if (packet->function == MSP_ELRS_BIND)
-  {
-    esp_now_send(bindingAddress, (uint8_t *) &nowDataOutput, packetSize); // Send Bind packet with the broadcast address
-  }
-  else
-  {
-    esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
-  }
-
-  blinkLED();
 }
 
 void sendMSPViaWiFiUDP(mspPacket_t *packet)
@@ -317,11 +290,11 @@ void SendCachedMSP()
 
   if (cachedVTXPacket.type != MSP_PACKET_UNKNOWN)
   {
-    sendMSPViaEspnow(&cachedVTXPacket);
+    ESPNOW::sendMSPViaEspnow(&cachedVTXPacket);
   }
   if (cachedHTPacket.type != MSP_PACKET_UNKNOWN)
   {
-    sendMSPViaEspnow(&cachedHTPacket);
+    ESPNOW::sendMSPViaEspnow(&cachedHTPacket);
   }
 }
 

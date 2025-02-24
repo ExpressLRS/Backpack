@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 typedef enum
 {
@@ -11,3 +12,4 @@ typedef enum
 
 extern connectionState_e connectionState;
 extern unsigned long bindingStart;
+static const uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
