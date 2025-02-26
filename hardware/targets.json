@@ -13,12 +13,6 @@
                 "firmware": "ESP32C3_TX_Backpack",
                 "upload_methods": ["uart", "etx", "passthru", "wifi"],
                 "platform": "esp32-c3"
-            },
-            "stm": {
-                "product_name": "ESP8285 Backpack for STM32-based TX module",
-                "firmware": "STM_TX_Backpack",
-                "upload_methods": ["uart", "wifi"],
-                "platform": "esp8285"
             }
         }
     },
