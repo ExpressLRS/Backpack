@@ -1,9 +1,5 @@
 #pragma once
 
-#ifdef STM32_TX_BACKPACK
-#include "stmUpdateClass.h"
-#endif
-
 class UpdateWrapper {
 public:
     void setSTMUpdate(bool stmMode) {
@@ -16,10 +12,6 @@ public:
     bool begin() {
 #endif
       _running = true;
-#ifdef STM32_TX_BACKPACK
-        if (_stmMode)
-            return STMUpdate.begin(0); // we don't know the size!
-#endif
 #if PLATFORM_ESP8266
         return Update.begin(size, U_FLASH);
 #else
@@ -28,35 +20,19 @@ public:
     }
 
     size_t write(uint8_t *data, size_t len) {
-#ifdef STM32_TX_BACKPACK
-        if (_stmMode)
-            return STMUpdate.write(data, len);
-#endif
         return Update.write(data, len);
     }
 
     bool end(bool evenIfRemaining = false) {
         _running = false;
-#ifdef STM32_TX_BACKPACK
-        if (_stmMode)
-            return STMUpdate.end(evenIfRemaining);
-#endif
         return Update.end(evenIfRemaining);
     }
 
     void printError(Print &out) {
-#ifdef STM32_TX_BACKPACK
-        if (_stmMode)
-            return STMUpdate.printError(out);
-#endif
         return Update.printError(out);
     }
 
     bool hasError() {
-#ifdef STM32_TX_BACKPACK
-        if (_stmMode)
-            return STMUpdate.hasError();
-#endif
         return Update.hasError();
     }
 

@@ -123,8 +123,6 @@ sys.stdout.write("\nbuild flags: %s\n\n" % build_flags)
 
 if fnmatch.filter(build_flags, '*PLATFORM_ESP32*'):
     sys.stdout.write("\u001b[32mBuilding for ESP32 Platform\n")
-elif fnmatch.filter(build_flags, '*PLATFORM_STM32*'):
-    sys.stdout.write("\u001b[32mBuilding for STM32 Platform\n")
 elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
     sys.stdout.write("\u001b[32mBuilding for ESP8266/ESP8285 Platform\n")
     if fnmatch.filter(build_flags, '-DAUTO_WIFI_ON_INTERVAL*'):
@@ -134,9 +132,3 @@ elif fnmatch.filter(build_flags, '*PLATFORM_ESP8266*'):
 
 sys.stdout.flush()
 time.sleep(.5)
-
-# Set upload_protovol = 'custom' for STM32 MCUs
-#  otherwise firmware.bin is not generated
-stm = env.get('PIOPLATFORM', '') in ['ststm32']
-if stm:
-    env['UPLOAD_PROTOCOL'] = 'custom'
