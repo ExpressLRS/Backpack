@@ -2,9 +2,6 @@
 
 class UpdateWrapper {
 public:
-    void setSTMUpdate(bool stmMode) {
-        _stmMode = stmMode;
-    }
 
 #if PLATFORM_ESP8266
     bool begin(size_t size) {
@@ -38,7 +35,7 @@ public:
 
     void runAsync(bool async) {
     #ifdef PLATFORM_ESP8266
-        if (!_stmMode) Update.runAsync(async);
+        Update.runAsync(async);
     #endif
     }
 
@@ -48,11 +45,10 @@ public:
 
 #ifdef PLATFORM_ESP32
     void abort() {
-        if (!_stmMode) Update.abort();
+        Update.abort();
     }
 #endif
 
 private:
-    bool _stmMode = false;
     bool _running = false;
 };
