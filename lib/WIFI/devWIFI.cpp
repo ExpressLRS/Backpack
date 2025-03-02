@@ -193,9 +193,6 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
   json["config"]["product_name"] = firmwareOptions.product_name;
 
-#if defined(STM32_TX_BACKPACK)
-  json["stm32"] = "yes";
-#endif
 #if defined(AAT_BACKPACK)
   WebAatAppendConfig(json);
 #endif
@@ -361,20 +358,6 @@ static void WebUploadDataHandler(AsyncWebServerRequest *request, const String& f
     target_complete = false;
     target_pos = 0;
     totalSize = 0;
-    #ifdef STM32_TX_BACKPACK
-      if (request->arg("type").equals("tx"))
-      {
-        DBGLN("Set updater to STM");
-        updater.setSTMUpdate(true);
-        target_seen = true;     // TODO get target_name from TX so we know what we're flashing
-        STMUpdate.setFilename(filename);
-      }
-      else
-      {
-        DBGLN("Set updater to ESP");
-        updater.setSTMUpdate(false);
-      }
-    #endif
     #if defined(PLATFORM_ESP8266)
       updater.runAsync(true);
       uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
