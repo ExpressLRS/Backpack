@@ -1,225 +1,120 @@
 #include "rapidfire.h"
-#include <SPI.h>
 #include "logging.h"
 
-void
-Rapidfire::Init()
-{
-    ModuleBase::Init();
+static rapidFIRE_SPI rapidfire = rapidFIRE_SPI(PIN_CLK, PIN_MOSI, PIN_CS);
 
-    delay(VRX_BOOT_DELAY);
-    EnableSPIMode(); // https://github.com/ExpressLRS/ExpressLRS/pull/1489 & https://github.com/ExpressLRS/Backpack/pull/65
+void Rapidfire::Init() {
+  ModuleBase::Init();
 
-    pinMode(PIN_MOSI, INPUT);
-    pinMode(PIN_CLK, INPUT);
-    pinMode(PIN_CS, INPUT);
+  delay(VRX_BOOT_DELAY);
 
-    DBGLN("Rapid Fire init");
+  rapidfire.begin();
+
+  DBGLN("Rapid Fire init");
 }
 
-void
-Rapidfire::EnableSPIMode()
-{
-    // Set pins to output to configure rapidfire in SPI mode
-    pinMode(PIN_MOSI, OUTPUT);
-    pinMode(PIN_CLK, OUTPUT);
-    pinMode(PIN_CS, OUTPUT);
+void Rapidfire::SetOSD(mspPacket_t *packet) {
+  int len = packet->payloadSize;
+  if (len < 4) {
+    return;
+  }
 
-    // put the RF into SPI mode by pulling all 3 pins high,
-    // then low within 100-400ms
-    digitalWrite(PIN_MOSI, HIGH);
-    digitalWrite(PIN_CLK, HIGH);
-    digitalWrite(PIN_CS, HIGH);
-    delay(200);
-    digitalWrite(PIN_MOSI, LOW);
-    digitalWrite(PIN_CLK, LOW);
-    digitalWrite(PIN_CS, LOW);
-    delay(200);
+  for (int i = 0; i < 4; i++) {   //payload = [0x03, row, col, 0]
+    packet->readByte(); // skip the first 4 bytes
+  }
+  len -= 4; // subtract the first 4 bytes
 
-    SPIModeEnabled = true;
+  if (len > MAX_LENGTH_TEXT) {
+    len = MAX_LENGTH_TEXT;
+  }
 
-    DBGLN("SPI config complete");
+  for (int i = 0; i < len; i++) {
+    m_textBuffer[i] = packet->readByte();
+  }
+
+  DisplayTextBuffer();
 }
 
-void
-Rapidfire::SendBuzzerCmd()
-{
-    DBGLN("Beep!");
-
-    uint8_t cmd[4];
-    cmd[0] = RF_API_BEEP_CMD;   // 'S'
-    cmd[1] = RF_API_DIR_GRTHAN; // '>'
-    cmd[2] = 0x00;              // len
-    cmd[3] = crc8(cmd, 3);
-
-    // rapidfire sometimes missed a pkt, so send 3x
-    SendSPI(cmd, 4);
-    SendSPI(cmd, 4);
-    SendSPI(cmd, 4);
-}
-
-void
-Rapidfire::SendIndexCmd(uint8_t index)
-{
-    uint8_t newBand = index / 8 + 1;
-    uint8_t newChannel = index % 8;
-
-    SendBandCmd(newBand);
-	delay(100);
-    SendChannelCmd(newChannel);
-}
-
-void
-Rapidfire::SendChannelCmd(uint8_t channel)
-{
-    // ELRS channel is zero based, need to add 1
-    channel++;
-
-    DBG("Setting new channel ");
-    DBGLN("%x", channel);
-
-    uint8_t cmd[5];
-    cmd[0] = RF_API_CHANNEL_CMD;    // 'C'
-    cmd[1] = RF_API_DIR_EQUAL;      // '='
-    cmd[2] = 0x01;                  // len
-    cmd[3] = channel;               // temporarily set byte 4 to channel for crc calc
-    cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
-    cmd[4] = channel;               // assign channel to correct byte 5
-
-    // rapidfire sometimes misses pkts, so send each one 3x
-    for (int i = 0; i < SPAM_COUNT; i++)
-    {
-        SendSPI(cmd, 5);
+void Rapidfire::DisplayTextBuffer() {
+  if (m_displayStartMillis == 0) {
+    for (int i = 0; i < SPAM_COUNT; i++) {
+      rapidfire.setOSDMode(rapidFIRE_SPI::OSDMODE::USERTEXT);
+      delay(DELAY_BETWEEN_SPI_PKT);
     }
+  }
+
+  // only send the text once to the rapidfire to avoid failure
+  rapidfire.setOSDUserText(m_textBuffer); // send the text to the rapidfire
+
+  memset(m_textBuffer, 0, MAX_LENGTH_TEXT);
+
+  m_displayStartMillis = millis();
+}
+
+void Rapidfire::SetRecordingState(uint8_t recordingState, uint16_t _delay){
+  sprintf(m_textBuffer, "Is Recording %5d", recordingState);
+
+  DisplayTextBuffer();
+}
+
+void Rapidfire::SendHeadTrackingEnableCmd(bool enable) {
+  sprintf(m_textBuffer, "Head Tracking %5d", enable);
+
+  DisplayTextBuffer();
+}
+
+void Rapidfire::SendIndexCmd(uint8_t index) {
+  uint8_t newBand = index / 8 + 1;
+  uint8_t newChannel = index % 8;
+
+  rapidFIRE_SPI::BAND imrcBand; // convert ELRS band index to IMRC band index:
+  switch (newBand) {
+    case 0x01: // Boscam A
+      imrcBand = rapidFIRE_SPI::BAND::BAND_A;
+      break;
+    case 0x02: // Boscam B
+      imrcBand = rapidFIRE_SPI::BAND::BAND_B;
+      break;
+    case 0x03: // Boscam E
+      imrcBand = rapidFIRE_SPI::BAND::BAND_E;
+      break;
+    case 0x04: // ImmersionRC/FatShark
+      imrcBand = rapidFIRE_SPI::BAND::BAND_F;
+      break;
+    case 0x05: // RaceBand
+      imrcBand = rapidFIRE_SPI::BAND::BAND_R;
+      break;
+    case 0x06: // LowRace
+      imrcBand = rapidFIRE_SPI::BAND::BAND_L;
+      break;
+    default: // ImmersionRC/FatShark
+      imrcBand = rapidFIRE_SPI::BAND::BAND_F;
+      break;
+  }
+
+  newChannel++;      // ELRS channel is zero based, need to add 1
+
+  for (int i = 0; i < SPAM_COUNT; i++) {
+    rapidfire.setBand(imrcBand);
+    delay(DELAY_BETWEEN_SPI_PKT);
+    rapidfire.setChannel(newChannel);
+    delay(DELAY_BETWEEN_SPI_PKT);
+  }
 }
 
 void
-Rapidfire::SendBandCmd(uint8_t band)
+Rapidfire::Loop(uint32_t now)
 {
-    DBG("Setting new band ");
-    DBGLN("%x", band);
+    ModuleBase::Loop(now);
 
-    // ELRS bands
-    // 0x01 - Boscam A
-    // 0x02 - Boscam B
-    // 0x03 - Boscam E
-    // 0x04 - ImmersionRC/FatShark
-    // 0x05 - RaceBand
-    // 0x06 - LowRace
-
-    // rapidfire bands
-    // 0x01 - ImmersionRC/FatShark
-    // 0x02 - RaceBand
-    // 0x03 - Boscam E
-    // 0x04 - Boscam B
-    // 0x05 - Boscam A
-    // 0x06 - LowRace
-    // 0x07 - Band X
-
-    // convert ELRS band index to IMRC band index:
-    uint8_t imrcBand;
-    switch (band)
-    {
-    case 0x01:
-        imrcBand = 0x05;
-        break;
-    case 0x02:
-        imrcBand = 0x04;
-        break;
-    case 0x03:
-        imrcBand = 0x03;
-        break;
-    case 0x04:
-        imrcBand = 0x01;
-        break;
-    case 0x05:
-        imrcBand = 0x02;
-        break;
-    case 0x06:
-        imrcBand = 0x06;
-        break;
-    default:
-        imrcBand = 0x01;
-        break;
-    }
-
-    uint8_t cmd[5];
-    cmd[0] = RF_API_BAND_CMD;       // 'C'
-    cmd[1] = RF_API_DIR_EQUAL;      // '='
-    cmd[2] = 0x01;                  // len
-    cmd[3] = imrcBand;              // temporarily set byte 4 to band for crc calc
-    cmd[3] = crc8(cmd, 4);          // reset byte 4 to crc
-    cmd[4] = imrcBand;              // assign band to correct byte 5
-
-    // rapidfire sometimes misses pkts, so send each one 3x
-    for (int i = 0; i < SPAM_COUNT; i++)
-    {
-        SendSPI(cmd, 5);
-    }
-}
-
-void
-Rapidfire::SendSPI(uint8_t* buf, uint8_t bufLen)
-{
-    if (!SPIModeEnabled) EnableSPIMode();
-
-    uint32_t periodMicroSec = 1000000 / BIT_BANG_FREQ;
-
-    pinMode(PIN_MOSI, OUTPUT);
-    pinMode(PIN_CLK, OUTPUT);
-    pinMode(PIN_CS, OUTPUT);
-    digitalWrite(PIN_MOSI, LOW);
-    digitalWrite(PIN_CLK, LOW);
-    digitalWrite(PIN_CS, HIGH);
-
-    delayMicroseconds(periodMicroSec);
-
-    digitalWrite(PIN_CS, LOW);
-    delay(100);
-
-    // debug code for printing SPI pkt
-    for (int i = 0; i < bufLen; ++i)
-    {
-        uint8_t bufByte = buf[i];
-
-        DBG("%x", bufByte);
-        DBG(",");
-
-        for (uint8_t k = 0; k < 8; k++)
+    if (m_displayStartMillis != 0)    {
+        if (now - m_displayStartMillis >= TIMEOUT_SET_OSD)
         {
-            // digitalWrite takes about 0.5us, so it is not taken into account with delays.
-            digitalWrite(PIN_CLK, LOW);
-            delayMicroseconds(periodMicroSec / 4);
-            digitalWrite(PIN_MOSI, bufByte & 0x80);
-            delayMicroseconds(periodMicroSec / 4);
-            digitalWrite(PIN_CLK, HIGH);
-            delayMicroseconds(periodMicroSec / 2);
-
-            bufByte <<= 1;
+            for (int i = 0; i < SPAM_COUNT; i++) {
+              rapidfire.setOSDMode(rapidFIRE_SPI::OSDMODE::DEFAULTMODE);
+              delay(DELAY_BETWEEN_SPI_PKT);
+            }
+            m_displayStartMillis = 0;
         }
     }
-    DBGLN("");
-
-    digitalWrite(PIN_MOSI, LOW);
-    digitalWrite(PIN_CLK, LOW);
-    digitalWrite(PIN_CS, HIGH);
-    delay(100);
-
-    pinMode(PIN_MOSI, INPUT);
-    pinMode(PIN_CLK, INPUT);
-    pinMode(PIN_CS, INPUT);
-}
-
-// CRC function for IMRC rapidfire API
-// Input: byte array, array length
-// Output: crc byte
-uint8_t
-Rapidfire::crc8(uint8_t* buf, uint8_t bufLen)
-{
-  uint32_t sum = 0;
-  for (uint8_t i = 0; i < bufLen; ++i)
-  {
-    sum += buf[i];
-  }
-  return sum & 0xFF;
 }
