@@ -4,7 +4,7 @@
 #include "rapidFIRE_SPI.h"
 
 rapidFIRE_SPI::rapidFIRE_SPI(int pin_SCK, int pin_DATA, int pin_SS, int freq) {
-  assert(SPI_freq < RAPIDFIRE_SPI_MAX_CLOCK);
+  assert(freq < RAPIDFIRE_SPI_MAX_CLOCK);
 
   SPI_pin_SCK = pin_SCK;
   SPI_pin_DATA = pin_DATA;
@@ -68,7 +68,7 @@ RF_RESULT rapidFIRE_SPI::recvCommand(uint8_t *data, size_t len) {
 
   recv_len = spi->transfer(0);
   recv_sum = spi->transfer(0);
-  for (int i = 0; i < len; i++) {
+  for (size_t i = 0; i < len; i++) {
     data[i] = spi->transfer(0);
   }
 
@@ -76,14 +76,9 @@ RF_RESULT rapidFIRE_SPI::recvCommand(uint8_t *data, size_t len) {
   spi->setHwCs(false);
 
   byte csum = recv_len;
-  for (int i = 0; i < len; ++i) {
-    //        Serial.printf("Read[%d]:0x%02x(%3d) '\%c'\n", i, data[i], data[i],
-    //        data[i]);
+  for (size_t i = 0; i < len; ++i) {
     csum += data[i];
   }
-
-  Serial.printf("CSUM:recv:%02x==calc:%02x LEN:recv:%d==%d %s\n", recv_sum,
-                csum, recv_len, len, recv_sum == csum ? "" : "NG!");
 
   if (recv_sum != csum) {
     //        return RF_RESULT_ERROR_CHECKSUM_MISSMATCH; // Checksum missmatch.
@@ -94,7 +89,7 @@ RF_RESULT rapidFIRE_SPI::recvCommand(uint8_t *data, size_t len) {
 RF_RESULT rapidFIRE_SPI::sendCommand(uint16_t command, byte *data, size_t len) {
   uint8_t csum = (command >> 8) + (command & 0xff) + len;
 
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i) {
     csum += data[i];
   }
 
@@ -104,6 +99,7 @@ RF_RESULT rapidFIRE_SPI::sendCommand(uint16_t command, byte *data, size_t len) {
   spi->begin();
   spi->pins(SPI_pin_SCK, SPI_pin_DATA, -1, SPI_pin_SS);
 #endif
+
   spi->setFrequency(SPI_freq);
   spi->setDataMode(SPI_MODE0);
   spi->setBitOrder(MSBFIRST);
@@ -117,14 +113,6 @@ RF_RESULT rapidFIRE_SPI::sendCommand(uint16_t command, byte *data, size_t len) {
 
   spi->setHwCs(false);
 
-#if 0
-  Serial.printf("sendCommand: '%c'(%02x) '%c'(%02x) LEN:%d SUM:%02x DATA:[", command>>8, command>>8, command&0xff, command&0xff, len, csum);
-  for (int i = 0; i < len; ++i)
-  {
-    Serial.printf(" %02x", data[i]);
-  }
-  Serial.printf("]\n");
-#endif
   return RF_RESULT_OK;
 }
 

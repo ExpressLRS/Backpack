@@ -36,7 +36,7 @@ class rapidFIRE_SPI {
   int SPI_pin_SCK = -1;
   int SPI_pin_DATA = -1;
   int SPI_pin_SS = -1;
-  int SPI_freq;
+  int SPI_freq = -1;
 
   SPIClass *spi = NULL;
 
@@ -71,7 +71,8 @@ public:
   };
   enum RAPIDFIREMODE {
     RAPIDFIRE_1 = 0x00, // - RapidFIRE #1
-    RAPIDFIRE_2 = 0x01, // - RapidFIRE #2
+    RAPIDFIRE_2 = 0x01, // - RapidFIRE #2 # Seems to have compatibility issues
+                        // with OSD UserText
     LEGACY = 0x02,      // - Legacy
   };
 
