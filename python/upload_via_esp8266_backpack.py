@@ -1,6 +1,6 @@
 import subprocess, os
 
-def do_upload(elrs_bin_target, upload_addr, isstm, env):
+def do_upload(elrs_bin_target, upload_addr, env):
     bootloader_target = None
     app_start = 0 # eka bootloader offset
 
@@ -8,20 +8,17 @@ def do_upload(elrs_bin_target, upload_addr, isstm, env):
            "--retry", "2", "--retry-delay", "1",
            "-F", "data=@%s" % (elrs_bin_target,)]
 
-    if  bootloader_target is not None and isstm:
+    if  bootloader_target is not None:
         cmd_bootloader = ["curl", "--max-time", "60",
             "--retry", "2", "--retry-delay", "1",
             "-F", "data=@%s" % (bootloader_target,), "-F", "flash_address=0x0000"]
-
-    if isstm:
-        cmd += ["-F", "flash_address=0x%X" % (app_start,)]
 
     upload_port = env.get('UPLOAD_PORT', None)
     if upload_port is not None:
         upload_addr = [upload_port]
 
     for addr in upload_addr:
-        addr = "http://%s/%s" % (addr, ['update', 'upload'][isstm])
+        addr = "http://%s/%s" % (addr, ['update', 'upload'])
         print(" ** UPLOADING TO: %s" % addr)
         try:
             if  bootloader_target is not None:
@@ -41,7 +38,6 @@ def do_upload(elrs_bin_target, upload_addr, isstm, env):
     raise Exception("WIFI upload FAILED!")
 
 def on_upload(source, target, env):
-    isstm = env.get('PIOPLATFORM', '') in ['ststm32']
     upload_addr = ['elrs_txbp', 'elrs_txbp.local']
 
     firmware_path = str(source[0])
@@ -53,4 +49,4 @@ def on_upload(source, target, env):
             elrs_bin_target = os.path.join(bin_path, 'firmware.bin')
             if not os.path.exists(elrs_bin_target):
                 raise Exception("No valid binary found!")
-    do_upload(elrs_bin_target, upload_addr, isstm, env)
+    do_upload(elrs_bin_target, upload_addr, env)
