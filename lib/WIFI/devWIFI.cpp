@@ -39,6 +39,11 @@
 #include <MAVLink.h>
 #endif
 #if defined(TARGET_VRX_BACKPACK)
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
+#include "devHeadTracker.h"
+#include "crsf_protocol.h"
+
+#endif
 extern VrxBackpackConfig config;
 extern bool sendRTCChangesToVrx;
 #elif defined(TARGET_TX_BACKPACK)
@@ -88,6 +93,11 @@ static IPAddress apBroadcast(10, 0, 0, 255);
 static DNSServer dnsServer;
 
 static AsyncWebServer server(80);
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
+static AsyncWebSocket ws("/ws");
+extern bool sendHeadTrackingChangesToVrx;
+extern bool headTrackingEnabled;
+#endif
 static bool servicesStarted = false;
 
 static bool target_seen = false;
@@ -156,14 +166,67 @@ static struct {
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
+  {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
+  {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
+  {"/p5.js", "text/javascript", (uint8_t *)P5_JS, sizeof(P5_JS)},
+#endif
 };
+
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
+static void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
+{
+  if (type == WS_EVT_CONNECT) {
+    static const char IMU_JSON[] PROGMEM = R"=====({"orientation":true,"heading":%f,"pitch":%f,"roll":%f,"hasIMU":%s})=====";
+    // Send JSON over websocket
+    char payload[128];
+#if defined(HAS_HEADTRACKING)
+    float (*o)[3] = config.GetBoardOrientation();
+    snprintf_P(payload, sizeof(payload), IMU_JSON, (*o)[2] * RAD_TO_DEG, (*o)[0] * RAD_TO_DEG, (*o)[1] * RAD_TO_DEG, "true");
+#else
+    snprintf_P(payload, sizeof(payload), IMU_JSON, 0.0, 0.0, 0.0, "false");
+#endif
+    ws.text(client->id(), payload, strlen(payload));
+    headTrackingEnabled = true;
+    sendHeadTrackingChangesToVrx = true;
+  }
+  if (type == WS_EVT_DATA) {
+    if (memcmp(data, "sc", 2) == 0) {
+      resetCenter();
+    }
+#if defined(HAS_HEADTRACKING)
+    if (memcmp(data, "o:", 2) == 0) {
+      char buf[64];
+      memcpy(buf, data+2, len-2);
+      buf[len-2] = 0;
+      char * colon = strchr(buf, ':');
+      *colon = 0;
+      int x = atoi(buf);
+      char *colon2 = strchr(colon+1, ':');
+      *colon2 = 0;
+      int y = atoi(colon+1);
+      int z = atoi(colon2+1);
+      setBoardOrientation(x, y, z);
+    } else if (memcmp(data, "ci", 2) == 0) {
+      startIMUCalibration();
+    } else if (memcmp(data, "ro", 2) == 0) {
+      resetBoardOrientation();
+    } else if (memcmp(data, "sv", 2) == 0) {
+      saveBoardOrientation();
+    }
+#endif
+  }
+}
+#endif
 
 static void WebUpdateSendContent(AsyncWebServerRequest *request)
 {
   for (size_t i=0 ; i<ARRAY_SIZE(files) ; i++) {
     if (request->url().equals(files[i].url)) {
       AsyncWebServerResponse *response = request->beginResponse_P(200, files[i].contentType, files[i].content, files[i].size);
-      response->addHeader("Content-Encoding", "gzip");
+      if (pgm_read_byte(files[i].content) == 0x1F) {
+        response->addHeader("Content-Encoding", "gzip");
+      }
       request->send(response);
       return;
     }
@@ -193,6 +256,9 @@ static void GetConfiguration(AsyncWebServerRequest *request)
   json["config"]["mode"] = wifiMode == WIFI_STA ? "STA" : "AP";
   json["config"]["product_name"] = firmwareOptions.product_name;
 
+#if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
+  json["config"]["head-tracking"] = true;
+#endif
 #if defined(AAT_BACKPACK)
   WebAatAppendConfig(json);
 #endif
@@ -627,7 +693,7 @@ static void startServices()
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
 
-  server.on("/generate_204", WebUpdateHandleRoot); // handle Andriod phones doing shit to detect if there is 'real' internet and possibly dropping conn.
+  server.on("/generate_204", WebUpdateHandleRoot); // handle Android phones doing shit to detect if there is 'real' internet and possibly dropping conn.
   server.on("/gen_204", WebUpdateHandleRoot);
   server.on("/library/test/success.html", WebUpdateHandleRoot);
   server.on("/hotspot-detect.html", WebUpdateHandleRoot);
@@ -647,6 +713,16 @@ static void startServices()
 #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
+
+  for (int i=0 ; i<ARRAY_SIZE(files) ; i++)
+  {
+    server.on(files[i].url, WebUpdateSendContent);
+  }
+
+  #if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+  #endif
 
   server.begin();
 
@@ -825,6 +901,36 @@ static void HandleWebUpdate()
       }
       rebootTime = millis() + 200;
     }
+
+#if defined(HAS_HEADTRACKING)|| defined(SUPPORT_HEADTRACKING)
+    static long lastCall = 0;
+    static HeadTrackerState last_state = STATE_ERROR;
+    if (now - lastCall > 50) {
+      auto current_state = getHeadTrackerState();
+      if (current_state == STATE_RUNNING)
+      {
+        if (last_state == STATE_IMU_CALIBRATING)
+        {
+          ws.textAll("{\"done\": true}");
+        }
+        else
+        {
+          static const char IMU_JSON[] PROGMEM = R"=====({"heading":%f,"pitch":%f,"roll":%f})=====";
+          // Send JSON over websocket
+          char payload[80];
+          float yaw, pitch, roll;
+          getEuler(&yaw, &pitch, &roll);
+          snprintf_P(payload, sizeof(payload), IMU_JSON, yaw, pitch, roll);
+          if (ws.availableForWriteAll())
+          {
+            ws.textAll(payload, strlen(payload));
+          }
+        }
+      }
+      lastCall = now;
+      last_state = current_state;
+    }
+#endif
   }
 }
 

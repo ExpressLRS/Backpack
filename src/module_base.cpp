@@ -7,6 +7,12 @@
 #include "logging.h"
 #include <config.h>
 
+#if defined(HAS_HEADTRACKING)
+#include "devHeadTracker.h"
+#include "crsf_protocol.h"
+#endif
+
+int16_t ptrChannelData[3];
 void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE);
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
@@ -56,6 +62,33 @@ ModuleBase::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
 void
 ModuleBase::Loop(uint32_t now)
 {
+#if defined(HAS_HEADTRACKING)
+    static uint32_t lastSend = 0;
+    if (connectionState != wifiUpdate && headTrackingEnabled && now - lastSend > 20)
+    {
+        float fyaw, fpitch, froll;
+        getEuler(&fyaw, &fpitch, &froll);
+
+        // convert from degrees to servo positions
+
+        int pan = map(-fyaw*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int tilt = map(fpitch*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        int roll = map(froll*100, -180*100, 180*100, CRSF_CHANNEL_VALUE_1000, CRSF_CHANNEL_VALUE_2000);
+        mspPacket_t packet;
+        packet.reset();
+        packet.makeCommand();
+        packet.function = MSP_ELRS_BACKPACK_SET_PTR;
+        packet.addByte(pan & 0xFF);
+        packet.addByte(pan >> 8);
+        packet.addByte(roll & 0xFF); // rotating about roll is pitch axis
+        packet.addByte(roll>> 8);
+        packet.addByte(tilt & 0xFF); // rotating about pitch is roll axis
+        packet.addByte(tilt >> 8);
+        sendMSPViaEspnow(&packet);
+        lastSend = now;
+// Serial.printf("%d, %d, %d\r\n",pan, tilt, roll);
+    }
+#endif
 }
 
 void
@@ -121,7 +154,10 @@ MSPModuleBase::Loop(uint32_t now)
             }
             else if (packet->function == MSP_ELRS_BACKPACK_SET_PTR && headTrackingEnabled)
             {
-                  sendMSPViaEspnow(packet);
+                ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
+                ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
+                ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
+                sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();
         }

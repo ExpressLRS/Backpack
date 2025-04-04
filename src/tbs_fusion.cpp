@@ -1,4 +1,4 @@
-#include "fusion.h"
+#include "tbs_fusion.h"
 #include "logging.h"
 #include "crc.h"
 #include "crsf_protocol.h"
@@ -15,7 +15,7 @@ Fusion::Init()
 
 void
 Fusion::SendIndexCmd(uint8_t index)
-{  
+{
     uint16_t f = frequencyTable[index];
     uint8_t buf[12];
     uint8_t pos = 0;
