@@ -553,7 +553,7 @@ void loop()
   }
 
 #if defined(PLATFORM_ESP32)
-  if (uxQueueMessagesWaiting(rxqueue) > 0 && Serial.availableForWrite() == 128)
+  if (uxQueueMessagesWaiting(rxqueue) > 0 && Serial.availableForWrite() >= 128)
     {
       mspPacket_t rxPacket;
       if (xQueueReceive(rxqueue, &rxPacket, (TickType_t)512) == pdTRUE)
