@@ -118,10 +118,11 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
+  MSP recv_msp;
   DBGLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
   {
-    if (msp.processReceivedByte(data[i]))
+    if (recv_msp.processReceivedByte(data[i]))
     {
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
@@ -132,9 +133,9 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
           firmwareOptions.uid[4] == mac_addr[4] &&
           firmwareOptions.uid[5] == mac_addr[5])
       {
-        ProcessMSPPacketFromPeer(msp.getReceivedPacket());
+        ProcessMSPPacketFromPeer(recv_msp.getReceivedPacket());
       }
-      msp.markPacketReceived();
+      recv_msp.markPacketReceived();
     }
   }
   blinkLED();

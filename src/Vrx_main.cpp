@@ -151,12 +151,13 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
+  MSP recv_msp;
   DBGVLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
   {
     DBGV("%x,", data[i]); // Debug prints
 
-    if (msp.processReceivedByte(data[i]))
+    if (recv_msp.processReceivedByte(data[i]))
     {
       DBGVLN(""); // Extra line for serial output readability
       // Finished processing a complete packet
@@ -174,16 +175,16 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
       {
         gotInitialPacket = true;
         #if defined(PLATFORM_ESP8266)
-          ProcessMSPPacket(msp.getReceivedPacket());
+          ProcessMSPPacket(recv_msp.getReceivedPacket());
         #elif defined(PLATFORM_ESP32)
-          xQueueSend(rxqueue, msp.getReceivedPacket(), (TickType_t)1024);
+          xQueueSend(rxqueue, recv_msp.getReceivedPacket(), (TickType_t)1024);
         #endif
       }
       else
       {
         DBGLN("Failed MAC add check and not in bindingMode.");
       }
-      msp.markPacketReceived();
+      recv_msp.markPacketReceived();
     }
   }
   blinkLED();
