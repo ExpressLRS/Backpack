@@ -2,6 +2,7 @@
 .pioenvs
 .piolibdeps
 .vscode
+.idea
 __pycache__
 *.pyc
 include/WebContent.h
