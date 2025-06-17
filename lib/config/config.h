@@ -2,10 +2,15 @@
 
 #include "elrs_eeprom.h"
 
+// Identifier for type of backpack
+#define TX_BACKPACK_TYPE_ID     (0b01U)
+#define VRX_BACKPACK_TYPE_ID    (0b10U)
+#define TIMER_BACKPACK_TYPE_ID  (0b11U)
+
 // CONFIG_MAGIC is ORed with CONFIG_VERSION in the version field
-#define TX_BACKPACK_CONFIG_MAGIC    (0b01U << 30)
-#define VRX_BACKPACK_CONFIG_MAGIC   (0b10U << 30)
-#define TIMER_BACKPACK_CONFIG_MAGIC (0b11U << 30)
+#define TX_BACKPACK_CONFIG_MAGIC    (TX_BACKPACK_TYPE_ID << 30)
+#define VRX_BACKPACK_CONFIG_MAGIC   (VRX_BACKPACK_TYPE_ID << 30)
+#define TIMER_BACKPACK_CONFIG_MAGIC (TIMER_BACKPACK_TYPE_ID << 30)
 
 #define TX_BACKPACK_CONFIG_VERSION      4
 #define VRX_BACKPACK_CONFIG_VERSION     5
