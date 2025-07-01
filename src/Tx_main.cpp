@@ -359,10 +359,10 @@ RF_PRE_INIT()
 
 void setup()
 {
-  #ifdef DEBUG_LOG
-    Serial1.begin(115200);
-    Serial1.setDebugOutput(true);
-  #endif
+#ifdef DEBUG_LOG
+  LOGGING_UART.begin(115200);
+  LOGGING_UART.setDebugOutput(true);
+#endif
   Serial.setRxBufferSize(4096);
   Serial.begin(460800);
 
