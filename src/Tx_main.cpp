@@ -72,6 +72,7 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 // otherwise we get errors about invalid peer:
 // https://rntlab.com/question/espnow-peer-interface-is-invalid/
 esp_now_peer_info_t peerInfo;
+esp_now_peer_info_t bindingInfo;
 #endif
 
 void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
@@ -410,6 +411,14 @@ void setup()
       if (esp_now_add_peer(&peerInfo) != ESP_OK)
       {
         DBGLN("ESP-NOW failed to add peer");
+        return;
+      }
+      memcpy(bindingInfo.peer_addr, bindingAddress, 6);
+      bindingInfo.channel = 0;
+      bindingInfo.encrypt = false;
+      if (esp_now_add_peer(&bindingInfo) != ESP_OK)
+      {
+        DBGLN("ESP-NOW failed to add binding peer");
         return;
       }
     #endif
