@@ -189,23 +189,6 @@ void HandleConfigMsg(mspPacket_t *packet)
 
 void ProcessMSPPacketFromTX(mspPacket_t *packet)
 {
-  if (packet->function == MSP_ELRS_BIND)
-  {
-    config.SetGroupAddress(packet->payload);
-    DBG("MSP_ELRS_BIND = ");
-    for (int i = 0; i < 6; i++)
-    {
-      DBG("%x", packet->payload[i]); // Debug prints
-      DBG(",");
-    }
-    DBG(""); // Extra line for serial output readability
-    config.Commit();
-    // delay(500); // delay may not be required
-    sendMSPViaEspnow(packet);
-    // delay(500); // delay may not be required
-    rebootTime = millis(); // restart to set SetSoftMACAddress
-  }
-
   switch (packet->function)
   {
   case MSP_SET_VTX_CONFIG:
@@ -215,24 +198,29 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     // transparently forward MSP packets via espnow to any subscribers
     sendMSPViaEspnow(packet);
     break;
+
   case MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_VRX_BACKPACK_WIFI_MODE...");
     sendMSPViaEspnow(packet);
     break;
+
   case MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE:
     DBGLN("Processing MSP_ELRS_SET_TX_BACKPACK_WIFI_MODE...");
     RebootIntoWifi();
     break;
+
   case MSP_ELRS_GET_BACKPACK_VERSION:
     DBGLN("Processing MSP_ELRS_GET_BACKPACK_VERSION...");
     SendVersionResponse();
     break;
+
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     cachedHTPacket = *packet;
     cacheFull = true;
     sendMSPViaEspnow(packet);
     break;
+
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
     if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
@@ -240,10 +228,33 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
       sendMSPViaEspnow(packet);
     }
     break;
+
   case MSP_ELRS_BACKPACK_CONFIG:
     DBGLN("Processing MSP_ELRS_BACKPACK_CONFIG...");
     HandleConfigMsg(packet);
     break;
+
+  case MSP_ELRS_BIND:
+    DBG("MSP_ELRS_BIND = ");
+    for (int i = 0; i < 6; i++)
+    {
+      DBG("%x", packet->payload[i]); // Debug prints
+      DBG(",");
+    }
+    DBG(""); // Extra line for serial output readability
+
+    // If the BIND address is different to our current one,
+    // then we save it and reboot so it can take effect
+    if (memcmp(packet->payload, config.GetGroupAddress(), 6) != 0)
+    {
+      config.SetGroupAddress(packet->payload);
+      config.Commit();
+      rebootTime = millis(); // restart to set SetSoftMACAddress
+      return;
+    }
+    sendMSPViaEspnow(packet);
+    break;
+
   default:
     // transparently forward MSP packets via espnow to any subscribers
     sendMSPViaEspnow(packet);
@@ -352,8 +363,8 @@ void setup()
     Serial1.begin(115200);
     Serial1.setDebugOutput(true);
   #endif
-  Serial.begin(460800);
   Serial.setRxBufferSize(4096);
+  Serial.begin(460800);
 
   options_init();
 
