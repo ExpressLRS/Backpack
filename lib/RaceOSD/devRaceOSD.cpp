@@ -10,8 +10,14 @@
 #if defined(PLATFORM_ESP32)
 static StaticSemaphore_t xMutexBuffer;
 static SemaphoreHandle_t xSemaphore = NULL;
-static TimerHandle_t xOSDTimer = NULL;
+
+#define STACK_SIZE 1028
 static TaskHandle_t xOSDUpdateTask = NULL;
+StaticTask_t xTaskBuffer;
+StackType_t xStack[ STACK_SIZE ];
+
+static TimerHandle_t xOSDTimer = NULL;
+StaticTimer_t pxTimerBuffer;
 #endif
 
 // OSD Data
@@ -351,46 +357,55 @@ static void renderOSDRowUpdate(uint8_t* rowData, uint8_t row_num)
  * Render each updated row and send data to
  * the host device.
 */
-static void sendOSDUpdates(void *)
+static void runOSDUpdates(void *)
 {
     static MSP msp;
     static bool updated_flag;
     static mspPacket_t packet;
     static uint8_t rowData[RACEOSD_WIDTH];
 
-    updated_flag = false;
-    for (int i = 0; i < RACEOSD_HEIGHT; i++)
+    #if defined(PLATFORM_ESP32)
+    while (1)
     {
-        if (rowHasUpdate[i])
+        // Reset the notification state and wait for new
+        // notification to proceed
+        xTaskNotifyStateClear(xOSDUpdateTask);
+        xTaskNotifyWait(0x00, ULONG_MAX, NULL, portMAX_DELAY);
+    #endif
+
+        updated_flag = false;
+        for (int i = 0; i < RACEOSD_HEIGHT; i++)
         {
-            memset(rowData, EMPTY_VALUE, sizeof(rowData));
-            renderOSDRowUpdate(rowData, i);
-            packet.reset();
-            packet.makeCommand();
-            packet.function = MSP_ELRS_SET_OSD;
-            packet.addByte(0x03);
-            packet.addByte(i);
-            packet.addByte(0);
-
-            for (int j = 0; j < RACEOSD_WIDTH; j++)
+            if (rowHasUpdate[i])
             {
-                packet.addByte(rowData[j]);
+                memset(rowData, EMPTY_VALUE, sizeof(rowData));
+                renderOSDRowUpdate(rowData, i);
+                packet.reset();
+                packet.makeCommand();
+                packet.function = MSP_ELRS_SET_OSD;
+                packet.addByte(0x03);
+                packet.addByte(i);
+                packet.addByte(0);
+
+                for (int j = 0; j < RACEOSD_WIDTH; j++)
+                {
+                    packet.addByte(rowData[j]);
+                }
+
+                msp.sendPacket(&packet, &Serial);
+                updated_flag = true;
             }
-
-            msp.sendPacket(&packet, &Serial);
-            updated_flag = true;
         }
-    }
+    
 
-    // Send packet to render updated row(s)
-    if (updated_flag)
-    {
-        msp.sendPacket(&displayPacket, &Serial);
-    }
+        // Send packet to render updated row(s)
+        if (updated_flag)
+        {
+            msp.sendPacket(&displayPacket, &Serial);
+        }
 
     #if defined(PLATFORM_ESP32)
-        vTaskDelete(NULL);
-        xOSDUpdateTask = NULL;
+    }
     #endif
 }
 
@@ -401,14 +416,17 @@ static void sendOSDUpdates(void *)
  * the updates as a function call (platform dependent) 
 */
 #if defined(PLATFORM_ESP32)
-static void runRaceOSDUpdates(TimerHandle_t timer)
+static void triggerRaceOSDUpdates(TimerHandle_t timer)
 {
-    // Schedule a lower priority task instead of running from a ISR
-    if (xOSDUpdateTask == NULL)
-        xTaskCreate(sendOSDUpdates, "Update OSD", 4096, NULL, 8, &xOSDUpdateTask);
+    // Notify OSD updater task to proceed if in a active
+    // race state
+    if (state == RACE_STATE_STAGING || 
+        state == RACE_STATE_RACING ||
+        state == RACE_STATE_OVERTIME)
+        xTaskNotify(xOSDUpdateTask, 0, eSetValueWithOverwrite);
 }
 #else
-void runRaceOSDUpdates(void)
+void triggerRaceOSDUpdates(void)
 {
 
     static uint32_t lastUpdateTime;
@@ -417,7 +435,7 @@ void runRaceOSDUpdates(void)
     now = millis();
     if (now - lastUpdateTime > OSD_REFRESH_MILLIS)
     {
-        sendOSDUpdates();
+        runOSDUpdates();
         lastUpdateTime = now;
     }
 }
@@ -495,13 +513,24 @@ void setupRaceOSD(void)
     // Setup osd element mutex
     xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
 
-    // Setup timer for generating the OSD update task
-    xOSDTimer = xTimerCreate(
-        "OSD Update Timer",
-        OSD_REFRESH_MILLIS / portTICK_PERIOD_MS,
-        pdTRUE,
-        (void *)0,
-        runRaceOSDUpdates);
+    // Create task to run OSD updates
+    xOSDUpdateTask = xTaskCreateStatic(
+                        runOSDUpdates, 
+                        "OSD Updater", 
+                        STACK_SIZE, 
+                        NULL, 
+                        8, 
+                        xStack, 
+                        &xTaskBuffer);
+
+    // Setup timer for generating osd update notifications
+    xOSDTimer = xTimerCreateStatic(
+                        "OSD Trigger Timer",
+                        OSD_REFRESH_MILLIS / portTICK_PERIOD_MS,
+                        pdTRUE,
+                        (void *)0,
+                        triggerRaceOSDUpdates,
+                        &pxTimerBuffer);
 
     xTimerStart(xOSDTimer, portMAX_DELAY);
     #endif
