@@ -24,6 +24,7 @@
 #include "devButton.h"
 #include "devLED.h"
 #include "devHeadTracker.h"
+#include "devRaceOSD.h"
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -245,6 +246,14 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_SET_OSD...");
     vrxModule.SetOSD(packet);
     break;
+  #if defined(RACEOSD_ENABLED)
+  case MSP_ELRS_SET_RACE_STATE:
+    processRaceStatePacket(packet);
+    break;
+  case MSP_ELRS_SET_RACEOSD_DATA:
+    processRaceOSDPacket(packet);
+    break;
+  #endif
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
@@ -480,6 +489,11 @@ void setup()
   #if defined(HDZERO_BACKPACK)
     Serial.begin(VRX_UART_BAUD);
   #endif
+
+  #if defined(RACEOSD_ENABLED)
+    setupRaceOSD();
+  #endif
+
   DBGLN("Setup completed");
 }
 
@@ -559,6 +573,10 @@ void loop()
       if (xQueueReceive(rxqueue, &rxPacket, (TickType_t)512) == pdTRUE)
         ProcessMSPPacket(&rxPacket);
     }
+#elif defined(PLATFORM_ESP8266)
+  #if defined(RACEOSD_ENABLED)
+    runRaceOSDUpdates();
+  #endif
 #endif
 
 }
