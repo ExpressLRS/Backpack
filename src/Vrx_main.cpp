@@ -23,7 +23,9 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devLED.h"
+#if defined(HAS_HEADTRACKING)
 #include "devHeadTracker.h"
+#endif
 
 #ifdef RAPIDFIRE_BACKPACK
   #include "rapidfire.h"
@@ -43,6 +45,8 @@
   #include "module_aat.h"
 #elif defined(CROSSBOW_BACKPACK)
   #include "mfd_crossbow.h"
+#elif defined(PEDAL_BACKPACK)
+  #include "module_pedal.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -124,6 +128,8 @@ VrxBackpackConfig config;
   AatModule vrxModule(Serial);
 #elif defined(CROSSBOW_BACKPACK)
   MFDCrossbow vrxModule(&Serial);
+#elif defined(PEDAL_BACKPACK)
+  PedalModule vrxModule;
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -341,7 +347,7 @@ void SetSoftMACAddress()
 
 void RequestVTXPacket()
 {
-#if !defined(AAT_BACKPACK) and !defined(CROSSBOW_BACKPACK)
+#if !defined(AAT_BACKPACK) && !defined(CROSSBOW_BACKPACK) && !defined(PEDAL_BACKPACK)
   mspPacket_t packet;
   packet.reset();
   packet.makeCommand();
@@ -370,7 +376,12 @@ void sendMSPViaEspnow(mspPacket_t *packet)
     return;
   }
 
-  esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
+  esp_err_t err = esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
+  if (err != ESP_OK)
+  {
+    DBGLN("ESPNOW err=%u", err);
+  }
+
 }
 
 void resetBootCounter()
