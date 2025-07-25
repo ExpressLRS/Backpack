@@ -24,7 +24,7 @@ private:
     static constexpr uint32_t STARTUP_MS = 2000U;
     // Transmit interval differs based on how recently the pedal changed position
     static constexpr uint32_t PEDAL_INTERVAL_UNCHANGED_MS = 750U;
-    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = 50U;
+    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = 100U;
 
     void button_OnLongPress();
     void checkSendPedalPos();
