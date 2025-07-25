@@ -27,11 +27,12 @@ private:
     static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = 50U;
 
     void button_OnLongPress();
-    void checkSendPedalPos(uint32_t now);
+    void checkSendPedalPos();
 
     Button<PIN_PEDAL_BUTTON, false> _pedal;
     SemaphoreHandle_t _pedalSemaphore;
     bool _lastTxValue;
+    uint32_t _lastNow;
     uint32_t _lastTxMs;
     uint32_t _lastPedalChangeMs;
 };

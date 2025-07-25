@@ -8,7 +8,7 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 bool BindingExpired(uint32_t now);
 
 PedalModule::PedalModule()
- :  _lastTxValue(false), _lastTxMs(0), _lastPedalChangeMs(0)
+ :  _lastTxValue(false), _lastNow(0), _lastTxMs(0), _lastPedalChangeMs(0)
 {
     _pedal.OnLongPress = std::bind(&PedalModule::button_OnLongPress, this);
 }
@@ -26,7 +26,11 @@ void PedalModule::Init()
 
 void PedalModule::Loop(uint32_t now)
 {
-    if (BindingExpired(now))
+    // Need to store what the main loop thinks is "now" in case the button
+    // event is going to use it to set the bindstart time, otherwise millis()
+    // could be in the future (compared to now) and timeout immediately
+    _lastNow = now;
+    if (BindingExpired(_lastNow))
     {
         connectionState = running;
     }
@@ -40,29 +44,29 @@ void PedalModule::Loop(uint32_t now)
     if (connectionState != running)
         return;
     // Don't TX on startup
-    if (_lastTxMs == 0 && now < STARTUP_MS)
+    if (_lastTxMs == 0 && _lastNow < STARTUP_MS)
         return;
 
-    checkSendPedalPos(now);
+    checkSendPedalPos();
 }
 
-void PedalModule::checkSendPedalPos(uint32_t now)
+void PedalModule::checkSendPedalPos()
 {
     bool pedalPressed = _pedal.isPressed();
     bool pedalChanged = pedalPressed != _lastTxValue;
 
     if (pedalChanged)
     {
-        _lastPedalChangeMs = now;
+        _lastPedalChangeMs = _lastNow;
     }
 
     // Send the pedal position frequently after last change, until it is unchanged for one UNCHANGED_MS interval
-    uint32_t txIntervalMs = (now - _lastPedalChangeMs < PEDAL_INTERVAL_UNCHANGED_MS) ? PEDAL_INTERVAL_CHANGED_MS : PEDAL_INTERVAL_UNCHANGED_MS;
-    if (pedalChanged || now - _lastTxMs > txIntervalMs)
+    uint32_t txIntervalMs = (_lastNow - _lastPedalChangeMs < PEDAL_INTERVAL_UNCHANGED_MS) ? PEDAL_INTERVAL_CHANGED_MS : PEDAL_INTERVAL_UNCHANGED_MS;
+    if (pedalChanged || _lastNow - _lastTxMs > txIntervalMs)
     {
-        _lastTxMs = now;
+        _lastTxMs = _lastNow;
         _lastTxValue = pedalPressed;
-        DBGLN("%u pedal %u", now, pedalPressed);
+        DBGLN("%u pedal %u", _lastNow, pedalPressed);
 
         // Pedal is 1000us if not pressed, 2000us if pressed
         uint16_t pedalState = pedalPressed ? CRSF_CHANNEL_VALUE_2000 : CRSF_CHANNEL_VALUE_1000;
@@ -94,7 +98,7 @@ void PedalModule::button_OnLongPress()
     // Long press of the pedal for 5s takes the pedal into binding mode
     if (_pedal.getLongCount() >= 10 && connectionState == running)
     {
-        bindingStart = millis();
+        bindingStart = _lastNow;
         connectionState = binding;
     }
     // Long press of pedal for 10s goes from binding to wifi
