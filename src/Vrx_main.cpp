@@ -381,7 +381,6 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   {
     DBGLN("ESPNOW err=%u", err);
   }
-
 }
 
 void resetBootCounter()

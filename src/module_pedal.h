@@ -24,15 +24,13 @@ private:
     static constexpr uint32_t STARTUP_MS = 2000U;
     // Transmit interval differs based on how recently the pedal changed position
     static constexpr uint32_t PEDAL_INTERVAL_UNCHANGED_MS = 750U;
-    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = PEDAL_INTERVAL_UNCHANGED_MS / 10U;
+    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = 50U;
 
-    void button_OnShortPress();
     void button_OnLongPress();
     void checkSendPedalPos(uint32_t now);
 
     Button<PIN_PEDAL_BUTTON, false> _pedal;
     SemaphoreHandle_t _pedalSemaphore;
-    bool _pedalEventFired;
     bool _lastTxValue;
     uint32_t _lastTxMs;
     uint32_t _lastPedalChangeMs;

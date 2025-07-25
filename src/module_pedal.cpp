@@ -8,9 +8,8 @@ void sendMSPViaEspnow(mspPacket_t *packet);
 bool BindingExpired(uint32_t now);
 
 PedalModule::PedalModule()
- :  _pedalEventFired(false), _lastTxValue(false), _lastTxMs(0), _lastPedalChangeMs(0)
+ :  _lastTxValue(false), _lastTxMs(0), _lastPedalChangeMs(0)
 {
-    _pedal.OnShortPress = std::bind(&PedalModule::button_OnShortPress, this);
     _pedal.OnLongPress = std::bind(&PedalModule::button_OnLongPress, this);
 }
 
@@ -50,8 +49,7 @@ void PedalModule::Loop(uint32_t now)
 void PedalModule::checkSendPedalPos(uint32_t now)
 {
     bool pedalPressed = _pedal.isPressed();
-    bool pedalChanged = _pedalEventFired || pedalPressed != _lastTxValue;
-    _pedalEventFired = false;
+    bool pedalChanged = pedalPressed != _lastTxValue;
 
     if (pedalChanged)
     {
@@ -79,6 +77,7 @@ void PedalModule::checkSendPedalPos(uint32_t now)
         packet.addByte(0); // CH2
         packet.addByte(0);
         sendMSPViaEspnow(&packet);
+        yield();
     }
 }
 
@@ -90,14 +89,8 @@ void IRAM_ATTR PedalModule::button_interrupt(void *instance)
         portYIELD_FROM_ISR();
 }
 
-void PedalModule::button_OnShortPress()
-{
-    _pedalEventFired = true;
-}
-
 void PedalModule::button_OnLongPress()
 {
-    _pedalEventFired = true;
     // Long press of the pedal for 5s takes the pedal into binding mode
     if (_pedal.getLongCount() >= 10 && connectionState == running)
     {
