@@ -376,11 +376,7 @@ void sendMSPViaEspnow(mspPacket_t *packet)
     return;
   }
 
-  esp_err_t err = esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
-  if (err != ESP_OK)
-  {
-    DBGLN("ESPNOW err=%u", err);
-  }
+  esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
 }
 
 void resetBootCounter()
