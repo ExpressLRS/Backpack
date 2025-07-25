@@ -13,18 +13,18 @@ class PedalModule : public ModuleBase
 {
 public:
     PedalModule();
+    ~PedalModule();
 
     void Init();
     void Loop(uint32_t now);
 private:
-    static PedalModule *instance;
-    static void button_interrupt();
+    static void button_interrupt(void *instance);
 
     // Don't send updates on for a short time after bootup
     static constexpr uint32_t STARTUP_MS = 2000U;
     // Transmit interval differs based on how recently the pedal changed position
-    static constexpr uint32_t PEDAL_INTERVAL_UNCHANGED_MS = 1000U;
-    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = 100U;
+    static constexpr uint32_t PEDAL_INTERVAL_UNCHANGED_MS = 750U;
+    static constexpr uint32_t PEDAL_INTERVAL_CHANGED_MS = PEDAL_INTERVAL_UNCHANGED_MS / 10U;
 
     void button_OnShortPress();
     void button_OnLongPress();

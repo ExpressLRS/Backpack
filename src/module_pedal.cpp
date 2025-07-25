@@ -7,20 +7,22 @@
 void sendMSPViaEspnow(mspPacket_t *packet);
 bool BindingExpired(uint32_t now);
 
-PedalModule *PedalModule::instance = nullptr;
-
 PedalModule::PedalModule()
  :  _pedalEventFired(false), _lastTxValue(false), _lastTxMs(0), _lastPedalChangeMs(0)
 {
-    PedalModule::instance = this;
     _pedal.OnShortPress = std::bind(&PedalModule::button_OnShortPress, this);
     _pedal.OnLongPress = std::bind(&PedalModule::button_OnLongPress, this);
+}
+
+PedalModule::~PedalModule()
+{
+    detachInterrupt(PIN_PEDAL_BUTTON);
 }
 
 void PedalModule::Init()
 {
     _pedalSemaphore = xSemaphoreCreateBinary();
-    attachInterrupt(PIN_PEDAL_BUTTON, &PedalModule::button_interrupt, CHANGE);
+    attachInterruptArg(PIN_PEDAL_BUTTON, &PedalModule::button_interrupt, this, CHANGE);
 }
 
 void PedalModule::Loop(uint32_t now)
@@ -47,8 +49,8 @@ void PedalModule::Loop(uint32_t now)
 
 void PedalModule::checkSendPedalPos(uint32_t now)
 {
-    bool pedalPressed = _pedalEventFired || _pedal.isPressed();
-    bool pedalChanged = pedalPressed != _lastTxValue;
+    bool pedalPressed = _pedal.isPressed();
+    bool pedalChanged = _pedalEventFired || pedalPressed != _lastTxValue;
     _pedalEventFired = false;
 
     if (pedalChanged)
@@ -80,24 +82,22 @@ void PedalModule::checkSendPedalPos(uint32_t now)
     }
 }
 
-void IRAM_ATTR PedalModule::button_interrupt()
+void IRAM_ATTR PedalModule::button_interrupt(void *instance)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xSemaphoreGiveFromISR(PedalModule::instance->_pedalSemaphore, &xHigherPriorityTaskWoken);
-    // No need to if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR(), just let the loop break
+    xSemaphoreGiveFromISR(((PedalModule *)instance)->_pedalSemaphore, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken)
+        portYIELD_FROM_ISR();
 }
 
 void PedalModule::button_OnShortPress()
 {
     _pedalEventFired = true;
-    DBGLN("Short %u", _pedal.getCount());
 }
 
 void PedalModule::button_OnLongPress()
 {
     _pedalEventFired = true;
-    DBGLN("Long %u", _pedal.getLongCount());
-
     // Long press of the pedal for 5s takes the pedal into binding mode
     if (_pedal.getLongCount() >= 10 && connectionState == running)
     {
