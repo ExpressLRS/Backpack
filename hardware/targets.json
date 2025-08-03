@@ -286,6 +286,12 @@
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
+            },
+            "tx15": {
+                "product_name": "RadioMaster TX15 Dual-Band TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["etx", "wifi"]
             }
         }
     },
