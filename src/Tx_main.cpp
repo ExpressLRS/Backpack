@@ -127,12 +127,14 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
     {
       // Finished processing a complete packet
       // Only process packets from a bound MAC address
-      if (firmwareOptions.uid[0] == mac_addr[0] &&
+      if ((firmwareOptions.uid[0] == mac_addr[0] &&
           firmwareOptions.uid[1] == mac_addr[1] &&
           firmwareOptions.uid[2] == mac_addr[2] &&
           firmwareOptions.uid[3] == mac_addr[3] &&
-          firmwareOptions.uid[4] == mac_addr[4] &&
-          firmwareOptions.uid[5] == mac_addr[5])
+          firmwareOptions.uid[4] == mac_addr[4]
+        ) ||
+        TIMER_BACKPACK_TYPE_ID == mac_addr[5]
+      )
       {
         ProcessMSPPacketFromPeer(recv_msp.getReceivedPacket());
       }
@@ -282,7 +284,8 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   }
   else
   {
-    esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
+    // Address set to NULL sends data to all registered peers
+    esp_now_send(NULL, (uint8_t *) &nowDataOutput, packetSize);
   }
 
   blinkLED();
@@ -322,6 +325,8 @@ void SetSoftMACAddress()
 
   // MAC address can only be set with unicast, so first byte must be even, not odd
   firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
+  // Set MAC address to be specific for type of device
+  firmwareOptions.uid[5] = TX_BACKPACK_TYPE_ID;
 
   WiFi.mode(WIFI_STA);
   #if defined(PLATFORM_ESP8266)
@@ -401,11 +406,16 @@ void setup()
       rebootTime = millis();
     }
 
+    // Create the peer address for transmitter with same UID
+    uint8_t peer_address[6];
+    memcpy(peer_address, firmwareOptions.uid, 6);
+    peer_address[5] = VRX_BACKPACK_TYPE_ID;
+
     #if defined(PLATFORM_ESP8266)
       esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-      esp_now_add_peer(firmwareOptions.uid, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+      esp_now_add_peer(peer_address, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
     #elif defined(PLATFORM_ESP32)
-      memcpy(peerInfo.peer_addr, firmwareOptions.uid, 6);
+      memcpy(peerInfo.peer_addr, peer_address, 6);
       peerInfo.channel = 0;
       peerInfo.encrypt = false;
       if (esp_now_add_peer(&peerInfo) != ESP_OK)
