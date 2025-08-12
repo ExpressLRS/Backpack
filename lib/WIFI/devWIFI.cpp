@@ -59,7 +59,10 @@ extern TimerBackpackConfig config;
 #endif
 extern unsigned long rebootTime;
 
-#if defined(TARGET_VRX_BACKPACK)
+#if defined(AAT_BACKPACK)
+static const char *myHostname = "elrs_aat";
+static const char *wifi_ap_ssid = "ExpressLRS AAT Backpack";
+#elif defined(TARGET_VRX_BACKPACK)
 static const char *myHostname = "elrs_vrx";
 static const char *wifi_ap_ssid = "ExpressLRS VRx Backpack";
 #elif defined(TARGET_TX_BACKPACK)
