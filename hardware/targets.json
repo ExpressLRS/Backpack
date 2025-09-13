@@ -295,6 +295,29 @@
             }
         }
     },
+    "radiosky": {
+        "name": "HelloRadioSky",
+        "txbp": {
+            "v14": {
+                "product_name": "HelloRadioSky V14 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "v16": {
+                "product_name": "HelloRadioSky V16 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "v16r": {
+                "product_name": "HelloRadioSky V16R TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
     "fusion": {
         "name": "Fusion VRX",
         "vrx": {
