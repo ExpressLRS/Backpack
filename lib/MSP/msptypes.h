@@ -20,7 +20,6 @@
 #define MSP_ELRS_SET_RX_LOAN_MODE               0x0F
 #define MSP_ELRS_GET_BACKPACK_VERSION           0x10
 #define MSP_ELRS_BACKPACK_CRSF_TLM              0x11
-#define MSP_ELRS_SET_SEND_UID                   0x00B5
 #define MSP_ELRS_SET_OSD                        0x00B6
 
 // Config opcodes
@@ -56,3 +55,8 @@
 #define MSP_ELRS_BACKPACK_GET_VERSION           0x0381  // get the bacpack firmware version
 #define MSP_ELRS_BACKPACK_GET_STATUS            0x0382  // get the status of the backpack
 #define MSP_ELRS_BACKPACK_SET_PTR               0x0383  // forwarded back to TX backpack
+
+// incoming, packets originating from the Timer
+#define MSP_ELRS_SET_SEND_UID                   0x0401  // Reserve 0x0400 for future use
+#define MSP_ELRS_SET_RACE_STATE                 0x0402
+#define MSP_ELRS_SET_RACEOSD_DATA               0x0403
