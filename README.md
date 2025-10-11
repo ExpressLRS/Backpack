@@ -1,4 +1,10 @@
+# ExpressLRS Backpack
+
+The ExpressLRS Backpack adds ESP-NOW–based wireless communication between ExpressLRS TX modules and compatible FPV hardware, allowing for remote configuration, control, and telemetry exchange. Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance
+reliable, high-performance radio control technology.
+
 ## What is a "TX Backpack"?
+
 Some of the ExpressLRS TX modules include an additional ESP8285 chip, which lets us communicate wirelessly with other ESP8285 enabled devices using a protocol called espnow. We call this chip the "TX-Backpack". The aim of the TX-Backpack is to allow wireless communication between ExpressLRS, and other FPV related devices for command and control, or for querying config.
 
 ## Sounds interesting... What type of FPV devices can it talk to?
