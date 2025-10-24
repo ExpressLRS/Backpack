@@ -76,10 +76,12 @@ void PedalModule::checkSendPedalPos()
         packet.function = MSP_ELRS_BACKPACK_SET_PTR;
         packet.addByte(pedalState & 0xFF); // CH0
         packet.addByte(pedalState >> 8);
-        packet.addByte(0); // CH1
-        packet.addByte(0);
-        packet.addByte(0); // CH2
-        packet.addByte(0);
+        // ExpressLRS 4.0 supports only sending as many channels as needed, but for 3.x compatibility
+        // 6 total payload bytes are required. A channel value of 0xffff means "do not update" in 4.0
+        packet.addByte(0xff); // CH1
+        packet.addByte(0xff);
+        packet.addByte(0xff); // CH2
+        packet.addByte(0xff);
         sendMSPViaEspnow(&packet);
         yield();
     }
