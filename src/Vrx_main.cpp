@@ -127,7 +127,7 @@ VrxBackpackConfig config;
 #elif defined(CROSSBOW_BACKPACK)
   MFDCrossbow vrxModule(&Serial);
 #elif defined(RAW_CRSF_BACKPACK)
-  CRSFBackPack vrxModule(&Serial);
+  CrsfRawBackpack vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
