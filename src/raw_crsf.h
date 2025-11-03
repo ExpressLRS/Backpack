@@ -1,14 +1,13 @@
 #pragma once
 
 #include "module_base.h"
-#include "msptypes.h"
 
 #define VRX_UART_BAUD           115200
 
-class CRSFBackPack : public ModuleBase
+class CrsfRawBackpack : public ModuleBase
 {
 public:
-CRSFBackPack(HardwareSerial *port);
+CrsfRawBackpack(HardwareSerial *port);
     void SendRawTelemetry(uint8_t *rawCrsfPacket, uint16_t size);
     void Loop(uint32_t now);
 
