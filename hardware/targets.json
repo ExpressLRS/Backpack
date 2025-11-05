@@ -97,6 +97,17 @@
             }
         }
     },
+    "flysky": {
+        "name": "FlySky",
+        "txbp": {
+            "pa01": {
+                "product_name": "Flysky PA01 2.4GHz TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
     "happymodel": {
         "name": "Happymodel",
         "txbp": {
