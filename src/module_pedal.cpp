@@ -3,6 +3,9 @@
 #include "module_pedal.h"
 #include "common.h"
 #include "msptypes.h"
+#if defined(PIN_LED)
+  #include "devLED.h"
+#endif
 
 void sendMSPViaEspnow(mspPacket_t *packet);
 bool BindingExpired(uint32_t now);
@@ -85,6 +88,12 @@ void PedalModule::checkSendPedalPos()
         packet.addByte(0xff);
         sendMSPViaEspnow(&packet);
         yield();
+
+#if defined(PIN_LED)
+        // Flash the LED to indicate the high-speed pedal update mode
+        if (pedalPressed)
+            blinkLED();
+#endif
     }
 }
 
