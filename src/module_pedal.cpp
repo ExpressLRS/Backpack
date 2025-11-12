@@ -10,18 +10,18 @@ bool BindingExpired(uint32_t now);
 PedalModule::PedalModule()
  :  _lastTxValue(false), _lastNow(0), _lastTxMs(0), _lastPedalChangeMs(0)
 {
-    _pedal.OnLongPress = std::bind(&PedalModule::button_OnLongPress, this);
+    _btnBind.OnLongPress = std::bind(&PedalModule::button_OnLongPress, this);
 }
 
 PedalModule::~PedalModule()
 {
-    detachInterrupt(PIN_PEDAL_BUTTON);
+    detachInterrupt(PIN_BUTTON_PEDAL);
 }
 
 void PedalModule::Init()
 {
     _pedalSemaphore = xSemaphoreCreateBinary();
-    attachInterruptArg(PIN_PEDAL_BUTTON, &PedalModule::button_interrupt, this, CHANGE);
+    attachInterruptArg(PIN_BUTTON_PEDAL, &PedalModule::button_interrupt, this, CHANGE);
 }
 
 void PedalModule::Loop(uint32_t now)
@@ -37,8 +37,9 @@ void PedalModule::Loop(uint32_t now)
 
     // Pause here to lower power usage (C3 drops from 100mA to 90mA)
     // If button is currently transitioning or pressed just consume the semaphore, else delay until an interrupt
-    xSemaphoreTake(_pedalSemaphore, _pedal.isIdle() ? pdMS_TO_TICKS(20) : 0);
-    _pedal.update();
+    xSemaphoreTake(_pedalSemaphore, _btnPedal.isIdle() ? pdMS_TO_TICKS(20) : 0);
+    _btnPedal.update();
+    _btnBind.update();
 
     // Don't TX if binding/wifi
     if (connectionState != running)
@@ -52,7 +53,7 @@ void PedalModule::Loop(uint32_t now)
 
 void PedalModule::checkSendPedalPos()
 {
-    bool pedalPressed = _pedal.isPressed();
+    bool pedalPressed = _btnPedal.isPressed();
     bool pedalChanged = pedalPressed != _lastTxValue;
 
     if (pedalChanged)
@@ -97,14 +98,14 @@ void IRAM_ATTR PedalModule::button_interrupt(void *instance)
 
 void PedalModule::button_OnLongPress()
 {
-    // Long press of the pedal for 5s takes the pedal into binding mode
-    if (_pedal.getLongCount() >= 10 && connectionState == running)
+    // Long press of the bind button for 5s takes the pedal into binding mode
+    if (_btnBind.getLongCount() >= 10 && connectionState == running)
     {
         bindingStart = _lastNow;
         connectionState = binding;
     }
-    // Long press of pedal for 10s goes from binding to wifi
-    else if (_pedal.getLongCount() >= 20 && connectionState == binding)
+    // Long press of bind button for 10s goes from binding to wifi
+    else if (_btnBind.getLongCount() >= 20 && connectionState == binding)
     {
         connectionState = wifiUpdate;
     }

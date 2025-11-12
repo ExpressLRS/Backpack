@@ -29,7 +29,8 @@ private:
     void button_OnLongPress();
     void checkSendPedalPos();
 
-    Button<PIN_PEDAL_BUTTON, false> _pedal;
+    Button<PIN_BUTTON_PEDAL, false> _btnPedal;
+    Button<PIN_BUTTON_BIND, false> _btnBind;
     SemaphoreHandle_t _pedalSemaphore;
     bool _lastTxValue;
     uint32_t _lastNow;
