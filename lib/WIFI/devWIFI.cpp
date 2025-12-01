@@ -781,19 +781,12 @@ static void HandleWebUpdate()
         changeTime = now;
         WiFi.softAPConfig(apIP, apIP, netMsk);
 #if defined(TARGET_TX_BACKPACK)
-        if (wifiService == WIFI_SERVICE_UPDATE)
-        {
-          strcpy(wifi_ap_ssid, "ExpressLRS TX Backpack");
-        }
-        else if (wifiService == WIFI_SERVICE_MAVLINK_TX)
-        {
-          // Generate a unique SSID using config.address as hex
-          sprintf(wifi_ap_ssid, "ExpressLRS TX Backpack %02X%02X%02X",
-            firmwareOptions.uid[3],
-            firmwareOptions.uid[4],
-            firmwareOptions.uid[5]
-          );
-        }
+        // Generate a unique SSID using config.address as hex
+        sprintf(wifi_ap_ssid, "ExpressLRS TX Backpack %02X%02X%02X",
+          firmwareOptions.uid[3],
+          firmwareOptions.uid[4],
+          firmwareOptions.uid[5]
+        );
 #endif
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
         WiFi.scanNetworks(true);
