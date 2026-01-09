@@ -43,6 +43,8 @@
   #include "module_aat.h"
 #elif defined(CROSSBOW_BACKPACK)
   #include "mfd_crossbow.h"
+#elif defined(TEST_STAND_BACKPACK)
+  #include "test_stand.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -124,6 +126,8 @@ VrxBackpackConfig config;
   AatModule vrxModule(Serial);
 #elif defined(CROSSBOW_BACKPACK)
   MFDCrossbow vrxModule(&Serial);
+#elif defined(TEST_STAND_BACKPACK)
+  TestStand vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -439,7 +443,8 @@ void setup()
     // Serial.begin() seems to prevent the HDZ VRX from booting
     // If we're not on HDZ, init serial early for debug msgs
     // Otherwise, delay it till the end of setup
-    Serial.begin(VRX_UART_BAUD);
+    Serial.begin(115200);
+    DBGLN("Starting setup...");
   #endif
 
   options_init();

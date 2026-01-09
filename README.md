@@ -1,5 +1,17 @@
 # ExpressLRS Backpack
 
+## Fork notes (TX Backpack test stand)
+
+This fork contains a small **ESP32-S3 test stand** firmware intended for validating **TX Backpack VTX channel updates** with an SSD1306 OLED + serial logs.
+
+- PlatformIO env: `Test_Stand_ESP32S3_Backpack_via_UART`
+
+- OLED I2C pins: `SDA=12`, `SCL=13`
+
+![Test stand photo](img/test_stand_photo.jpg)
+
+---
+
 The ExpressLRS Backpack adds ESP-NOW–based wireless communication between ExpressLRS TX modules and compatible FPV hardware, allowing for remote configuration, control, and telemetry exchange. Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance
 reliable, high-performance radio control technology.
 

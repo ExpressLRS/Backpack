@@ -23,6 +23,10 @@ void debugPrintf(const char* fmt, ...)
         case 's':
           LOGGING_UART.print(va_arg(vlist,const char *));
           break;
+        case 'c':
+          // varargs promotes char to int
+          LOGGING_UART.write((char)va_arg(vlist, int));
+          break;
         case 'd':
           LOGGING_UART.print(va_arg(vlist,int32_t), DEC);
           break;
