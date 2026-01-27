@@ -68,6 +68,17 @@
             }
         }
     },
+    "corewing": {
+        "name": "CoreWing",
+        "txbp": {
+            "radio": {
+                "product_name": "CoreWing Sirius 2.4GHz TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
+            }
+        }
+    },
     "emax": {
         "name": "EMAX",
         "txbp": {
@@ -105,6 +116,23 @@
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
+    "geprc": {
+        "name": "GEPRC",
+        "txbp": {
+            "linkflow900": {
+                "product_name": "GEPRC LINKFLOW 900M TX V2",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "linkflow-dual": {
+                "product_name": "GEPRC LINKFLOW 900/2400 Dual-Band TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
