@@ -30,6 +30,8 @@ public:
     // Properties
     uint8_t getCount() const { return _pressCount; }
     uint8_t getLongCount() const { return _longCount; }
+    bool isPressed() const { return _state == STATE_HELD; }
+    bool isIdle() const { return _state == STATE_IDLE; }
 
     Button() :
         _lastCheck(0), _lastFallingEdge(0), _state(STATE_IDLE),
