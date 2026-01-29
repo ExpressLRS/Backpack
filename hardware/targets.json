@@ -666,5 +666,34 @@
                 "platform": "esp32-s3"
             }
         }
+    },
+    "raw-crsf": {
+        "name": "Raw CRSF Backpack",
+        "aat": {
+            "esp82": {
+                "product_name": "Generic ESP8285 / ESP8266 Receiver",
+                "firmware": "Raw_CRSF_ESP8285_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp8285"
+            },
+            "esp32": {
+                "product_name": "Generic ESP32 Receiver",
+                "firmware": "Raw_CRSF_ESP32_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32"
+            },
+            "esp32c3": {
+                "product_name": "Generic ESP32C3 Receiver",
+                "firmware": "Raw_CRSF_ESP32C3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-c3"
+            },
+            "esp32s3": {
+                "product_name": "Generic ESP32S3 Receiver",
+                "firmware": "Raw_CRSF_ESP32S3_Backpack",
+                "upload_methods": ["uart", "wifi"],
+                "platform": "esp32-s3"
+            }
+        }
     }
 }
