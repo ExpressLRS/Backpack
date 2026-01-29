@@ -425,6 +425,19 @@
             }
         }
     },
+    "hdzero-radio": {
+        "name": "HDZero Radio",
+        "txbp": {
+            "hdzero radio": {
+                "esp32": {
+                    "product_name": "HDZero Radio Tx",
+                    "firmware": "ESP32C3_TX_Backpack",
+                    "platform": "esp32-c3",
+                    "upload_methods": ["uart", "wifi"]
+                }
+            }
+        }
+    },
     "rapidfire": {
         "name": "rapidFIRE Module",
         "vrx": {
