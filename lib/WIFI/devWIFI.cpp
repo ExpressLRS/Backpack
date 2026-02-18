@@ -122,36 +122,46 @@ bool gcsIPSet = false;
 #if defined(TARGET_TX_BACKPACK)
 bool SendTxBackpackTelemetryViaUDP(const uint8_t *data, uint16_t size)
 {
-  if (!data || size == 0) {
+  if (!data || size == 0)
+  {
     return false;
   }
 
 #if !defined(MAVLINK_ENABLED)
   return false;
 #else
-  if (!servicesStarted || !wifiStarted) {
+  if (!servicesStarted || !wifiStarted)
+  {
     return false;
   }
-  if (wifiService != WIFI_SERVICE_MAVLINK_TX) {
+  if (wifiService != WIFI_SERVICE_MAVLINK_TX)
+  {
     return false;
   }
 
   IPAddress remote;
   WiFiMode_t mode = WiFi.getMode();
-  if (mode == WIFI_AP || mode == WIFI_AP_STA) {
+  if (mode == WIFI_AP || mode == WIFI_AP_STA)
+  {
     remote = apBroadcast;
-  } else if (mode == WIFI_STA) {
+  }
+  else if (mode == WIFI_STA)
+  {
     remote = WiFi.broadcastIP();
-  } else {
+  }
+  else
+  {
     return false;
   }
 
-  if (!mavlinkUDP.beginPacket(remote, config.GetMavlinkSendPort())) {
+  if (!mavlinkUDP.beginPacket(remote, config.GetMavlinkSendPort()))
+  {
     return false;
   }
 
   size_t sent = mavlinkUDP.write(data, size);
-  if (sent != size) {
+  if (sent != size)
+  {
     mavlinkUDP.endPacket();
     return false;
   }

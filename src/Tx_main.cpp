@@ -64,7 +64,7 @@ MAVLink mavlink;
 /////////// FUNCTION DEFS ///////////
 
 void sendMSPViaEspnow(mspPacket_t *packet);
-bool sendMSPViaWiFiUDP(mspPacket_t *packet);
+void sendMSPViaWiFiUDP(mspPacket_t *packet);
 
 /////////////////////////////////////
 
@@ -294,7 +294,7 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   blinkLED();
 }
 
-bool sendMSPViaWiFiUDP(mspPacket_t *packet)
+void sendMSPViaWiFiUDP(mspPacket_t *packet)
 {
   uint8_t packetSize = msp.getTotalPacketSize(packet);
   uint8_t dataOutput[packetSize];
@@ -302,10 +302,10 @@ bool sendMSPViaWiFiUDP(mspPacket_t *packet)
   uint8_t result = msp.convertToByteArray(packet, dataOutput);
   if (!result)
   {
-    return false;
+    return;
   }
 
-  return SendTxBackpackTelemetryViaUDP(dataOutput, result);
+  SendTxBackpackTelemetryViaUDP(dataOutput, packetSize);
 }
 
 void SendCachedMSP()
