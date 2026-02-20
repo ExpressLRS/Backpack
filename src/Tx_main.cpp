@@ -64,6 +64,7 @@ MAVLink mavlink;
 /////////// FUNCTION DEFS ///////////
 
 void sendMSPViaEspnow(mspPacket_t *packet);
+void sendMSPViaWiFiUDP(mspPacket_t *packet);
 
 /////////////////////////////////////
 
@@ -224,7 +225,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
-    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
+    if (config.GetTelemMode() == BACKPACK_TELEM_MODE_WIFI)
+    {
+      sendMSPViaWiFiUDP(packet);
+      sendMSPViaEspnow(packet);
+    }
+    else if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
     {
       sendMSPViaEspnow(packet);
     }
@@ -286,6 +292,20 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   }
 
   blinkLED();
+}
+
+void sendMSPViaWiFiUDP(mspPacket_t *packet)
+{
+  uint8_t packetSize = msp.getTotalPacketSize(packet);
+  uint8_t dataOutput[packetSize];
+
+  uint8_t result = msp.convertToByteArray(packet, dataOutput);
+  if (!result)
+  {
+    return;
+  }
+
+  SendTxBackpackTelemetryViaUDP(dataOutput, packetSize);
 }
 
 void SendCachedMSP()
