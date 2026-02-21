@@ -161,8 +161,7 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
             firmwareOptions.uid[1] == mac_addr[1] &&
             firmwareOptions.uid[2] == mac_addr[2] &&
             firmwareOptions.uid[3] == mac_addr[3] &&
-            firmwareOptions.uid[4] == mac_addr[4] &&
-            firmwareOptions.uid[5] == mac_addr[5]
+            firmwareOptions.uid[4] == mac_addr[4]
             )
           )
       {
@@ -341,6 +340,8 @@ void SetSoftMACAddress()
 
   // MAC address can only be set with unicast, so first byte must be even, not odd
   firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
+  // Set MAC address to be specific for type of device
+  firmwareOptions.uid[5] = TIMER_BACKPACK_TYPE_ID;
 
   WiFi.mode(WIFI_STA);
   #if defined(PLATFORM_ESP8266)
@@ -448,8 +449,6 @@ void setup()
       esp_now_register_send_cb(OnDataSent);
       xSemaphoreGive(semaphore);
     #endif
-
-    registerPeer(firmwareOptions.uid);
 
     memcpy(sendAddress, firmwareOptions.uid, 6);
   }
