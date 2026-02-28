@@ -360,6 +360,23 @@
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
+            },
+            "v12": {
+                "product_name": "HelloRadioSky V12 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
+    "dakefpv": {
+        "name": "DAKEFPV",
+        "txbp": {
+            "max": {
+                "product_name": "DAKEFPV MAX TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["etx", "wifi"]
             }
         }
     },
