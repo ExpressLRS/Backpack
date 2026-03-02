@@ -7,4 +7,8 @@ extern device_t WIFI_device;
 #define HAS_WIFI
 
 extern const char *VERSION;
+
+#if defined(TARGET_TX_BACKPACK)
+bool SendTxBackpackTelemetryViaUDP(const uint8_t *data, uint16_t size);
+#endif
 #endif
