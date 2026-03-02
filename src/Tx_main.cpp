@@ -228,9 +228,8 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     if (config.GetTelemMode() == BACKPACK_TELEM_MODE_WIFI)
     {
       sendMSPViaWiFiUDP(packet);
-      sendMSPViaEspnow(packet);
     }
-    else if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
+    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
     {
       sendMSPViaEspnow(packet);
     }
