@@ -3,6 +3,7 @@
 #include "module_base.h"
 #include "crsf_protocol.h"
 #include "crc.h"
+#include "rc_main.h"
 
 class CrsfModuleBase : public ModuleBase
 {

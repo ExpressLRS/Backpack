@@ -21,6 +21,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devLED.h"
+#include "rc_main.h"
 
 #if defined(MAVLINK_ENABLED)
 #include <MAVLink.h>
@@ -394,6 +395,8 @@ void setup()
 
   devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
+  RcMain::Instance().Init();
+
   #ifdef DEBUG_ELRS_WIFI
     config.SetStartWiFiOnBoot(true);
   #endif
@@ -441,6 +444,8 @@ void setup()
         return;
       }
     #endif
+
+    RcMain::Instance().SetPeerAddress(firmwareOptions.uid);
 
     esp_now_register_recv_cb(OnDataRecv);
   }
