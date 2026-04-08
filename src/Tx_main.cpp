@@ -29,6 +29,12 @@
 /////////// GLOBALS ///////////
 
 uint8_t bindingAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+#if defined(MAVLINK_ENABLED)
+uint8_t companionAddress[6];
+uint8_t companionUplinkBuf[1024];
+volatile uint16_t companionUplinkHead = 0;
+volatile uint16_t companionUplinkTail = 0;
+#endif
 
 const uint8_t version[] = {LATEST_VERSION};
 
@@ -74,6 +80,9 @@ void sendMSPViaWiFiUDP(mspPacket_t *packet);
 // https://rntlab.com/question/espnow-peer-interface-is-invalid/
 esp_now_peer_info_t peerInfo;
 esp_now_peer_info_t bindingInfo;
+#if defined(MAVLINK_ENABLED)
+esp_now_peer_info_t companionInfo;
+#endif
 #endif
 
 void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE)
@@ -120,6 +129,23 @@ void OnDataRecv(uint8_t * mac_addr, uint8_t *data, uint8_t data_len)
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *data, int data_len)
 #endif
 {
+#if defined(MAVLINK_ENABLED)
+  // MAVLink uplink from companion: buffer for processing in loop
+  if (memcmp(mac_addr, companionAddress, 6) == 0)
+  {
+    for (int i = 0; i < data_len; i++)
+    {
+      uint16_t nextHead = (companionUplinkHead + 1) % sizeof(companionUplinkBuf);
+      if (nextHead == companionUplinkTail)
+        break;
+      companionUplinkBuf[companionUplinkHead] = data[i];
+      companionUplinkHead = nextHead;
+    }
+    blinkLED();
+    return;
+  }
+#endif
+
   MSP recv_msp;
   DBGLN("ESP NOW DATA:");
   for(int i = 0; i < data_len; i++)
@@ -307,6 +333,60 @@ void sendMSPViaWiFiUDP(mspPacket_t *packet)
   SendTxBackpackTelemetryViaUDP(dataOutput, packetSize);
 }
 
+#if defined(MAVLINK_ENABLED)
+void sendMAVLinkViaEspnow()
+{
+  uint8_t count = mavlink.GetQueuedMsgCount();
+  if (count == 0)
+  {
+    return;
+  }
+
+  mavlink_message_t *msgQueue = mavlink.GetQueuedMsgs();
+  uint8_t buf[250];
+  uint8_t bufLen = 0;
+
+  for (uint8_t i = 0; i < count; i++)
+  {
+    uint8_t tmpBuf[MAVLINK_MAX_PACKET_LEN];
+    uint16_t msgLen = mavlink_msg_to_send_buffer(tmpBuf, &msgQueue[i]);
+
+    // If adding this message would overflow, send current buffer first
+    if (bufLen + msgLen > sizeof(buf) && bufLen > 0)
+    {
+      esp_now_send(companionAddress, buf, bufLen);
+      bufLen = 0;
+    }
+
+    // If a single message exceeds 250 bytes, fragment it
+    if (msgLen > sizeof(buf))
+    {
+      uint16_t offset = 0;
+      while (offset < msgLen)
+      {
+        uint16_t chunkLen = min((uint16_t)(sizeof(buf)), (uint16_t)(msgLen - offset));
+        esp_now_send(companionAddress, tmpBuf + offset, chunkLen);
+        offset += chunkLen;
+      }
+    }
+    else
+    {
+      memcpy(buf + bufLen, tmpBuf, msgLen);
+      bufLen += msgLen;
+    }
+  }
+
+  // Send any remaining bytes
+  if (bufLen > 0)
+  {
+    esp_now_send(companionAddress, buf, bufLen);
+  }
+
+  mavlink.ResetQueuedMsgCount();
+  blinkLED();
+}
+#endif
+
 void SendCachedMSP()
 {
   if (!cacheFull)
@@ -344,9 +424,9 @@ void SetSoftMACAddress()
 
   WiFi.mode(WIFI_STA);
   #if defined(PLATFORM_ESP8266)
-    WiFi.setOutputPower(20.5);
+    WiFi.setOutputPower(10);
   #elif defined(PLATFORM_ESP32)
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);
     esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #endif
   WiFi.begin("network-name", "pass-to-network", 1);
@@ -442,6 +522,23 @@ void setup()
       }
     #endif
 
+    #if defined(MAVLINK_ENABLED)
+      // Add MAVLink companion as a unicast peer (MAC = binding UID with last byte XOR 0x01)
+      memcpy(companionAddress, firmwareOptions.uid, 6);
+      companionAddress[5] ^= 0x01;
+      #if defined(PLATFORM_ESP8266)
+        esp_now_add_peer(companionAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+      #elif defined(PLATFORM_ESP32)
+        memcpy(companionInfo.peer_addr, companionAddress, 6);
+        companionInfo.channel = 0;
+        companionInfo.encrypt = false;
+        if (esp_now_add_peer(&companionInfo) != ESP_OK)
+        {
+          DBGLN("ESP-NOW failed to add companion peer");
+        }
+      #endif
+    #endif
+
     esp_now_register_recv_cb(OnDataRecv);
   }
 
@@ -489,4 +586,27 @@ void loop()
     SendCachedMSP();
     sendCached = false;
   }
+
+#if defined(MAVLINK_ENABLED)
+  // Drain companion uplink ring buffer and frame MAVLink to TX module UART
+  while (companionUplinkHead != companionUplinkTail)
+  {
+    uint8_t c = companionUplinkBuf[companionUplinkTail];
+    companionUplinkTail = (companionUplinkTail + 1) % sizeof(companionUplinkBuf);
+    mavlink.ProcessMAVLinkFromGCS(&c, 1);
+  }
+
+  // Flush buffered MAVLink frames via ESP-NOW to companion (only when ESP-NOW is active, not WiFi mode)
+  if (connectionState == running)
+  {
+    static unsigned long lastMavlinkFlush = 0;
+    bool thresholdHit = mavlink.GetQueuedMsgCount() >= MAVLINK_BUF_THRESHOLD;
+    bool timeoutHit = mavlink.GetQueuedMsgCount() > 0 && (now - lastMavlinkFlush) > MAVLINK_BUF_TIMEOUT;
+    if (thresholdHit || timeoutHit)
+    {
+      sendMAVLinkViaEspnow();
+      lastMavlinkFlush = now;
+    }
+  }
+#endif
 }
