@@ -398,7 +398,6 @@ void setup()
     config.SetStartWiFiOnBoot(true);
   #endif
 
-  
   if (config.GetStartWiFiOnBoot())
   {
     wifiService = config.GetWiFiService();
@@ -466,9 +465,9 @@ void loop()
     }
   #endif
 
-  if (Serial.available())
+  while (Serial.available())
   {
-    uint8_t c = Serial.read();
+    const uint8_t c = Serial.read();
 
     // Try to parse MSP packets from the TX
     if (msp.processReceivedByte(c))

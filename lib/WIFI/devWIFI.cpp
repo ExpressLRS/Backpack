@@ -640,7 +640,7 @@ static void startWiFi(unsigned long now)
     connectionState = wifiUpdate;
   }
 
-  INFOLN("Begin Webupdater");
+  DBGLN("Begin Webupdater");
 
   WiFi.persistent(false);
   WiFi.disconnect();
@@ -667,7 +667,7 @@ static void startWiFi(unsigned long now)
     changeTime = now;
     changeMode = WIFI_STA;
   }
-  laststatus = WL_DISCONNECTED;
+  laststatus = WL_NO_SHIELD;
   wifiStarted = true;
 }
 
@@ -823,7 +823,7 @@ static void HandleWebUpdate()
     changeMode = WIFI_AP;
     DBGLN("Connection failed %d", status);
   }
-  if (changeMode != wifiMode && changeMode != WIFI_OFF && (now - changeTime) > 500) {
+  if (changeMode != wifiMode && changeMode != WIFI_OFF) {
     switch(changeMode) {
       case WIFI_AP:
         DBGLN("Changing to AP mode");
@@ -1021,7 +1021,7 @@ static int timeout()
 }
 
 device_t WIFI_device = {
-  .initialize = wifiOff,
+  .initialize = nullptr,
   .start = start,
   .event = event,
   .timeout = timeout
