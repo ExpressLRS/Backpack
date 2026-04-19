@@ -58,16 +58,23 @@ static void initialize()
         }
     }
     imu->setInterruptHandler(PIN_INT);
+    if (imu->getDeltaTime() <= 0.0f) {
+        delete imu;
+        imu = nullptr;
+        ht_state = STATE_ERROR;
+        return;
+    }
 
     FusionAhrsInitialise(&ahrs);
     // Set AHRS algorithm settings
+    const unsigned int recoveryTriggerPeriod = (unsigned int) ((5.0f / imu->getDeltaTime()) + 0.5f);
     const FusionAhrsSettings settings = {
             .convention = FusionConventionNwu,
             .gain = 0.5f,
             .gyroscopeRange = imu->getGyroRange(), /* replace this with actual gyroscope range in degrees/s */
             .accelerationRejection = 10.0f,
             .magneticRejection = 10.0f,
-            .recoveryTriggerPeriod = 5U * imu->getSampleRate(), /* 5 seconds */
+            .recoveryTriggerPeriod = recoveryTriggerPeriod,
     };
     FusionAhrsSetSettings(&ahrs, &settings);
     DBGLN("starting head tracker");
@@ -138,20 +145,16 @@ static int timeout()
 {
     FusionVector a;
     FusionVector g;
+    const float deltaTime = imu->getDeltaTime();
 
-    if (!imu->readIMUData(a, g))
+    if (!imu->readIMUData(a, g)) {
         return DURATION_IMMEDIATELY;
+    }
 
     switch (ht_state) {
         case STATE_RUNNING: {
             rotate(a.array, orientation);
             rotate(g.array, orientation);
-
-            // Calculate delta time (in seconds) to account for gyroscope sample clock error
-            const clock_t timestamp = micros();
-            static clock_t previousTimestamp;
-            const float deltaTime = (float) (timestamp - previousTimestamp) / (float) 1000000;
-            previousTimestamp = timestamp;
 
             FusionAhrsUpdate(&ahrs, g, a, FUSION_VECTOR_ZERO, deltaTime);
 
@@ -171,6 +174,7 @@ static int timeout()
             break;
         }
     }
+
     return DURATION_IMMEDIATELY;
 }
 

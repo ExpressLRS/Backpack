@@ -33,7 +33,11 @@ bool ICMSeries::initialize() {
 
     writeRegister(0x21, 9);         // 16G, 100Hz
     writeRegister(0x20, 9);         // 2000dps, 100Hz
+    writeRegister(0x23, 0x05);      // GYRO_CONFIG1, 34Hz UI LPF
+    writeRegister(0x24, 0x45);      // ACCEL_CONFIG1, 34Hz UI LPF
     writeRegister(0x1F, 0x0F);      // Low noise mode for Accel/Gyro
+
+    deltaTime = 0.01f;
 
     gyroRange = 2000.0;
     gRes = GRES;

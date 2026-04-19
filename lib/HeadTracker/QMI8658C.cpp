@@ -7,6 +7,8 @@
 #define REVISION_ID 0x01
 #define ACCEL_X_L 0x35
 
+#define QMI8658_DELTA_TIME (1.0f / 112.1f)
+
 #define ARES (16.0 / 32768)
 #define GRES (1024.0 / 32768)
 
@@ -54,12 +56,12 @@ bool QMI8658C::initialize() {
         return false;
     }
 
-    writeRegister(0x03, 0b00110011);    // 16G, 896.8 ODR
-    writeRegister(0x06, 0b00000111);    // both LPF enabled @ 13.37% ODR
-    writeRegister(0x03, 0b10110011);    // 16G, 896.8 ODR + self test
-    writeRegister(0x04, 0b01100011);    // 1024dps, 896.8 ODR
-    writeRegister(0x06, 0b01110111);    // both LPF enabled @ 13.37% ODR
-    writeRegister(0x04, 0b11100011);    // 1024dps, 896.8 ODR + self test
+    writeRegister(0x03, 0b00110110);    // 16G, 112.1Hz ODR
+    writeRegister(0x06, 0b00000110);    // both LPF enabled @ 27.5% ODR
+    writeRegister(0x03, 0b10110110);    // 16G, 112.1Hz ODR + self test
+    writeRegister(0x04, 0b01100110);    // 1024dps, 112.1Hz ODR
+    writeRegister(0x06, 0b01110110);    // both LPF enabled @ 27.5% ODR
+    writeRegister(0x04, 0b11100110);    // 1024dps, 112.1Hz ODR + self test
     writeRegister(0x08, 0b10000011);    // SyncSample, G+A enabled
 
     // disable AHB clock gating
@@ -73,6 +75,7 @@ bool QMI8658C::initialize() {
         return false;
     }
 
+    deltaTime = QMI8658_DELTA_TIME;
     gyroRange = 1024.0;
     gRes = GRES;
 
