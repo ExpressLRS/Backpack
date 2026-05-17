@@ -58,10 +58,11 @@ def upload_wifi(args, mcuType, upload_addr):
             with open(args.file.name, 'rb') as f_in:
                 with gzip.open('firmware.bin.gz', 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
-            upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, False, {})
+            upload_via_esp8266_backpack.do_upload('firmware.bin.gz', upload_addr, {})
         else:
-            upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, False, {})
-    except:
+            upload_via_esp8266_backpack.do_upload(args.file.name, upload_addr, {})
+    except Exception as e:
+        print("WIFI upload failed: %s" % e, file=sys.stderr)
         return ElrsUploadResult.ErrorGeneral
     return ElrsUploadResult.Success
 
