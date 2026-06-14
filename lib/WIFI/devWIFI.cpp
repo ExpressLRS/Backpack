@@ -687,6 +687,8 @@ static void startMDNS()
     MDNSResponder::hMDNSService service = MDNS.addService(instance.c_str(), "http", "tcp", 80);
     MDNS.addServiceTxt(service, "vendor", "elrs");
     MDNS.addServiceTxt(service, "target", (const char *)&target_name[4]);
+    if (firmwareOptions.product_name[0] != 0)
+      MDNS.addServiceTxt(service, "product", (const char *)firmwareOptions.product_name);
     MDNS.addServiceTxt(service, "version", VERSION);
     MDNS.addServiceTxt(service, "options", String(FPSTR(compile_options)).c_str());
     #if defined(TARGET_VRX_BACKPACK)
@@ -710,6 +712,8 @@ static void startMDNS()
     MDNS.addService("http", "tcp", 80);
     MDNS.addServiceTxt("http", "tcp", "vendor", "elrs");
     MDNS.addServiceTxt("http", "tcp", "target", (const char *)&target_name[4]);
+    if (firmwareOptions.product_name[0] != 0)
+      MDNS.addServiceTxt("http", "tcp", "product", (const char *)firmwareOptions.product_name);
     MDNS.addServiceTxt("http", "tcp", "version", VERSION);
     MDNS.addServiceTxt("http", "tcp", "options", String(FPSTR(compile_options)).c_str());
     #if defined(TARGET_VRX_BACKPACK)
