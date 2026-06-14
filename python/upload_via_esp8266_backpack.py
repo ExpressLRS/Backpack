@@ -18,7 +18,7 @@ def do_upload(elrs_bin_target, upload_addr, env):
         upload_addr = [upload_port]
 
     for addr in upload_addr:
-        addr = "http://%s/%s" % (addr, ['update', 'upload'])
+        addr = "http://%s/update" % (addr,)
         print(" ** UPLOADING TO: %s" % addr)
         try:
             if  bootloader_target is not None:
