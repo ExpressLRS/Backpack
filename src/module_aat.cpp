@@ -115,11 +115,13 @@ void AatModule::Init()
 #endif
     _servoPos[IDX_AZIM] = (config.GetAatServoLow(IDX_AZIM) + config.GetAatServoHigh(IDX_AZIM)) / 2;
 #if defined(PIN_SERVO_AZIM)
-    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500, _servoPos[IDX_AZIM]);
+    _servo_Azim.attach(PIN_SERVO_AZIM, 500, 2500);
+    _servo_Azim.write(_servoPos[IDX_AZIM]);
 #endif
     _servoPos[IDX_ELEV] = (config.GetAatServoLow(IDX_ELEV) + config.GetAatServoHigh(IDX_ELEV)) / 2;
 #if defined(PIN_SERVO_ELEV)
-    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500, _servoPos[IDX_ELEV]);
+    _servo_Elev.attach(PIN_SERVO_ELEV, 500, 2500);
+    _servo_Elev.write(_servoPos[IDX_ELEV]);
 #endif
 #if defined(PIN_OLED_SDA)
     displayInit();
