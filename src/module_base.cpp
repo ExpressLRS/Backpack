@@ -60,6 +60,11 @@ ModuleBase::SendBatteryTelemetry(uint8_t *rawCrsfPacket)
 }
 
 void
+ModuleBase::SendRawTelemetry(uint8_t *rawCrsfPacket, uint16_t size)
+{
+}
+
+void
 ModuleBase::Loop(uint32_t now)
 {
 #if defined(HAS_HEADTRACKING)
