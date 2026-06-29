@@ -580,6 +580,17 @@
             }
         }
     },
+    "oxbot": {
+        "name": "Oxbot R1",
+        "txbp": {
+            "r1": {
+                "product_name": "Oxbot R1 2.4GHz TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["etx", "wifi"]
+            }
+        }
+    },
     "generic-timer": {
         "name": "Generic backpack for any Race Timer",
         "timer": {
