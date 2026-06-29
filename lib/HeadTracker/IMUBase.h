@@ -19,12 +19,12 @@ public:
 
     const float *getCalibration();
 
-    int getSampleRate() const { return sampleRate; }
+    float getDeltaTime() const { return deltaTime; }
     float getGyroRange() const { return gyroRange; }
 
 protected:
     int address;
-    int sampleRate = 0;
+    float deltaTime = 0.0f;
     float gyroRange;
     float gRes = 0;
 
