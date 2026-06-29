@@ -2,6 +2,11 @@
 #include <Arduino.h>
 #include "MAVLink.h"
 #include <config.h>
+#include <crsf_protocol.h>
+#include <msp.h>
+#include <msptypes.h>
+#include <CRSF.h>
+#include <ESPNOW_Helpers.h>
 
 void
 MAVLink::ProcessMAVLinkFromTX(uint8_t c)
@@ -40,6 +45,35 @@ MAVLink::ProcessMAVLinkFromTX(uint8_t c)
         mavlink_to_gcs_buf[mavlink_to_gcs_buf_count] = msg;
         mavlink_to_gcs_buf_count++;
         mavlink_stats.packets_downlink++;
+        
+        // Look for GPS packets - convert them to CRSF
+        if (msg.msgid == MAVLINK_MSG_ID_GPS_RAW_INT)
+        {
+            mavlink_gps_raw_int_t gps_int;
+            mavlink_msg_gps_raw_int_decode(&msg, &gps_int);
+            CRSF_MK_FRAME_T(crsf_sensor_gps_t) crsfgps = {0};
+
+            crsfgps.p.speed = htobe16(gps_int.vel * 36 / 100);
+            crsfgps.p.lat = htobe32(gps_int.lat);
+            crsfgps.p.lon = htobe32(gps_int.lon);
+            crsfgps.p.heading = htobe16(gps_int.cog);
+            crsfgps.p.satcnt = gps_int.satellites_visible;
+            crsfgps.p.altitude = htobe16(gps_int.alt / 1000 + 1000);
+
+            CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, sizeof(crsf_sensor_gps_t), CRSF_ADDRESS_CRSF_TRANSMITTER);
+
+            // Wrap in MSP
+            mspPacket_t packet;
+            packet.reset();
+            packet.makeCommand();
+            packet.function = MSP_ELRS_BACKPACK_CRSF_TLM;
+            for (size_t i = 0; i < sizeof(crsfgps); i++)
+            {
+                packet.addByte(((uint8_t *)&crsfgps)[i]);
+            }
+            // Send it out ESPNOW
+            ESPNOW::sendMSPViaEspnow(&packet);
+        }
     }
 }
 

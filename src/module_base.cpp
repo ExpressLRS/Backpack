@@ -6,6 +6,7 @@
 #include "msptypes.h"
 #include "logging.h"
 #include <config.h>
+#include "ESPNOW_Helpers.h"
 
 #if defined(HAS_HEADTRACKING)
 #include "devHeadTracker.h"
@@ -17,7 +18,6 @@ void RebootIntoWifi(wifi_service_t service = WIFI_SERVICE_UPDATE);
 bool BindingExpired(uint32_t now);
 extern uint8_t backpackVersion[];
 extern bool headTrackingEnabled;
-void sendMSPViaEspnow(mspPacket_t *packet);
 
 void
 ModuleBase::Init()
@@ -84,7 +84,7 @@ ModuleBase::Loop(uint32_t now)
         packet.addByte(roll>> 8);
         packet.addByte(tilt & 0xFF); // rotating about pitch is roll axis
         packet.addByte(tilt >> 8);
-        sendMSPViaEspnow(&packet);
+        ESPNOW::sendMSPViaEspnow(&packet);
         lastSend = now;
 // Serial.printf("%d, %d, %d\r\n",pan, tilt, roll);
     }
@@ -157,7 +157,7 @@ MSPModuleBase::Loop(uint32_t now)
                 ptrChannelData[0] = packet->payload[0] + (packet->payload[1] << 8);
                 ptrChannelData[1] = packet->payload[2] + (packet->payload[3] << 8);
                 ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
-                sendMSPViaEspnow(packet);
+                ESPNOW::sendMSPViaEspnow(packet);
             }
             msp.markPacketReceived();
         }
