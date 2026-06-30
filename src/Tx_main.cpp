@@ -22,6 +22,10 @@
 #include "devButton.h"
 #include "devLED.h"
 
+#if defined(PLATFORM_ESP32) && defined(BLE_TELEM_ENABLED)
+#include "devBLE.h"
+#endif
+
 #if defined(MAVLINK_ENABLED)
 #include <MAVLink.h>
 #endif
@@ -48,6 +52,9 @@ device_t *ui_devices[] = {
   &Button_device,
 #endif
   &WIFI_device,
+#if defined(PLATFORM_ESP32) && defined(BLE_TELEM_ENABLED)
+  &BLE_device,
+#endif
 };
 
 /////////// CLASS OBJECTS ///////////
@@ -183,6 +190,14 @@ void HandleConfigMsg(mspPacket_t *packet)
           config.SetStartWiFiOnBoot(true);
           config.Commit();
           break;
+#if defined(PLATFORM_ESP32) && defined(BLE_TELEM_ENABLED)
+        case BACKPACK_TELEM_MODE_BLUETOOTH:
+          config.SetTelemMode(BACKPACK_TELEM_MODE_BLUETOOTH);
+          config.SetWiFiService(WIFI_SERVICE_UPDATE);
+          config.SetStartWiFiOnBoot(false);
+          config.Commit();
+          break;
+#endif
       }
       rebootTime = millis();
       break;
@@ -225,13 +240,23 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 
   case MSP_ELRS_BACKPACK_CRSF_TLM:
     DBGLN("Processing MSP_ELRS_BACKPACK_CRSF_TLM...");
-    if (config.GetTelemMode() == BACKPACK_TELEM_MODE_WIFI)
+    // Route CRSF telemetry to one transport only — avoids radio contention with BLE.
+    switch (config.GetTelemMode())
     {
-      sendMSPViaWiFiUDP(packet);
-    }
-    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
-    {
-      sendMSPViaEspnow(packet);
+      case BACKPACK_TELEM_MODE_ESPNOW:
+        sendMSPViaEspnow(packet);
+        break;
+      case BACKPACK_TELEM_MODE_WIFI:
+        sendMSPViaWiFiUDP(packet);
+        break;
+#if defined(PLATFORM_ESP32) && defined(BLE_TELEM_ENABLED)
+      case BACKPACK_TELEM_MODE_BLUETOOTH:
+        SendTxBackpackTelemetryViaBLE(packet->payload, packet->payloadSize);
+        break;
+#endif
+      case BACKPACK_TELEM_MODE_OFF:
+      default:
+        break;
     }
     break;
 
