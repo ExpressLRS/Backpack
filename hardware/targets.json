@@ -697,8 +697,8 @@
         }
     },
     "raw-crsf": {
-        "name": "Raw CRSF Backpack",
-        "aat": {
+        "name": "CRSF Telemetry Receiver Backpack",
+        "telemetry": {
             "esp82": {
                 "product_name": "Generic ESP8285 / ESP8266 Receiver",
                 "firmware": "Raw_CRSF_ESP8285_Backpack",
