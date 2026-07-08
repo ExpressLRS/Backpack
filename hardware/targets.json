@@ -83,6 +83,12 @@
                 "platform": "esp8285",
                 "upload_methods": ["passthru", "wifi"]
             },
+            "micro900v2": {
+                "product_name": "BETAFPV 900MHz Micro TX V2",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["passthru", "wifi"]
+            },
             "superg": {
                 "product_name": "BETAFPV SuperG 2.4GHz Gemini TX",
                 "firmware": "ESP_TX_Backpack",
