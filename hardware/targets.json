@@ -27,6 +27,29 @@
             }
         }
     },
+    "bayckrc": {
+        "name": "BAYCKRC",
+        "txbp": {
+            "nano-db": {
+                "product_name": "BAYCKRC 900/2400 Dual Band 1W Nano TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "nano-dbx": {
+                "product_name": "BAYCKRC 900/2400 Dual Band 1W Nano Gemini TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "micro-dbx": {
+                "product_name": "BAYCKRC 900/2400 Dual Band 1W Micro Gemini TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
+            }
+        }
+    },
     "betafpv": {
         "name": "BETAFPV",
         "txbp": {
