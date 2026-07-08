@@ -237,6 +237,24 @@
     "jumper": {
         "name": "Jumper",
         "txbp": {
+            "bumblebee": {
+                "product_name": "Jumper AION Bumblebee 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "t-14": {
+                "product_name": "Jumper AION T-14 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "t-14-900": {
+                "product_name": "Jumper AION T-14 900M TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
             "t12-max": {
                 "product_name": "Jumper T-12 Max Internal TX Modules",
                 "firmware": "ESP_TX_Backpack",
@@ -254,6 +272,18 @@
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["uart", "etx" ,"wifi"]
+            },
+            "t20v2": {
+                "product_name": "Jumper AION T-20 2.4GHz V2 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
+            },
+            "t20-900v2": {
+                "product_name": "Jumper AION T-20 900M V2 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
             }
         }
     },
