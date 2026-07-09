@@ -208,12 +208,6 @@
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["passthru", "wifi"]
-            },
-            "hermes-2g4": {
-                "product_name": "HGLRC Hermes 2.4GHz TX",
-                "firmware": "ESP_TX_Backpack",
-                "platform": "esp8285",
-                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
