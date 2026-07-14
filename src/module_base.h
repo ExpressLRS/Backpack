@@ -11,6 +11,7 @@ public:
     void SendIndexCmd(uint8_t index);
     void SetRecordingState(uint8_t recordingState, uint16_t delay);
     void SetOSD(mspPacket_t *packet);
+    void ForwardPacket(mspPacket_t *packet);
     void SendHeadTrackingEnableCmd(bool enable);
     void SetRTC();
     void SendLinkTelemetry(uint8_t *rawCrsfPacket);
@@ -24,6 +25,7 @@ class MSPModuleBase : public ModuleBase
 public:
     MSPModuleBase(Stream *port) : m_port(port) {};
     void Loop(uint32_t);
+    void ForwardPacket(mspPacket_t *packet);
 
     void sendResponse(uint16_t function, const uint8_t *response, uint32_t responseSize);
 

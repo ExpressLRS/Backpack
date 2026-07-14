@@ -40,6 +40,11 @@ ModuleBase::SetOSD(mspPacket_t *packet)
 }
 
 void
+ModuleBase::ForwardPacket(mspPacket_t *packet)
+{
+}
+
+void
 ModuleBase::SendHeadTrackingEnableCmd(bool enable)
 {
 }
@@ -164,6 +169,13 @@ MSPModuleBase::Loop(uint32_t now)
     }
 }
 
+
+// Pass a packet through to the connected device (e.g. the goggles) verbatim
+void
+MSPModuleBase::ForwardPacket(mspPacket_t *packet)
+{
+    msp.sendPacket(packet, m_port);
+}
 
 void
 MSPModuleBase::sendResponse(uint16_t function, const uint8_t *response, uint32_t responseSize)
