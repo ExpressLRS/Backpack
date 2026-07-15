@@ -43,6 +43,8 @@
   #include "module_aat.h"
 #elif defined(CROSSBOW_BACKPACK)
   #include "mfd_crossbow.h"
+#elif defined(RAW_CRSF_BACKPACK)
+  #include "raw_crsf.h"
 #endif
 
 /////////// DEFINES ///////////
@@ -124,6 +126,8 @@ VrxBackpackConfig config;
   AatModule vrxModule(Serial);
 #elif defined(CROSSBOW_BACKPACK)
   MFDCrossbow vrxModule(&Serial);
+#elif defined(RAW_CRSF_BACKPACK)
+  CrsfRawBackpack vrxModule(&Serial);
 #endif
 
 /////////// FUNCTION DEFS ///////////
@@ -260,6 +264,7 @@ void ProcessMSPPacket(mspPacket_t *packet)
       DBGLN("CRSF_TLM packet too short")
       break;
     }
+    vrxModule.SendRawTelemetry(packet->payload, packet->payloadSize);
     switch (packet->payload[2]) {
     case CRSF_FRAMETYPE_GPS:
       vrxModule.SendGpsTelemetry((crsf_packet_gps_t *)packet->payload);
