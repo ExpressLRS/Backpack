@@ -56,3 +56,11 @@
 #define MSP_ELRS_BACKPACK_GET_VERSION           0x0381  // get the bacpack firmware version
 #define MSP_ELRS_BACKPACK_GET_STATUS            0x0382  // get the status of the backpack
 #define MSP_ELRS_BACKPACK_SET_PTR               0x0383  // forwarded back to TX backpack
+
+#define MSP_ELRS_BACKPACK_CONFIG_TRAINER_MODE   0x32
+
+#define MSP_ELRS_BACKPACK_TRAINER_CHANNELS      0x0390
+#define MSP_ELRS_BACKPACK_TRAINER_PAIR_REQ      0x0391
+#define MSP_ELRS_BACKPACK_TRAINER_PAIR_ACK      0x0392
+#define MSP_ELRS_BACKPACK_TRAINER_FORGET        0x0393
+#define MSP_ELRS_BACKPACK_TRAINER_STATUS        0x0394
