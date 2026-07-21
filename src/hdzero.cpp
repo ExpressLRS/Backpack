@@ -139,3 +139,36 @@ HDZero::SetRTC()
 
     msp.sendPacket(&packet, m_port);
 }
+
+void
+HDZero::ForwardCrsfFrame(uint8_t *rawCrsfPacket)
+{
+    // rawCrsfPacket[1] counts type + payload + crc; +2 for sync and size bytes
+    uint16_t len = (uint16_t)rawCrsfPacket[1] + 2;
+    if (len > MSP_PORT_INBUF_SIZE)
+    {
+        return;
+    }
+    MSP msp;
+    mspPacket_t packet;
+    packet.reset();
+    packet.makeCommand();
+    packet.function = MSP_ELRS_BACKPACK_FWD_TLM;
+    for (uint16_t i = 0; i < len; i++)
+    {
+        packet.addByte(rawCrsfPacket[i]);
+    }
+    msp.sendPacket(&packet, m_port);
+}
+
+void
+HDZero::SendGpsTelemetry(crsf_packet_gps_t *packet)
+{
+    ForwardCrsfFrame((uint8_t *)packet);
+}
+
+void
+HDZero::SendFlightModeTelemetry(uint8_t *rawCrsfPacket)
+{
+    ForwardCrsfFrame(rawCrsfPacket);
+}

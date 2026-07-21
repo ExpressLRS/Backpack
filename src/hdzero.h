@@ -26,4 +26,9 @@ public:
     void SendHeadTrackingEnableCmd(bool enable);
     void SetOSD(mspPacket_t *packet);
     void SetRTC();
+    void SendGpsTelemetry(crsf_packet_gps_t *packet);
+    void SendFlightModeTelemetry(uint8_t *rawCrsfPacket);
+
+private:
+    void ForwardCrsfFrame(uint8_t *rawCrsfPacket);
 };
