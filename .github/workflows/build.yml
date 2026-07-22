@@ -1,7 +1,16 @@
 name: Build ExpressLRS Backpack
 on: [push, pull_request]
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - name: Validate targets.json
+      run: python3 .github/targets_validator.py
+
   targets:
+    needs: validate
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.set-targets.outputs.targets }}
