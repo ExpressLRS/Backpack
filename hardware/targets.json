@@ -218,13 +218,13 @@
                 "product_name": "iFlight 2.4GHz TX V2",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
             },
             "iflight-900": {
                 "product_name": "iFlight 900MHz TX V2",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
@@ -256,7 +256,13 @@
                 "upload_methods": ["etx", "wifi"]
             },
             "t15": {
-                "product_name": "Jumper T-15 Internal TX Modules",
+                "product_name": "Jumper AION T-15 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "t15-900": {
+                "product_name": "Jumper AION T-15 900M TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
@@ -273,8 +279,20 @@
                 "platform": "esp8285",
                 "upload_methods": ["etx" ,"wifi"]
             },
+            "tpros": {
+                "product_name": "Jumper AION T-ProS 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
+            },
             "t20-900v2": {
                 "product_name": "Jumper AION T-20 900M V2 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
+            },
+            "tpros-900": {
+                "product_name": "Jumper AION T-ProS 900M TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx" ,"wifi"]
@@ -454,11 +472,17 @@
     "dakefpv": {
         "name": "DAKEFPV",
         "txbp": {
-            "max": {
-                "product_name": "DAKEFPV MAX TX",
+            "max-2g4": {
+                "product_name": "DAKEFPV 2.4GHz Micro MAX 1W TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
-                "upload_methods": ["etx", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "max-900": {
+                "product_name": "DAKEFPV 900MHz Micro MAX 2W TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
