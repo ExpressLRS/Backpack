@@ -218,13 +218,13 @@
                 "product_name": "iFlight 2.4GHz TX V2",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
             },
             "iflight-900": {
                 "product_name": "iFlight 900MHz TX V2",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
-                "upload_methods": ["uart", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
@@ -250,13 +250,19 @@
                 "upload_methods": ["etx", "wifi"]
             },
             "t12-max": {
-                "product_name": "Jumper T-12 Max Internal TX Modules",
+                "product_name": "Jumper AION T-12 MAX 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "t15": {
-                "product_name": "Jumper T-15 Internal TX Modules",
+                "product_name": "Jumper AION T-15 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx", "wifi"]
+            },
+            "t15-900": {
+                "product_name": "Jumper AION T-15 900M TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
@@ -273,8 +279,20 @@
                 "platform": "esp8285",
                 "upload_methods": ["etx" ,"wifi"]
             },
+            "tpros": {
+                "product_name": "Jumper AION T-ProS 2.4GHz TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
+            },
             "t20-900v2": {
                 "product_name": "Jumper AION T-20 900M V2 TX",
+                "firmware": "ESP_TX_Backpack",
+                "platform": "esp8285",
+                "upload_methods": ["etx" ,"wifi"]
+            },
+            "tpros-900": {
+                "product_name": "Jumper AION T-ProS 900M TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx" ,"wifi"]
@@ -337,19 +355,19 @@
                 "upload_methods": ["passthru", "wifi"]
 			},
             "mt12": {
-                "product_name": "RadioMaster MT12 2.4GHz TX",
+                "product_name": "RadioMaster MT12 Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "pocket": {
-                "product_name": "RadioMaster Pocket 2.4GHz TX",
+                "product_name": "RadioMaster Pocket Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "zorro": {
-                "product_name": "RadioMaster Zorro 2.4GHz TX",
+                "product_name": "RadioMaster Zorro Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
@@ -391,31 +409,31 @@
                 "upload_methods": ["etx", "wifi"]
             },
             "nomad": {
-                "product_name": "RadioMaster Nomad Xrossband TX",
+                "product_name": "RadioMaster Nomad 2.4/900 TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["passthru", "wifi"]
             },
             "gx12": {
-                "product_name": "RadioMaster GX12 Dual-Band Gemini-X TX",
+                "product_name": "RadioMaster GX12 2.4/900 TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
             },
             "tx15": {
-                "product_name": "RadioMaster TX15 Dual-Band TX",
+                "product_name": "RadioMaster TX15 2.4/900 TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
             },
             "tx16mk3": {
-                "product_name": "RadioMaster TX16Mk3 Dual-Band Gemini-X TX",
+                "product_name": "RadioMaster TX16S MK3 Internal TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
             },
             "ax12": {
-                "product_name": "RadioMaster AX12 Dual-Band TX",
+                "product_name": "RadioMaster AX12 2.4/900 TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["passthru", "wifi"]
@@ -426,25 +444,25 @@
         "name": "HelloRadioSky",
         "txbp": {
             "v14": {
-                "product_name": "HelloRadioSky V14 TX",
+                "product_name": "HELLORADIO V14 Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "v16": {
-                "product_name": "HelloRadioSky V16 TX",
+                "product_name": "HELLORADIO V16 Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "v16r": {
-                "product_name": "HelloRadioSky V16R TX",
+                "product_name": "HELLORADIO V16R Internal 2.4GHz TX",
                 "firmware": "ESP_TX_Backpack",
                 "platform": "esp8285",
                 "upload_methods": ["etx", "wifi"]
             },
             "v12": {
-                "product_name": "HelloRadioSky V12 TX",
+                "product_name": "HelloRadio IntV12 2.4/900 TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["etx", "wifi"]
@@ -454,11 +472,17 @@
     "dakefpv": {
         "name": "DAKEFPV",
         "txbp": {
-            "max": {
-                "product_name": "DAKEFPV MAX TX",
+            "max-2g4": {
+                "product_name": "DAKEFPV 2.4GHz Micro MAX 1W TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
-                "upload_methods": ["etx", "wifi"]
+                "upload_methods": ["passthru", "wifi"]
+            },
+            "max-900": {
+                "product_name": "DAKEFPV 900MHz Micro MAX 2W TX",
+                "firmware": "ESP32C3_TX_Backpack",
+                "platform": "esp32-c3",
+                "upload_methods": ["passthru", "wifi"]
             }
         }
     },
@@ -528,7 +552,7 @@
         "name": "HDZero Radio",
         "txbp": {
             "radio": {
-                "product_name": "HDZero Radio TX",
+                "product_name": "HDZero Radio 2.4GHz TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
                 "upload_methods": ["uart", "wifi"]
