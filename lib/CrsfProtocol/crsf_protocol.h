@@ -73,6 +73,12 @@ typedef enum : uint8_t
 
 #define CRSF_MK_FRAME_T(payload) struct payload##_frame_s { crsf_header_t h; payload p; uint8_t crc; } PACKED
 
+// frame_size counts everything after itself, i.e. the payload plus type and crc
+#define CRSF_FRAME_SIZE(payload_size) ((payload_size) + 2)
+
+// Must be PACKED: without it the compiler adds a tail pad byte after satcnt, so
+// sizeof() is 16 rather than the 15 bytes actually on the wire, and the crc member
+// sits one byte past where CRSF puts it.
 typedef struct crsf_sensor_gps_s {
     int32_t lat;        // degrees * 1e7
     int32_t lon;        // degrees * 1e7
@@ -80,7 +86,7 @@ typedef struct crsf_sensor_gps_s {
     uint16_t heading;   // big-endian degrees * 10
     uint16_t altitude;  // big endian meters + 1000
     uint8_t satcnt;     // number of satellites
-} crsf_sensor_gps_t;
+} PACKED crsf_sensor_gps_t;
 typedef CRSF_MK_FRAME_T(crsf_sensor_gps_t) crsf_packet_gps_t;
 
 #if !defined(__linux__)

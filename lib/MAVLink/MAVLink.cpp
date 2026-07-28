@@ -60,7 +60,10 @@ MAVLink::ProcessMAVLinkFromTX(uint8_t c)
             crsfgps.p.satcnt = gps_int.satellites_visible;
             crsfgps.p.altitude = htobe16(gps_int.alt / 1000 + 1000);
 
-            CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS, sizeof(crsf_sensor_gps_t), CRSF_ADDRESS_CRSF_TRANSMITTER);
+            // CRSF_ADDRESS_FLIGHT_CONTROLLER is CRSF_SYNC_BYTE, which is what telemetry
+            // frames carry and what AatModule::onCrsfPacketIn checks for.
+            CRSF::SetHeaderAndCrc((uint8_t *)&crsfgps, CRSF_FRAMETYPE_GPS,
+                                  CRSF_FRAME_SIZE(sizeof(crsf_sensor_gps_t)), CRSF_ADDRESS_FLIGHT_CONTROLLER);
 
             // Wrap in MSP
             mspPacket_t packet;

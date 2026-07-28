@@ -2,6 +2,7 @@
 #include <options.h>
 #include <common.h>
 #include "devLED.h"
+#include "logging.h"
 #if defined(PLATFORM_ESP8266)
   #include <espnow.h>
 #elif defined(PLATFORM_ESP32)
@@ -27,13 +28,17 @@ void ESPNOW::sendMSPViaEspnow(mspPacket_t *packet)
         // packet could not be converted to array, bail out
         return;
     }
-    if (packet->function == MSP_ELRS_BIND)
+    // Send Bind packets with the broadcast address, everything else to the peer
+    const uint8_t *dest = (packet->function == MSP_ELRS_BIND) ? bindingAddress : firmwareOptions.uid;
+
+    // Don't swallow the error.  If ESP-NOW was never initialised (as happens when the
+    // backpack boots straight into WiFi mode) every send fails here, and without this
+    // log the whole path looks like it is working while nothing goes out on air.
+    int err = esp_now_send((uint8_t *)dest, (uint8_t *)&nowDataOutput, packetSize);
+    if (err != 0)
     {
-      esp_now_send((uint8_t*)bindingAddress, (uint8_t *) &nowDataOutput, packetSize); // Send Bind packet with the broadcast address
-    }
-    else
-    {
-      esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
+        DBGLN("esp_now_send failed (%d) for function 0x%x", err, packet->function);
+        return;
     }
     blinkLED();
 }

@@ -51,6 +51,7 @@ extern TxBackpackConfig config;
 extern wifi_service_t wifiService;
 #if defined(MAVLINK_ENABLED)
 extern MAVLink mavlink;
+extern bool StartEspNow(); // Tx_main.cpp
 #endif
 #elif defined(TARGET_TIMER_BACKPACK)
 extern TimerBackpackConfig config;
@@ -880,6 +881,15 @@ static void HandleWebUpdate()
   #if defined(MAVLINK_ENABLED)
     if (wifiService == WIFI_SERVICE_MAVLINK_TX)
     {
+      // Once WiFi has settled on an interface, bring ESP-NOW up alongside it.  This is
+      // what lets MAVLink WiFi mode still emit CRSF GPS frames to ESP-NOW peers such as
+      // antenna trackers.  Re-checked every loop because a station that fails to
+      // associate falls back to AP mode, which moves the interface out from under us.
+      if (wifiMode == WIFI_AP || (wifiMode == WIFI_STA && status == WL_CONNECTED))
+      {
+        StartEspNow();
+      }
+
       // Dump the mavlink_to_gcs_buf to the GCS
       static unsigned long last_mavlink_to_gcs_dump = 0;
 
