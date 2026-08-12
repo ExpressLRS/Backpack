@@ -297,7 +297,7 @@
                 "platform": "esp8285",
                 "upload_methods": ["etx" ,"wifi"]
             },
-            "t2-duo": {
+            "t22-duo": {
                 "product_name": "Jumper AION T22 DUO Internal TX",
                 "firmware": "ESP32C3_TX_Backpack",
                 "platform": "esp32-c3",
