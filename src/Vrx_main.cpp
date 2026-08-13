@@ -19,6 +19,9 @@
 #include "config.h"
 #include "crsf_protocol.h"
 
+#include "time.h"
+#include <sys/time.h>
+
 #include "device.h"
 #include "devWIFI.h"
 #include "devButton.h"
@@ -244,6 +247,24 @@ void ProcessMSPPacket(mspPacket_t *packet)
   case MSP_ELRS_SET_OSD:
     DBGLN("Processing MSP_ELRS_SET_OSD...");
     vrxModule.SetOSD(packet);
+    break;
+  case MSP_ELRS_BACKPACK_SET_RTC:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_RTC...");
+    if (packet->payloadSize >= 6)
+    {
+      // Set our local clock from the payload, then flag the time
+      // to be sent on to the goggles from the main loop
+      tm timeData = {};
+      timeData.tm_year = packet->readByte();
+      timeData.tm_mon = packet->readByte();
+      timeData.tm_mday = packet->readByte();
+      timeData.tm_hour = packet->readByte();
+      timeData.tm_min = packet->readByte();
+      timeData.tm_sec = packet->readByte();
+      timeval tv = {mktime(&timeData), 0};
+      settimeofday(&tv, NULL);
+      sendRTCChangesToVrx = true;
+    }
     break;
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
@@ -524,6 +545,11 @@ void loop()
     sendHeadTrackingChangesToVrx = false;
     vrxModule.SendHeadTrackingEnableCmd(headTrackingEnabled);
   }
+  if (sendRTCChangesToVrx)
+  {
+    sendRTCChangesToVrx = false;
+    vrxModule.SetRTC();
+  }
 
 #if !defined(NO_AUTOBIND)
   // Power cycle must be done within 30s.  Long timeout to allow goggles to boot and shutdown correctly e.g. Orqa.
@@ -536,11 +562,6 @@ void loop()
 
   if (connectionState == wifiUpdate)
   {
-    if (sendRTCChangesToVrx)
-    {
-      sendRTCChangesToVrx = false;
-      vrxModule.SetRTC();
-    }
     return;
   }
 
