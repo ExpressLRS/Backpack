@@ -42,6 +42,7 @@ void CrsfModuleBase::handleByteReceived()
                 if (crc == inCrc)
                 {
                     onCrsfPacketIn((const crsf_header_t *)_rxBuf);
+                    RcMain::Instance().SendCrsf(_rxBuf, len + 2);
 
                     shiftRxBuffer(len + 2);
                     reprocess = true;
