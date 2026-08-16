@@ -29,6 +29,7 @@ public:
     void SendGpsTelemetry(crsf_packet_gps_t *packet);
     void SendFlightModeTelemetry(uint8_t *rawCrsfPacket);
     void SendLinkTelemetry(uint8_t *rawCrsfPacket);
+    void SendAttitudeTelemetry(uint8_t *rawCrsfPacket);
 
 private:
     void ForwardCrsfFrame(uint8_t *rawCrsfPacket);

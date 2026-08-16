@@ -178,3 +178,9 @@ HDZero::SendLinkTelemetry(uint8_t *rawCrsfPacket)
 {
     ForwardCrsfFrame(rawCrsfPacket);
 }
+
+void
+HDZero::SendAttitudeTelemetry(uint8_t *rawCrsfPacket)
+{
+    ForwardCrsfFrame(rawCrsfPacket);
+}
