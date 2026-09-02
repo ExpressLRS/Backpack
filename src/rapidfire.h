@@ -1,31 +1,46 @@
 #pragma once
 
 #include "module_base.h"
+#include "msp.h"
+#include "msptypes.h"
+#include "rapidFIRE_SPI.h"
+#include "rapidFIRE_SPI_Protocol.h"
+
+#include "logging.h"
 #include <Arduino.h>
+#include <queue>
+#include <string>
 
-#define VRX_BOOT_DELAY  2000
+#define VRX_BOOT_DELAY 2000       // 2 seconds delay before sending any packets
+#define DELAY_BETWEEN_SPI_PKT 100 // 100ms delay between each SPI packet
+#define SPAM_COUNT 3 // rapidfire sometimes missed a pkt, so send 3x
 
-#define BIT_BANG_FREQ       1000
-#define SPAM_COUNT          3
+#define MAX_QUEUE_SIZE 10     // max number of packets to queue for display
+#define DISPLAY_INTERVAL 1000 // 1 seconds
+#define OSD_TIMEOUT 2500      // 2.5 seconds
 
-#define RF_API_DIR_GRTHAN   0x3E    // '>'
-#define RF_API_DIR_EQUAL    0x3D    // '='
-#define RF_API_BEEP_CMD     0x53    // 'S'
-#define RF_API_CHANNEL_CMD  0x43    // 'C'
-#define RF_API_BAND_CMD     0x42    // 'B'
-
-class Rapidfire : public ModuleBase
-{
+class Rapidfire : public ModuleBase {
 public:
-    void Init();
-    void SendBuzzerCmd();
-    void SendIndexCmd(uint8_t index);
-    void SendChannelCmd(uint8_t channel);
-    void SendBandCmd(uint8_t band);
+  void Init();
+  void Loop(uint32_t now);
+  void SendIndexCmd(uint8_t index);
+  void SendChannelCmd(uint8_t channel);
+  void SendBandCmd(uint8_t band);
+  void SendHeadTrackingEnableCmd(bool enable);
+  void SetRecordingState(uint8_t recordingState, uint16_t delay);
+  void SetOSD(mspPacket_t *packet);
+  void SendLinkTelemetry(uint8_t *rawCrsfPacket);
+  void SendBatteryTelemetry(uint8_t *rawCrsfPacket);
+  void SendGpsTelemetry(crsf_packet_gps_t *packet);
 
 private:
-    void SendSPI(uint8_t* buf, uint8_t bufLen);
-    void EnableSPIMode();
-    uint8_t crc8(uint8_t* buf, uint8_t bufLen);
-    bool SPIModeEnabled = false;
+  uint32_t m_lastDisplayTime = 0;
+  char m_textBuffer[RAPIDFIRE_MAX_LENGTH_TEXT];
+  std::queue<std::string> m_displayQueue;
+
+  void ShowNextMessage();
+  void ClearOSD();
+  bool BufferIsClear(char *payload, int len);
+  int CountMessageParts(std::vector<char> &buffer, int len);
+  void QueueMessageParts(std::vector<char> &buffer, int len, int numParts);
 };
