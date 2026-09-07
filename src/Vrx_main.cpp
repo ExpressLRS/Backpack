@@ -329,6 +329,10 @@ void SetSoftMACAddress()
     esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
   #endif
   WiFi.begin("network-name", "pass-to-network", 1);
+  #if defined(CONFIG_IDF_TARGET_ESP32S3)
+    // Allow the S3 Wi-Fi task to apply channel 1 before disconnecting.
+    delay(10);
+  #endif
   WiFi.disconnect();
 
   // Soft-set the MAC address to the passphrase UID for binding
