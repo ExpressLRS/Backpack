@@ -7,7 +7,7 @@
 #define VRX_BACKPACK_CONFIG_MAGIC   (0b10U << 30)
 #define TIMER_BACKPACK_CONFIG_MAGIC (0b11U << 30)
 
-#define TX_BACKPACK_CONFIG_VERSION      4
+#define TX_BACKPACK_CONFIG_VERSION      6
 #define VRX_BACKPACK_CONFIG_VERSION     5
 #define TIMER_BACKPACK_CONFIG_VERSION   3
 
@@ -24,6 +24,12 @@ typedef enum {
     BACKPACK_TELEM_MODE_BLUETOOTH,
 } telem_mode_t;
 
+typedef enum {
+    TRAINER_MODE_OFF,
+    TRAINER_MODE_MASTER,
+    TRAINER_MODE_SLAVE,
+} trainer_mode_t;
+
 #if defined(TARGET_TX_BACKPACK)
 
 typedef struct {
@@ -36,6 +42,8 @@ typedef struct {
     telem_mode_t      telemMode;
     uint16_t          mavlinkListenPort;
     uint16_t          mavlinkSendPort;
+    uint8_t           trainerPeerMac[6];
+    trainer_mode_t    trainerMode;       // persisted so it survives TLM_MODE reboots
 } tx_backpack_config_t;
 
 class TxBackpackConfig
@@ -54,6 +62,9 @@ public:
     telem_mode_t GetTelemMode() { return m_config.telemMode; }
     uint16_t GetMavlinkListenPort() const { return m_config.mavlinkListenPort; }
     uint16_t GetMavlinkSendPort() const { return m_config.mavlinkSendPort; }
+    const uint8_t *GetTrainerPeerMac() const { return m_config.trainerPeerMac; }
+    bool IsTrainerPaired() const;
+    trainer_mode_t GetTrainerMode() const { return m_config.trainerMode; }
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -66,6 +77,9 @@ public:
     void SetTelemMode(telem_mode_t mode);
     void SetMavlinkListenPort(uint16_t port);
     void SetMavlinkSendPort(uint16_t port);
+    void SetTrainerPeer(const uint8_t mac[6]);
+    void ClearTrainerPeer();
+    void SetTrainerMode(trainer_mode_t mode);
 
 private:
     tx_backpack_config_t    m_config;
