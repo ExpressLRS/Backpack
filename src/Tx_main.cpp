@@ -17,6 +17,9 @@
 #include "options.h"
 #include "helpers.h"
 
+#include "time.h"
+#include <sys/time.h>
+
 #include "device.h"
 #include "devWIFI.h"
 #include "devButton.h"
@@ -39,6 +42,7 @@ unsigned long rebootTime = 0;
 
 bool cacheFull = false;
 bool sendCached = false;
+bool sendRTC = false;
 
 device_t *ui_devices[] = {
 #ifdef PIN_LED
@@ -98,6 +102,8 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
       {
         sendCached = true;
       }
+      // the vrx-backpack just booted, so send it the time as well
+      sendRTC = true;
       break;
     }
     case MSP_ELRS_BACKPACK_SET_PTR: {
@@ -240,6 +246,25 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     HandleConfigMsg(packet);
     break;
 
+  case MSP_ELRS_BACKPACK_SET_RTC:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_RTC...");
+    // Seed our local clock from the payload, then forward the
+    // time on to the VRX backpack
+    if (packet->payloadSize >= 6)
+    {
+      tm timeData = {};
+      timeData.tm_year = packet->payload[0];
+      timeData.tm_mon = packet->payload[1];
+      timeData.tm_mday = packet->payload[2];
+      timeData.tm_hour = packet->payload[3];
+      timeData.tm_min = packet->payload[4];
+      timeData.tm_sec = packet->payload[5];
+      timeval tv = {mktime(&timeData), 0};
+      settimeofday(&tv, NULL);
+      sendMSPViaEspnow(packet);
+    }
+    break;
+
   case MSP_ELRS_BIND:
     DBG("MSP_ELRS_BIND = ");
     for (int i = 0; i < 6; i++)
@@ -305,6 +330,31 @@ void sendMSPViaWiFiUDP(mspPacket_t *packet)
   }
 
   SendTxBackpackTelemetryViaUDP(dataOutput, packetSize);
+}
+
+void SendRTCViaEspnow()
+{
+  time_t now = time(NULL);
+  if (now < 1704067200) // 1 Jan 2024 - the local clock has not been set
+  {
+    return;
+  }
+
+  tm timeData;
+  localtime_r(&now, &timeData);
+
+  mspPacket_t packet;
+  packet.reset();
+  packet.makeCommand();
+  packet.function = MSP_ELRS_BACKPACK_SET_RTC;
+  packet.addByte(timeData.tm_year);
+  packet.addByte(timeData.tm_mon);
+  packet.addByte(timeData.tm_mday);
+  packet.addByte(timeData.tm_hour);
+  packet.addByte(timeData.tm_min);
+  packet.addByte(timeData.tm_sec);
+
+  sendMSPViaEspnow(&packet);
 }
 
 void SendCachedMSP()
@@ -487,5 +537,12 @@ void loop()
   {
     SendCachedMSP();
     sendCached = false;
+  }
+
+  // Send the time to the VRX backpack when it requests it at boot
+  if (connectionState == running && sendRTC)
+  {
+    sendRTC = false;
+    SendRTCViaEspnow();
   }
 }
