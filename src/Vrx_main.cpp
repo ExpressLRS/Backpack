@@ -270,6 +270,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
     case CRSF_FRAMETYPE_LINK_STATISTICS:
       vrxModule.SendLinkTelemetry(packet->payload);
       break;
+    case CRSF_FRAMETYPE_FLIGHT_MODE:
+      vrxModule.SendFlightModeTelemetry(packet->payload);
+      break;
+    case CRSF_FRAMETYPE_ATTITUDE:
+      vrxModule.SendAttitudeTelemetry(packet->payload);
+      break;
     }
     break;
   default:
