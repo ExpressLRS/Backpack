@@ -12,9 +12,28 @@ TxBackpackConfig::Load()
     // Check if version number matches
     if (m_config.version != (uint32_t)(TX_BACKPACK_CONFIG_VERSION | TX_BACKPACK_CONFIG_MAGIC))
     {
-        // If not, revert to defaults for this version
-        DBGLN("EEPROM version mismatch! Resetting to defaults...");
-        SetDefaults();
+        // If a known previous version is detected, migrate in place; otherwise revert to defaults
+        if (m_config.version == (uint32_t)(4U | TX_BACKPACK_CONFIG_MAGIC))
+        {
+            m_config.version = TX_BACKPACK_CONFIG_VERSION | TX_BACKPACK_CONFIG_MAGIC;
+            memset(m_config.trainerPeerMac, 0, 6);
+            m_config.trainerMode = TRAINER_MODE_OFF;
+            m_modified = true;
+            Commit();
+        }
+        else if (m_config.version == (uint32_t)(5U | TX_BACKPACK_CONFIG_MAGIC))
+        {
+            // Version 5 → 6: added trainerMode field
+            m_config.version = TX_BACKPACK_CONFIG_VERSION | TX_BACKPACK_CONFIG_MAGIC;
+            m_config.trainerMode = TRAINER_MODE_OFF;
+            m_modified = true;
+            Commit();
+        }
+        else
+        {
+            DBGLN("EEPROM version mismatch! Resetting to defaults...");
+            SetDefaults();
+        }
     }
 }
 
@@ -54,6 +73,8 @@ TxBackpackConfig::SetDefaults()
     m_config.wifiService = WIFI_SERVICE_UPDATE;
     m_config.mavlinkListenPort = 14555;  // Default MavLink listen port
     m_config.mavlinkSendPort = 14550;    // Default MavLink send port
+    memset(m_config.trainerPeerMac, 0, 6);
+    m_config.trainerMode = TRAINER_MODE_OFF;
     m_modified = true;
     Commit();
 }
@@ -99,6 +120,7 @@ TxBackpackConfig::SetTelemMode(telem_mode_t mode)
     m_config.telemMode = mode;
     m_modified = true;
 }
+
 void
 TxBackpackConfig::SetMavlinkListenPort(uint16_t port)
 {
@@ -112,6 +134,38 @@ TxBackpackConfig::SetMavlinkSendPort(uint16_t port)
     m_config.mavlinkSendPort = port;
     m_modified = true;
 }
+
+bool
+TxBackpackConfig::IsTrainerPaired() const
+{
+    for (int i = 0; i < 6; i++)
+    {
+        if (m_config.trainerPeerMac[i] != 0) return true;
+    }
+    return false;
+}
+
+void
+TxBackpackConfig::SetTrainerPeer(const uint8_t mac[6])
+{
+    memcpy(m_config.trainerPeerMac, mac, 6);
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::ClearTrainerPeer()
+{
+    memset(m_config.trainerPeerMac, 0, 6);
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetTrainerMode(trainer_mode_t mode)
+{
+    m_config.trainerMode = mode;
+    m_modified = true;
+}
+
 #endif
 
 /////////////////////////////////////////////////////
