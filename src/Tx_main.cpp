@@ -21,6 +21,7 @@
 #include "devWIFI.h"
 #include "devButton.h"
 #include "devLED.h"
+#include "BleTrainer.h"
 
 #if defined(MAVLINK_ENABLED)
 #include <MAVLink.h>
@@ -40,12 +41,19 @@ unsigned long rebootTime = 0;
 bool cacheFull = false;
 bool sendCached = false;
 
+// Trainer enabled by the radio (MSP_ELRS_BACKPACK_SET_HEAD_TRACKING).
+// When set, a BLE-connected trainer is forwarded to the module as SET_PTR.
+bool headTrackingEnabled = false;
+
 device_t *ui_devices[] = {
 #ifdef PIN_LED
   &LED_device,
 #endif
 #ifdef PIN_BUTTON
   &Button_device,
+#endif
+#ifdef HAS_BLE_TRAINER
+  &BleTrainer_device,
 #endif
   &WIFI_device,
 };
@@ -102,6 +110,13 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
     }
     case MSP_ELRS_BACKPACK_SET_PTR: {
       DBGLN("MSP_ELRS_BACKPACK_SET_PTR...");
+#if defined(HAS_BLE_TRAINER)
+      // BLE is the active source when explicitly selected, or (in Auto) while connected.
+      const trainer_source_t trainerSrc = config.GetTrainerSource();
+      if (trainerSrc == TRAINER_SOURCE_BLE ||
+          (trainerSrc == TRAINER_SOURCE_AUTO && bleTrainerConnected()))
+        break;
+#endif
       msp.sendPacket(packet, &Serial);
       break;
     }
@@ -163,29 +178,45 @@ void HandleConfigMsg(mspPacket_t *packet)
   switch (key)
   {
     case MSP_ELRS_BACKPACK_CONFIG_TLM_MODE:
+    {
+      telem_mode_t newMode = config.GetTelemMode();
+      wifi_service_t newService = config.GetWiFiService();
+      bool newStartWiFi = config.GetStartWiFiOnBoot();
       switch (value)
       {
         case BACKPACK_TELEM_MODE_OFF:
-          config.SetTelemMode(BACKPACK_TELEM_MODE_OFF);
-          config.SetWiFiService(WIFI_SERVICE_UPDATE);
-          config.SetStartWiFiOnBoot(false);
-          config.Commit();
+          newMode = BACKPACK_TELEM_MODE_OFF;
+          newService = WIFI_SERVICE_UPDATE;
+          newStartWiFi = false;
           break;
         case BACKPACK_TELEM_MODE_ESPNOW:
-          config.SetTelemMode(BACKPACK_TELEM_MODE_ESPNOW);
-          config.SetWiFiService(WIFI_SERVICE_UPDATE);
-          config.SetStartWiFiOnBoot(false);
-          config.Commit();
+          newMode = BACKPACK_TELEM_MODE_ESPNOW;
+          newService = WIFI_SERVICE_UPDATE;
+          newStartWiFi = false;
           break;
         case BACKPACK_TELEM_MODE_WIFI:
-          config.SetTelemMode(BACKPACK_TELEM_MODE_WIFI);
-          config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
-          config.SetStartWiFiOnBoot(true);
-          config.Commit();
+          newMode = BACKPACK_TELEM_MODE_WIFI;
+          newService = WIFI_SERVICE_MAVLINK_TX;
+          newStartWiFi = true;
           break;
       }
+
+      // The TX module can resend this config. Rebooting on an unchanged value
+      // would restart the backpack in a loop and constantly drop the trainer.
+      if (newMode == config.GetTelemMode() &&
+          newService == config.GetWiFiService() &&
+          newStartWiFi == config.GetStartWiFiOnBoot())
+      {
+        break;
+      }
+
+      config.SetTelemMode(newMode);
+      config.SetWiFiService(newService);
+      config.SetStartWiFiOnBoot(newStartWiFi);
+      config.Commit();
       rebootTime = millis();
       break;
+    }
   }
 }
 
@@ -218,6 +249,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
+    headTrackingEnabled = (packet->payloadSize > 0) && (packet->payload[0] != 0);
     cachedHTPacket = *packet;
     cacheFull = true;
     sendMSPViaEspnow(packet);
@@ -229,7 +261,7 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
     {
       sendMSPViaWiFiUDP(packet);
     }
-    if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
+    else if (config.GetTelemMode() != BACKPACK_TELEM_MODE_OFF)
     {
       sendMSPViaEspnow(packet);
     }
@@ -270,6 +302,12 @@ void ProcessMSPPacketFromTX(mspPacket_t *packet)
 
 void sendMSPViaEspnow(mspPacket_t *packet)
 {
+  // WiFi telemetry mode boots without initializing ESP-NOW.
+  if (config.GetTelemMode() == BACKPACK_TELEM_MODE_WIFI)
+  {
+    return;
+  }
+
   uint8_t packetSize = msp.getTotalPacketSize(packet);
   uint8_t nowDataOutput[packetSize];
 
@@ -325,12 +363,28 @@ void SendCachedMSP()
   }
 }
 
-void SetSoftMACAddress()
+static void InitializeBackpackUID()
 {
   if (!firmwareOptions.hasUID)
   {
     memcpy(firmwareOptions.uid, config.GetGroupAddress(), 6);
   }
+#if defined(PLATFORM_ESP32)
+  static const uint8_t unboundAddress[6] = {0, 0, 0, 0, 0, 0};
+  if (memcmp(firmwareOptions.uid, unboundAddress, sizeof(unboundAddress)) == 0)
+  {
+    const uint64_t efuseMac = ESP.getEfuseMac();
+    for (uint8_t i = 0; i < 6; i++)
+      firmwareOptions.uid[i] = (uint8_t)(efuseMac >> (8 * (5 - i)));
+  }
+#endif
+  // MAC addresses assigned to the WiFi STA interface must be unicast.
+  firmwareOptions.uid[0] &= ~0x01;
+}
+
+void SetSoftMACAddress()
+{
+  InitializeBackpackUID();
   DBG("EEPROM MAC = ");
   for (int i = 0; i < 6; i++)
   {
@@ -338,9 +392,6 @@ void SetSoftMACAddress()
     DBG(",");
   }
   DBGLN(""); // Extra line for serial output readability
-
-  // MAC address can only be set with unicast, so first byte must be even, not odd
-  firmwareOptions.uid[0] = firmwareOptions.uid[0] & ~0x01;
 
   WiFi.mode(WIFI_STA);
   #if defined(PLATFORM_ESP8266)
@@ -391,6 +442,20 @@ void setup()
   eeprom.Begin();
   config.SetStorageProvider(&eeprom);
   config.Load();
+  InitializeBackpackUID();
+
+#if defined(MAVLINK_ENABLED)
+  // The MAVLink WiFi service is a persistent mode selected by the telemetry
+  // setting, unlike the one-shot updater. Restore it on every boot so that
+  // entering the updater (which overwrites the WiFi service) does not leave the
+  // backpack in normal mode with no access point.
+  if (config.GetTelemMode() == BACKPACK_TELEM_MODE_WIFI &&
+      !(config.GetStartWiFiOnBoot() && config.GetWiFiService() == WIFI_SERVICE_UPDATE))
+  {
+    config.SetWiFiService(WIFI_SERVICE_MAVLINK_TX);
+    config.SetStartWiFiOnBoot(true);
+  }
+#endif
 
   devicesInit(ui_devices, ARRAY_SIZE(ui_devices));
 
@@ -457,6 +522,7 @@ void loop()
   uint32_t now = millis();
 
   devicesUpdate(now);
+
 
   #if defined(PLATFORM_ESP8266) || defined(PLATFORM_ESP32)
     // If the reboot time is set and the current time is past the reboot time then reboot.

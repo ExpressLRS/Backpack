@@ -15,6 +15,18 @@ TxBackpackConfig::Load()
         // If not, revert to defaults for this version
         DBGLN("EEPROM version mismatch! Resetting to defaults...");
         SetDefaults();
+        return;
+    }
+
+    // The stored connection interval can predate the throttling fix, in which case
+    // it is the old default rather than a deliberate choice. Migrate it so the fix
+    // reaches units that were paired before it landed.
+    if (m_config.trainerIntervalMs == TRAINER_LEGACY_INTERVAL_MS)
+    {
+        DBGLN("Migrating legacy trainer interval to default");
+        m_config.trainerIntervalMs = TRAINER_DEFAULT_INTERVAL_MS;
+        m_modified = true;
+        Commit();
     }
 }
 
@@ -54,6 +66,13 @@ TxBackpackConfig::SetDefaults()
     m_config.wifiService = WIFI_SERVICE_UPDATE;
     m_config.mavlinkListenPort = 14555;  // Default MavLink listen port
     m_config.mavlinkSendPort = 14550;    // Default MavLink send port
+    memset(m_config.trainerPeerMac, 0, 6);
+    m_config.trainerPeerType = 0;
+    // The trainer only has one notification in flight at a time, so its
+    // update rate is capped at one frame per connection event. Keep this small
+    // enough not to throttle the stream below the device's own 80 Hz rate.
+    m_config.trainerIntervalMs = TRAINER_DEFAULT_INTERVAL_MS;
+    m_config.trainerSource = TRAINER_SOURCE_AUTO;
     m_modified = true;
     Commit();
 }
@@ -110,6 +129,53 @@ void
 TxBackpackConfig::SetMavlinkSendPort(uint16_t port)
 {
     m_config.mavlinkSendPort = port;
+    m_modified = true;
+}
+
+bool
+TxBackpackConfig::IsTrainerPaired() const
+{
+    for (int i = 0; i < 6; i++)
+    {
+        if (m_config.trainerPeerMac[i] != 0)
+            return true;
+    }
+    return false;
+}
+
+void
+TxBackpackConfig::SetTrainerPeerMac(const uint8_t mac[6])
+{
+    memcpy(m_config.trainerPeerMac, mac, 6);
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetTrainerPeerType(uint8_t type)
+{
+    m_config.trainerPeerType = type;
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::ClearTrainerPeerMac()
+{
+    memset(m_config.trainerPeerMac, 0, 6);
+    m_config.trainerPeerType = 0;
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetTrainerIntervalMs(uint16_t ms)
+{
+    m_config.trainerIntervalMs = ms;
+    m_modified = true;
+}
+
+void
+TxBackpackConfig::SetTrainerSource(trainer_source_t source)
+{
+    m_config.trainerSource = source;
     m_modified = true;
 }
 #endif

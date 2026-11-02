@@ -26,6 +26,7 @@
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-2">Backpack</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-3">Network</a></li>
 				<li><a data-mui-toggle="tab" data-mui-controls="pane-justified-4">MavLink</a></li>
+				<li id="bttab" style="display:none;"><a data-mui-toggle="tab" data-mui-controls="pane-bt">FrSky BLE Trainer</a></li>
 			</ul>
 
 			<div class="mui-tabs__pane mui--is-active" id="pane-justified-1">
@@ -145,6 +146,48 @@
 						<td id="mavlink_gcs_ip"></td>
 					</tr>
 				</table>
+			</div>
+
+			<div class="mui-tabs__pane" id="pane-bt">
+				<h2>FrSky BLE Trainer</h2>
+				<p>The backpack forwards trainer channels to EdgeTX (as trainer input) from one of
+				two sources: the <b>native</b> system (ESP-NOW, e.g. a VRX or goggles with IMU) or a
+				<b>Bluetooth</b> device advertising the FrSky trainer service (e.g. an Arduino-based
+				HeadTracker). Both respect the radio's HT Enable; use the selector to choose which one
+				is used.</p>
+				<form id="bt_form" class="mui-form">
+					<div class="mui-select">
+						<select id="bt_source" name="source">
+							<option value="auto">Auto (Bluetooth if connected, else native)</option>
+							<option value="native">Native (ESP-NOW / VRX)</option>
+							<option value="ble">Bluetooth (BLE)</option>
+						</select>
+						<label>Trainer source</label>
+					</div>
+					<div id="bt_ble_settings">
+						<h3>Bluetooth device</h3>
+						<table class="mui-table">
+							<tr>
+								<td>Status:</td>
+								<td id="bt_status">-</td>
+							</tr>
+							<tr>
+								<td>Paired address:</td>
+								<td id="bt_mac">-</td>
+							</tr>
+						</table>
+						<div class="mui-textfield">
+							Connection interval (ms)
+							<input type="number" id="bt_interval" name="interval" min="7" max="1000">
+						</div>
+						<p>The trainer sends one frame per Bluetooth connection event, so a low
+						interval is what keeps the movement fluid. 8 ms suits a HeadTracker; higher
+						values only slow the stream down.</p>
+						<button type="button" id="bt_forget" class="mui-btn mui-btn--danger">Forget (re-pair on next boot)</button>
+						<br/><br/>
+					</div>
+					<input type="submit" value="Save" class="mui-btn mui-btn--primary">
+				</form>
 			</div>
 		</div>
 	</div>

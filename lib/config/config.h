@@ -7,9 +7,15 @@
 #define VRX_BACKPACK_CONFIG_MAGIC   (0b10U << 30)
 #define TIMER_BACKPACK_CONFIG_MAGIC (0b11U << 30)
 
-#define TX_BACKPACK_CONFIG_VERSION      4
+#define TX_BACKPACK_CONFIG_VERSION      6
 #define VRX_BACKPACK_CONFIG_VERSION     5
 #define TIMER_BACKPACK_CONFIG_VERSION   3
+
+// The Bluetooth trainer stream used to default to a 100 ms BLE connection interval,
+// which capped the bridge at 10 Hz against the device's own 80 Hz rate. Treat that
+// legacy value as "never explicitly configured" so already-paired units pick up the fix.
+#define TRAINER_LEGACY_INTERVAL_MS   100
+#define TRAINER_DEFAULT_INTERVAL_MS  8
 
 
 typedef enum {
@@ -24,6 +30,13 @@ typedef enum {
     BACKPACK_TELEM_MODE_BLUETOOTH,
 } telem_mode_t;
 
+// Trainer source selection
+typedef enum {
+    TRAINER_SOURCE_AUTO,    // BLE if connected, otherwise ESP-NOW (VRX)
+    TRAINER_SOURCE_ESPNOW,  // ESP-NOW (VRX) only
+    TRAINER_SOURCE_BLE,     // BLE only
+} trainer_source_t;
+
 #if defined(TARGET_TX_BACKPACK)
 
 typedef struct {
@@ -36,6 +49,11 @@ typedef struct {
     telem_mode_t      telemMode;
     uint16_t          mavlinkListenPort;
     uint16_t          mavlinkSendPort;
+    // Bluetooth trainer (central). All-zero MAC = not paired.
+    uint8_t           trainerPeerMac[6];
+    uint8_t           trainerPeerType;   // NimBLE address type
+    uint16_t          trainerIntervalMs; // requested BLE connection interval (ms)
+    trainer_source_t  trainerSource;     // trainer source selection
 } tx_backpack_config_t;
 
 class TxBackpackConfig
@@ -54,6 +72,11 @@ public:
     telem_mode_t GetTelemMode() { return m_config.telemMode; }
     uint16_t GetMavlinkListenPort() const { return m_config.mavlinkListenPort; }
     uint16_t GetMavlinkSendPort() const { return m_config.mavlinkSendPort; }
+    uint8_t *GetTrainerPeerMac() { return m_config.trainerPeerMac; }
+    uint8_t  GetTrainerPeerType() { return m_config.trainerPeerType; }
+    uint16_t GetTrainerIntervalMs() { return m_config.trainerIntervalMs; }
+    trainer_source_t GetTrainerSource() { return m_config.trainerSource; }
+    bool     IsTrainerPaired() const;
 
     // Setters
     void SetStorageProvider(ELRS_EEPROM *eeprom);
@@ -66,6 +89,11 @@ public:
     void SetTelemMode(telem_mode_t mode);
     void SetMavlinkListenPort(uint16_t port);
     void SetMavlinkSendPort(uint16_t port);
+    void SetTrainerPeerMac(const uint8_t mac[6]);
+    void SetTrainerPeerType(uint8_t type);
+    void ClearTrainerPeerMac();
+    void SetTrainerIntervalMs(uint16_t ms);
+    void SetTrainerSource(trainer_source_t source);
 
 private:
     tx_backpack_config_t    m_config;

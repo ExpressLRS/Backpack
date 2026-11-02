@@ -7,6 +7,7 @@ function _(el) {
 function init() {
     initAat();
     initMavLink();
+    initBleTrainer();
 
     // sends XMLHttpRequest, so do it last
     initOptions();
@@ -47,6 +48,55 @@ function initMavLink() {
     xmlhttp.open('GET', '/mavlink', true);
     xmlhttp.send();
 }
+
+function initBleTrainer() {
+    const form = _('bt_form');
+    if (!form)
+        return;
+    form.addEventListener('submit', (e) => { e.preventDefault(); btSubmit(false); });
+    _('bt_forget').addEventListener('click', (e) => { e.preventDefault(); btSubmit(true); });
+    _('bt_source').addEventListener('change', () => btToggleBleSettings(_('bt_source').value));
+}
+
+// Posts the FrSky BLE Trainer form (or a Forget request) and updates the page
+// in place, so no manual reload is needed.
+function btSubmit(clearPeer) {
+    const body = clearPeer ? new URLSearchParams({ forget: 1 })
+                           : new URLSearchParams(new FormData(_('bt_form')));
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function () {
+        if (this.readyState != 4)
+            return;
+        if (this.status == 200) {
+            if (clearPeer) {
+                _('bt_status').textContent = 'Not paired';
+                _('bt_mac').textContent = '-';
+            }
+            cuteAlert({
+                type: 'success',
+                title: 'Bluetooth Trainer',
+                message: 'Bluetooth trainer settings saved'
+            });
+        } else {
+            cuteAlert({
+                type: 'error',
+                title: 'Bluetooth Trainer',
+                message: 'An error occurred saving the Bluetooth trainer settings'
+            });
+        }
+    };
+    xmlhttp.open('POST', '/settrainer', true);
+    xmlhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xmlhttp.send(body);
+}
+
+// Bluetooth-only fields are hidden when the native source is selected.
+function btToggleBleSettings(source) {
+    const el = _('bt_ble_settings');
+    if (el)
+        el.style.display = (source === 'native') ? 'none' : 'block';
+}
+
 function initOptions() {
     const xmlhttp = new XMLHttpRequest();
     xmlhttp.onreadystatechange = function() {
@@ -135,6 +185,15 @@ function updateConfig(data) {
     }
     if (config['head-tracking']) {
         if (_('httab')) _('httab').style.display = 'table-cell';
+    }
+    if (config['trainer']) {
+        if (_('bttab')) _('bttab').style.display = 'table-cell';
+        const bt = config.trainer;
+        _('bt_status').textContent = bt.paired ? 'Paired' : 'Not paired';
+        _('bt_mac').textContent = bt.paired ? bt.mac : '-';
+        _('bt_interval').value = bt.interval;
+        _('bt_source').value = bt.source;
+        btToggleBleSettings(bt.source);
     }
     if((!data.stm32 || data.stm32==="no") && _('tx_tab')) {
         mui.tabs.activate('pane-justified-2');
