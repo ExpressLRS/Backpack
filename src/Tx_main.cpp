@@ -40,6 +40,21 @@ unsigned long rebootTime = 0;
 bool cacheFull = false;
 bool sendCached = false;
 
+// Telemetry delivery: a unicast to the UID address expects an 802.11 ACK from a
+// peer carrying that MAC (a bound VRX backpack). When no such peer is present
+// or it is out of range, the WiFi stack retransmits every frame several times;
+// while those retries run, esp_now_send() fails for the telemetry frames that
+// keep arriving from the TX module (up to ~60 frames/s with a CRSF flight
+// controller) and most of the stream is dropped. OnDataSent() counts unacked
+// unicasts; after TLM_UNICAST_FAIL_LIMIT in a row telemetry is sent as
+// broadcast, which goes out exactly once. Every TLM_UNICAST_PROBE_INTERVAL
+// frames one unicast is tried, so a peer coming back switches us to unicast.
+constexpr uint8_t TLM_UNICAST_FAIL_LIMIT = 8;
+constexpr uint8_t TLM_UNICAST_PROBE_INTERVAL = 128;
+volatile uint8_t tlmUnicastFailures = 0;
+volatile bool tlmUseBroadcast = false;
+uint8_t tlmBroadcastCount = 0;
+
 device_t *ui_devices[] = {
 #ifdef PIN_LED
   &LED_device,
@@ -109,6 +124,37 @@ void ProcessMSPPacketFromPeer(mspPacket_t *packet)
       DBGLN("MSP_SET_VTX_CONFIG...");
       msp.sendPacket(packet, &Serial);
       break;
+    }
+  }
+}
+
+// espnow on-send callback: tracks whether unicasts to the UID address get
+// acknowledged, see the telemetry delivery note above
+#if defined(PLATFORM_ESP8266)
+void OnDataSent(uint8_t *mac_addr, uint8_t status)
+{
+  const bool success = status == 0;
+#elif defined(PLATFORM_ESP32)
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+  const bool success = status == ESP_NOW_SEND_SUCCESS;
+#endif
+  // Only unicasts carry ACK information; broadcasts always report success
+  if (memcmp(mac_addr, firmwareOptions.uid, 6) != 0)
+  {
+    return;
+  }
+  if (success)
+  {
+    tlmUnicastFailures = 0;
+    tlmUseBroadcast = false;
+  }
+  else if (tlmUnicastFailures < TLM_UNICAST_FAIL_LIMIT)
+  {
+    tlmUnicastFailures++;
+    if (tlmUnicastFailures == TLM_UNICAST_FAIL_LIMIT)
+    {
+      tlmUseBroadcast = true;
     }
   }
 }
@@ -285,6 +331,20 @@ void sendMSPViaEspnow(mspPacket_t *packet)
   {
     esp_now_send(bindingAddress, (uint8_t *) &nowDataOutput, packetSize); // Send Bind packet with the broadcast address
   }
+  else if (packet->function == MSP_ELRS_BACKPACK_CRSF_TLM && tlmUseBroadcast)
+  {
+    // Nobody acknowledges our unicasts: send telemetry as broadcast (no ACK,
+    // no retries) and probe with a unicast now and then, see OnDataSent()
+    if (++tlmBroadcastCount >= TLM_UNICAST_PROBE_INTERVAL)
+    {
+      tlmBroadcastCount = 0;
+      esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
+    }
+    else
+    {
+      esp_now_send(bindingAddress, (uint8_t *) &nowDataOutput, packetSize);
+    }
+  }
   else
   {
     esp_now_send(firmwareOptions.uid, (uint8_t *) &nowDataOutput, packetSize);
@@ -442,6 +502,7 @@ void setup()
     #endif
 
     esp_now_register_recv_cb(OnDataRecv);
+    esp_now_register_send_cb(OnDataSent);
   }
 
   devicesStart();
