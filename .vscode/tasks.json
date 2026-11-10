@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "PlatformIO",
+			"task": "List",
+			"problemMatcher": [
+				"$platformio"
+			],
+			"label": "PlatformIO: List"
+		}
+	]
+}
