@@ -117,6 +117,21 @@ WiFiUDP mavlinkUDP;
 
 IPAddress gcsIP;
 bool gcsIPSet = false;
+
+// MAVLink over WebSocket for browser GCS (Field Mission Planner): a phone browser can't do UDP,
+// so /fmp-relay.html (served from here) holds this socket. Uplink bytes are queued in the
+// async callback and written to the UART from the main loop, like the UDP path.
+static AsyncWebSocket mavWs("/mavlink-ws");
+static uint8_t mavWsUplink[1024];
+static uint16_t mavWsUplinkLen = 0;
+#if defined(PLATFORM_ESP32)
+static portMUX_TYPE mavWsMux = portMUX_INITIALIZER_UNLOCKED;
+#define MAVWS_LOCK() portENTER_CRITICAL(&mavWsMux)
+#define MAVWS_UNLOCK() portEXIT_CRITICAL(&mavWsMux)
+#else
+#define MAVWS_LOCK()
+#define MAVWS_UNLOCK()
+#endif
 #endif
 
 #if defined(TARGET_TX_BACKPACK)
@@ -210,6 +225,36 @@ static bool captivePortal(AsyncWebServerRequest *request)
   return false;
 }
 
+#if defined(MAVLINK_ENABLED)
+static void onMavWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  if (type == WS_EVT_CONNECT)
+  {
+    // Browsers send Origin: only pages served by this backpack, opened by IP or mDNS name
+    // (a rebound DNS name or another site must not drive the drone). No Origin = not a browser.
+    AsyncWebServerRequest *request = (AsyncWebServerRequest *)arg;
+    String host = request->host();
+    bool hostOk = isIp(host) || host.endsWith(".local");
+    if (!hostOk || (request->hasHeader("Origin") && request->header("Origin") != "http://" + host))
+    {
+      client->close();
+      return;
+    }
+    server->cleanupClients(2);
+  }
+  else if (type == WS_EVT_DATA)
+  {
+    MAVWS_LOCK();
+    if (mavWsUplinkLen + len <= sizeof(mavWsUplink))
+    {
+      memcpy(mavWsUplink + mavWsUplinkLen, data, len);
+      mavWsUplinkLen += len;
+    }
+    MAVWS_UNLOCK();
+  }
+}
+#endif
+
 static struct {
   const char *url;
   const char *contentType;
@@ -221,6 +266,9 @@ static struct {
   {"/mui.js", "text/javascript", (uint8_t *)MUI_JS, sizeof(MUI_JS)},
   {"/scan.js", "text/javascript", (uint8_t *)SCAN_JS, sizeof(SCAN_JS)},
   {"/logo.svg", "image/svg+xml", (uint8_t *)LOGO_SVG, sizeof(LOGO_SVG)},
+#if defined(MAVLINK_ENABLED)
+  {"/fmp-relay.html", "text/html", (uint8_t *)FMP_RELAY_HTML, sizeof(FMP_RELAY_HTML)},
+#endif
 #if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
   {"/airplane.obj", "text/plain", (uint8_t *)PLANE_OBJ, sizeof(PLANE_OBJ)},
   {"/texture.gif", "image/gif", (uint8_t *)TEXTURE_GIF, sizeof(TEXTURE_GIF)},
@@ -769,6 +817,8 @@ static void startServices()
 #endif
 #if defined(MAVLINK_ENABLED)
   server.on("/mavlink", HTTP_GET, WebMAVLinkHandler);
+  mavWs.onEvent(onMavWsEvent);
+  server.addHandler(&mavWs);
 #endif
 
   server.onNotFound(WebUpdateHandleNotFound);
@@ -908,10 +958,24 @@ static void HandleWebUpdate()
 
         mavlinkUDP.beginPacket(remote, config.GetMavlinkSendPort());
         mavlink_message_t* msgQueue = mavlink.GetQueuedMsgs();
+        // Same batch to WebSocket clients, coalesced; skipped (dropped) while their queue is full
+        static uint8_t wsBatch[1024];
+        uint16_t wsBatchLen = 0;
+        bool toWs = mavWs.count() > 0 && mavWs.availableForWriteAll();
         for (uint8_t i = 0; i < mavlink.GetQueuedMsgCount(); i++)
         {
           uint8_t buf[MAVLINK_MAX_PACKET_LEN];
           uint16_t len = mavlink_msg_to_send_buffer(buf, &msgQueue[i]);
+          if (toWs)
+          {
+            if (wsBatchLen + len > sizeof(wsBatch))
+            {
+              mavWs.binaryAll(wsBatch, wsBatchLen);
+              wsBatchLen = 0;
+            }
+            memcpy(wsBatch + wsBatchLen, buf, len);
+            wsBatchLen += len;
+          }
           size_t sent = mavlinkUDP.write(buf, len);
           if (sent < len)
           {
@@ -919,6 +983,10 @@ static void HandleWebUpdate()
           }
         }
         mavlinkUDP.endPacket();
+        if (wsBatchLen)
+        {
+          mavWs.binaryAll(wsBatch, wsBatchLen);
+        }
         mavlink.ResetQueuedMsgCount();
         last_mavlink_to_gcs_dump = millis();
       }
@@ -934,6 +1002,18 @@ static void HandleWebUpdate()
           uint8_t buf[MAVLINK_MAX_PACKET_LEN];
           mavlinkUDP.read(buf, packetSize);
           mavlink.ProcessMAVLinkFromGCS(buf, packetSize);
+        }
+
+        // MAVLink from WebSocket clients (FMP in a browser)
+        if (mavWsUplinkLen)
+        {
+          static uint8_t wsBuf[sizeof(mavWsUplink)];
+          MAVWS_LOCK();
+          uint16_t n = mavWsUplinkLen;
+          memcpy(wsBuf, mavWsUplink, n);
+          mavWsUplinkLen = 0;
+          MAVWS_UNLOCK();
+          mavlink.ProcessMAVLinkFromGCS(wsBuf, n);
         }
       }
     }

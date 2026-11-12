@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FMP - drone link</title>
+<style>body{margin:0;padding:16px;font:14px/1.4 system-ui,sans-serif;background:#111827;color:#e5e7eb}b{color:#34d399}.err{color:#f87171}</style>
+</head>
+<body>
+<!-- Opened as a popup by Field Mission Planner (GitHub Pages). A browser can't speak UDP and an
+     https page may not open ws:// to the LAN, but this page is served BY the backpack, so it holds
+     the MAVLink WebSocket and relays bytes through postMessage. Same protocol as FMP's relay.html. -->
+<div><b>FMP: drone link</b> - keep this tab open while FMP is open (it closes with FMP).</div>
+<div id="st">Connecting to the backpack...</div>
+<script>
+"use strict";
+var ALLOWED = ["https://tecelskyyivan-alt.github.io", location.origin];
+var st = document.getElementById("st");
+var peer = null, ws = null, rx = 0, tx = 0;
+function show(text, err) { st.textContent = text; st.className = err ? "err" : ""; }
+function ready() { if (peer && ws && ws.readyState === 1) window.opener.postMessage({ fmp: "ready" }, peer); }
+ws = new WebSocket("ws://" + location.host + "/mavlink-ws");
+ws.binaryType = "arraybuffer";
+ws.onopen = function () { show("Backpack connected, waiting for FMP..."); ready(); };
+ws.onerror = function () { show("Backpack MAVLink WebSocket not answering. Backpack -> Telemetry must be WiFi.", true); };
+ws.onclose = function () { show("Link to the backpack closed.", true); if (peer && window.opener) window.opener.postMessage({ fmp: "closed" }, peer); };
+ws.onmessage = function (ev) {
+  rx++;
+  if (peer && window.opener) window.opener.postMessage({ fmp: "rx", data: ev.data }, peer, [ev.data]);
+};
+window.addEventListener("message", function (ev) {
+  if (ALLOWED.indexOf(ev.origin) < 0 || !ev.data) return;
+  if (ev.data.fmp === "hello") { peer = ev.origin; ready(); try { window.opener.focus(); } catch (e) {} }
+  else if (ev.data.fmp === "tx" && ev.origin === peer && ws.readyState === 1) { ws.send(ev.data.data); tx++; }
+  else if (ev.data.fmp === "close" && ev.origin === peer) window.close();
+});
+setInterval(function () {
+  if (!window.opener || window.opener.closed) { window.close(); return; }
+  /* Let a reloaded FMP find this window instead of opening another one. */
+  if (ws.readyState === 1) for (var i = 0; i < ALLOWED.length; i++) if (ALLOWED[i] !== location.origin) window.opener.postMessage({ fmp: "here" }, ALLOWED[i]);
+  if (peer && ws.readyState === 1) show("Drone <-> FMP: received " + rx + ", sent " + tx + " packets.");
+}, 1000);
+</script>
+</body>
+</html>
