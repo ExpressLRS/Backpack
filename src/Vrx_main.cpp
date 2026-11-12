@@ -245,6 +245,12 @@ void ProcessMSPPacket(mspPacket_t *packet)
     DBGLN("Processing MSP_ELRS_SET_OSD...");
     vrxModule.SetOSD(packet);
     break;
+  case MSP_ELRS_BACKPACK_SET_DVR_NAME:
+    DBGLN("Processing MSP_ELRS_BACKPACK_SET_DVR_NAME...");
+    // Race label for the goggles to name the next DVR recording with;
+    // forwarded verbatim over the goggle serial link
+    vrxModule.ForwardPacket(packet);
+    break;
   case MSP_ELRS_BACKPACK_SET_HEAD_TRACKING:
     DBGLN("Processing MSP_ELRS_BACKPACK_SET_HEAD_TRACKING...");
     headTrackingEnabled = packet->readByte();
