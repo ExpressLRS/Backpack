@@ -52,6 +52,11 @@ extern wifi_service_t wifiService;
 #if defined(MAVLINK_ENABLED)
 extern MAVLink mavlink;
 #endif
+#if defined(HAS_BLE_TRAINER)
+#include <esp_attr.h>
+#include <esp_system.h>
+#include "BleTrainer.h"
+#endif
 #elif defined(TARGET_TIMER_BACKPACK)
 extern TimerBackpackConfig config;
 #else
@@ -102,6 +107,65 @@ extern bool sendHeadTrackingChangesToVrx;
 extern bool headTrackingEnabled;
 #endif
 static bool servicesStarted = false;
+
+#if defined(TARGET_TX_BACKPACK)
+static void setMavlinkAccessPointSSID()
+{
+#if defined(PLATFORM_ESP32)
+  static const uint8_t unboundAddress[6] = {0, 0, 0, 0, 0, 0};
+  if (memcmp(firmwareOptions.uid, unboundAddress, sizeof(unboundAddress)) == 0)
+  {
+    const uint32_t suffix = (uint32_t)(ESP.getEfuseMac() & 0xFFFFFF);
+    snprintf(wifi_ap_ssid, sizeof(wifi_ap_ssid), "ExpressLRS TX Backpack %06lX",
+             (unsigned long)suffix);
+    return;
+  }
+#endif
+  snprintf(wifi_ap_ssid, sizeof(wifi_ap_ssid), "ExpressLRS TX Backpack %02X%02X%02X",
+           firmwareOptions.uid[3], firmwareOptions.uid[4], firmwareOptions.uid[5]);
+}
+#endif
+
+#if defined(HAS_BLE_TRAINER)
+// Boot forensics kept in retained RAM: the Nomad has no USB console, and the
+// MAVLink WiFi crash loop can only be diagnosed by reading, on the next boot,
+// what ended the previous one. Survives software/watchdog/brownout resets.
+#define TRAINER_BOOT_FX_MAGIC 0x48544246UL
+struct TrainerBootForensics
+{
+  uint32_t magic;
+  uint32_t boots;
+};
+RTC_NOINIT_ATTR static TrainerBootForensics s_bootFx;
+static uint32_t s_bootCount = 0;
+static int32_t s_thisReset = ESP_RST_UNKNOWN;
+
+static const char *resetReasonName(int32_t reason)
+{
+  switch (reason)
+  {
+    case ESP_RST_POWERON: return "power-on";
+    case ESP_RST_EXT: return "external-pin";
+    case ESP_RST_SW: return "software";
+    case ESP_RST_PANIC: return "panic";
+    case ESP_RST_INT_WDT: return "interrupt-watchdog";
+    case ESP_RST_TASK_WDT: return "task-watchdog";
+    case ESP_RST_WDT: return "other-watchdog";
+    case ESP_RST_DEEPSLEEP: return "deep-sleep";
+    case ESP_RST_BROWNOUT: return "brownout";
+    case ESP_RST_SDIO: return "sdio";
+    default: return "unknown";
+  }
+}
+
+static void captureBootForensics()
+{
+  s_thisReset = (int32_t)esp_reset_reason();
+  s_bootCount = (s_bootFx.magic == TRAINER_BOOT_FX_MAGIC) ? s_bootFx.boots + 1 : 1;
+  s_bootFx.magic = TRAINER_BOOT_FX_MAGIC;
+  s_bootFx.boots = s_bootCount;
+}
+#endif
 
 static bool target_seen = false;
 static uint8_t target_pos = 0;
@@ -313,6 +377,23 @@ static void GetConfiguration(AsyncWebServerRequest *request)
 
 #if defined(HAS_HEADTRACKING) || defined(SUPPORT_HEADTRACKING)
   json["config"]["head-tracking"] = true;
+#endif
+#if defined(HAS_BLE_TRAINER)
+  json["config"]["trainer"]["paired"] = config.IsTrainerPaired();
+  json["config"]["trainer"]["interval"] = config.GetTrainerIntervalMs();
+  const uint8_t *trainerMac = config.GetTrainerPeerMac();
+  char trainerMacStr[18];
+  snprintf(trainerMacStr, sizeof(trainerMacStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           trainerMac[0], trainerMac[1], trainerMac[2], trainerMac[3], trainerMac[4], trainerMac[5]);
+  json["config"]["trainer"]["mac"] = trainerMacStr;
+  const char *trainerSource = "auto";
+  if (config.GetTrainerSource() == TRAINER_SOURCE_ESPNOW) trainerSource = "native";
+  else if (config.GetTrainerSource() == TRAINER_SOURCE_BLE) trainerSource = "ble";
+  json["config"]["trainer"]["source"] = trainerSource;
+  json["config"]["trainer"]["boots"] = s_bootCount;
+  json["config"]["trainer"]["lastreset"] = resetReasonName(s_thisReset);
+  json["config"]["trainer"]["linked"] = bleTrainerConnected();
+  json["config"]["trainer"]["setptr"] = bleTrainerSetPtrCount();
 #endif
 #if defined(AAT_BACKPACK)
   WebAatAppendConfig(json);
@@ -621,6 +702,34 @@ static void WebUpdateSetMavLink(AsyncWebServerRequest *request)
 }
 #endif
 
+#if defined(HAS_BLE_TRAINER)
+static void WebUpdateSetTrainer(AsyncWebServerRequest *request)
+{
+  if (request->hasArg("interval"))
+  {
+    int interval = request->arg("interval").toInt();
+    config.SetTrainerIntervalMs((uint16_t)constrain(interval, 7, 1000));
+  }
+  if (request->hasArg("source"))
+  {
+    String source = request->arg("source");
+    if (source == "native" || source == "espnow")
+      config.SetTrainerSource(TRAINER_SOURCE_ESPNOW);
+    else if (source == "ble")
+      config.SetTrainerSource(TRAINER_SOURCE_BLE);
+    else
+      config.SetTrainerSource(TRAINER_SOURCE_AUTO);
+  }
+  if (request->hasArg("forget") && request->arg("forget") != "0")
+  {
+    config.ClearTrainerPeerMac();
+  }
+  config.Commit();
+  DBGLN("Bluetooth trainer configuration updated");
+  request->send(200, "text/plain", "Bluetooth trainer settings saved");
+}
+#endif
+
 static void wifiOff()
 {
   wifiStarted = false;
@@ -748,6 +857,9 @@ static void startServices()
   #if defined(MAVLINK_ENABLED)
   server.on("/setmavlink", WebUpdateSetMavLink);
   #endif
+  #if defined(HAS_BLE_TRAINER)
+  server.on("/settrainer", HTTP_POST, WebUpdateSetTrainer);
+  #endif
   server.on("/forget", WebUpdateForget);
   server.on("/connect", WebUpdateConnect);
   server.on("/access", WebUpdateAccessPoint);
@@ -800,6 +912,15 @@ static void startServices()
 static void HandleWebUpdate()
 {
   unsigned long now = millis();
+#if defined(HAS_BLE_TRAINER)
+  static unsigned long lastStatusLog = 0;
+  if (now - lastStatusLog > 3000)
+  {
+    lastStatusLog = now;
+    DBGLN("WIFI status mode=%d started=%d services=%d ap=%s", (int)wifiMode, wifiStarted,
+          servicesStarted, WiFi.softAPIP().toString().c_str());
+  }
+#endif
   wl_status_t status = WiFi.status();
   if (status != laststatus && wifiMode == WIFI_STA) {
     DBGLN("WiFi status %d", status);
@@ -843,12 +964,7 @@ static void HandleWebUpdate()
         }
         else if (wifiService == WIFI_SERVICE_MAVLINK_TX)
         {
-          // Generate a unique SSID using config.address as hex
-          sprintf(wifi_ap_ssid, "ExpressLRS TX Backpack %02X%02X%02X",
-            firmwareOptions.uid[3],
-            firmwareOptions.uid[4],
-            firmwareOptions.uid[5]
-          );
+          setMavlinkAccessPointSSID();
         }
 #endif
         WiFi.softAP(wifi_ap_ssid, wifi_ap_password);
@@ -945,11 +1061,10 @@ static void HandleWebUpdate()
     #endif
     // When in STA mode, a small delay reduces power use from 90mA to 30mA when idle
     // In AP mode, it doesn't seem to make a measurable difference, but does not hurt
-#if defined(MAVLINK_ENABLED)
-    if (!updater.isRunning() && wifiService != WIFI_SERVICE_MAVLINK_TX)
-#else
+    // The ESP32-C3 is single-core: always yield to the idle task here. Skipping
+    // the delay in MAVLINK_TX lets this tight poll loop starve the idle task
+    // once BLE adds its radio tasks, which resets the whole chip.
     if (!updater.isRunning())
-#endif
       delay(1);
     if (do_flash) {
       do_flash = false;
@@ -995,6 +1110,9 @@ static void HandleWebUpdate()
 
 static int start()
 {
+#if defined(HAS_BLE_TRAINER)
+  captureBootForensics();
+#endif
   return DURATION_NEVER;
 }
 

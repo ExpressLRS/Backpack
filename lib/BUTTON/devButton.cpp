@@ -6,6 +6,7 @@
 #if defined(PIN_BUTTON)
 #include "logging.h"
 #include "button.h"
+#include "BleTrainer.h"
 
 static Button<PIN_BUTTON, false> button;
 
@@ -24,9 +25,21 @@ static void shortPress()
     }
 }
 
+#if defined(HAS_BLE_TRAINER)
+// Long press: forget the paired Bluetooth trainer so it can be re-paired.
+static void longPress()
+{
+    DBGLN("Button long: forget Bluetooth trainer peer");
+    bleTrainerForgetPeer();
+}
+#endif
+
 static void initialize()
 {
     button.OnShortPress = shortPress;
+#if defined(HAS_BLE_TRAINER)
+    button.OnLongPress = longPress;
+#endif
 }
 
 static int start()
