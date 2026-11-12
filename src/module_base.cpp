@@ -159,6 +159,21 @@ MSPModuleBase::Loop(uint32_t now)
                 ptrChannelData[2] = packet->payload[4] + (packet->payload[5] << 8);
                 sendMSPViaEspnow(packet);
             }
+            else if (packet->function == MSP_ELRS_BACKPACK_SET_CHANNEL_INDEX &&
+                     packet->type == MSP_PACKET_COMMAND &&
+                     packet->payloadSize >= 1 && packet->payload[0] < 48)
+            {
+                // VRx-initiated channel change (e.g. HDZero goggles "Send VTX"):
+                // rebroadcast over ESP-NOW as MSP_SET_VTX_CONFIG, the opcode
+                // peers act on over the air; 0x0301 is only a UART opcode and
+                // is dropped as unknown by ESP-NOW receivers.
+                mspPacket_t out;
+                out.reset();
+                out.makeCommand();
+                out.function = MSP_SET_VTX_CONFIG;
+                out.addByte(packet->payload[0]);
+                sendMSPViaEspnow(&out);
+            }
             msp.markPacketReceived();
         }
     }
